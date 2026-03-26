@@ -1,0 +1,4 @@
+root = false
+
+[*.cs]
+file_header_template = #nullable enable
