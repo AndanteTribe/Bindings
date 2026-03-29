@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Threading;
 using UnityEngine;
 
 namespace Bindings.Sample
@@ -80,13 +81,15 @@ namespace Bindings.Sample
             _viewModel = viewModel;
         }
 
-        public void Bind()
+        public System.Threading.Tasks.ValueTask BindAsync(CancellationToken _)
         {
             _text.text = _viewModel.Count.ToString();
             _incrementButton.onClick.RemoveAllListeners();
             _incrementButton.onClick.AddListener(_viewModel.Increment);
             _decrementButton.onClick.RemoveAllListeners();
             _decrementButton.onClick.AddListener(_viewModel.Decrement);
+
+            return default;
         }
     }
 }

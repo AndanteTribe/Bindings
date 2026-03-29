@@ -1,5 +1,8 @@
 ﻿#nullable enable
 
+using System.Threading;
+using System.Threading.Tasks;
+
 namespace Bindings
 {
     /// <summary>
@@ -10,7 +13,7 @@ namespace Bindings
         /// <summary>
         /// Binds the view to the view model.
         /// </summary>
-        void Bind();
+        ValueTask BindAsync(CancellationToken cancellationToken);
 
         /// <summary>
         /// Determines whether the view can be bound to the view model.

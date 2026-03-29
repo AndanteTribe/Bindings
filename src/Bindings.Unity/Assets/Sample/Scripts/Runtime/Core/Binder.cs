@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using VContainer;
 
@@ -16,6 +17,7 @@ namespace Bindings
         private bool _runOnEnable = true;
 
         private readonly List<IView> _nextChangedViews = new();
+        private CancellationTokenSource _cancellationTokenSource = null!;
 
         [Inject]
         public void Initialize(IReadOnlyList<IViewModel> viewModels)
@@ -24,6 +26,11 @@ namespace Bindings
             {
                 Initialize(viewModel);
             }
+        }
+
+        private void Awake()
+        {
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
         }
 
         private void OnEnable()
@@ -38,9 +45,13 @@ namespace Bindings
         {
             if (_nextChangedViews.Count > 0)
             {
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
+                _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
+
                 foreach (var view in _nextChangedViews)
                 {
-                    view.Bind();
+                    _ = view.BindAsync(_cancellationTokenSource.Token);
                 }
                 _nextChangedViews.Clear();
             }
@@ -68,9 +79,13 @@ namespace Bindings
         /// </summary>
         public void Run()
         {
+            _cancellationTokenSource.Cancel();
+            _cancellationTokenSource.Dispose();
+            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
+
             foreach (var view in _views.AsSpan())
             {
-                view.Bind();
+                _ = view.BindAsync(_cancellationTokenSource.Token);
             }
         }
 
