@@ -1,9 +1,11 @@
-﻿using Bindings;
+﻿#nullable enable
 
 namespace Bindings
 {
     public interface IPublisher
     {
-        void Publish<T>() where T : IViewModel;
+        void PublishRebindMessage<T>() where T : IViewModel;
+
+        void Publish<T>(T message);
     }
 }

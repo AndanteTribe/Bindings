@@ -1,7 +1,9 @@
-﻿namespace Bindings
+﻿using System;
+
+namespace Bindings
 {
-    public interface ISubscriber
+    public interface ISubscriber<in T>
     {
-        void OnReceived();
+        void OnReceivedMessage(T message);
     }
 }

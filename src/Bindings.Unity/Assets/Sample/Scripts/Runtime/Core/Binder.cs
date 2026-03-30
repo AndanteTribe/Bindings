@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using VContainer;
 
@@ -41,22 +42,6 @@ namespace Bindings
             }
         }
 
-        private void LateUpdate()
-        {
-            if (_nextChangedViews.Count > 0)
-            {
-                _cancellationTokenSource.Cancel();
-                _cancellationTokenSource.Dispose();
-                _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
-
-                foreach (var view in _nextChangedViews)
-                {
-                    _ = view.BindAsync(_cancellationTokenSource.Token);
-                }
-                _nextChangedViews.Clear();
-            }
-        }
-
         /// <summary>
         /// Initializes the view with the given view model.
         /// </summary>
@@ -79,18 +64,21 @@ namespace Bindings
         /// </summary>
         public void Run()
         {
-            _cancellationTokenSource.Cancel();
-            _cancellationTokenSource.Dispose();
+            if (!_cancellationTokenSource.IsCancellationRequested)
+            {
+                _cancellationTokenSource.Cancel();
+                _cancellationTokenSource.Dispose();
+            }
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
 
             foreach (var view in _views.AsSpan())
             {
-                _ = view.BindAsync(_cancellationTokenSource.Token);
+                view.BindAsync(_cancellationTokenSource.Token).Forget();
             }
         }
 
         /// <inheritdoc />
-        void IPublisher.Publish<T>()
+        void IPublisher.PublishRebindMessage<T>()
         {
             foreach (var view in _nextChangedViews)
             {
@@ -103,10 +91,34 @@ namespace Bindings
             {
                 if (view is IView<T>)
                 {
+                    if (_cancellationTokenSource.IsCancellationRequested)
+                    {
+                        _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
+                    }
+
                     _nextChangedViews.Add(view);
+                    RunAsync(view, _cancellationTokenSource.Token).Forget();
+                    return;
                 }
             }
             throw new InvalidOperationException("No view found for view model of type " + typeof(T).FullName + ".");
+        }
+
+        void IPublisher.Publish<T>(T message)
+        {
+            foreach (var view in _views.AsSpan())
+            {
+                if (view is ISubscriber<T> subscriber)
+                {
+                    subscriber.OnReceivedMessage(message);
+                }
+            }
+        }
+
+        private static async ValueTask RunAsync(IView view, CancellationToken cancellationToken)
+        {
+            await BindingScheduler.EnqueueAsync(cancellationToken);
+            await view.BindAsync(cancellationToken);
         }
     }
 }

@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Bindings.Sample
 {
     [ViewModel]
-    public partial class CountViewModel : ISubscriber
+    public partial class CountViewModel
     {
         [Model]
         private readonly CountModel _model;
@@ -19,23 +19,23 @@ namespace Bindings.Sample
         public void Increment()
         {
             _count += 1;
-            _publisher.Publish<CountViewModel>();
+            _publisher.PublishRebindMessage<CountViewModel>();
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
             _count -= 1;
-            _publisher.Publish<CountViewModel>();
+            _publisher.PublishRebindMessage<CountViewModel>();
         }
 
-        /// <inheritdoc />
-        void ISubscriber.OnReceived()
+        partial void OnPostBind()
         {
             _model.Count = _count;
         }
     }
 
+    // Planned to be generated auto.
     [System.Serializable]
     public partial class CountViewModel : IViewModel
     {
@@ -47,7 +47,7 @@ namespace Bindings.Sample
             set
             {
                 _count = value;
-                _publisher.Publish<CountViewModel>();
+                _publisher.PublishRebindMessage<CountViewModel>();
             }
         }
 
@@ -60,8 +60,13 @@ namespace Bindings.Sample
         private CountViewModel() : this(null!, null!)
         {
         }
+
+        public void NotifyCompletedBind() => OnPostBind();
+
+        partial void OnPostBind();
     }
 
+    // Planned to be generated auto.
     [System.Serializable]
     public partial class CountView : IView<CountViewModel>
     {
@@ -89,6 +94,7 @@ namespace Bindings.Sample
             _decrementButton.onClick.RemoveAllListeners();
             _decrementButton.onClick.AddListener(_viewModel.Decrement);
 
+            _viewModel.NotifyCompletedBind();
             return default;
         }
     }
