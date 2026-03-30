@@ -146,7 +146,7 @@ namespace Bindings
                 var current = basePath;
                 while (!string.IsNullOrEmpty(current) && dict.TryGetValue(current, out var baseData))
                 {
-                    // primitives
+                    // properties
                     foreach (var prop in baseData.props)
                     {
 #>
