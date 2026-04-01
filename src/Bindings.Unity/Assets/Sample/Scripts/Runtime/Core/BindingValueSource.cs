@@ -3,12 +3,11 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 
 namespace Bindings
 {
-    internal sealed class BindingValueSource : IValueTaskSource<Unit>, IValueTaskSource
+    internal sealed class BindingValueSource : IValueTaskSource
     {
         private static BindingValueSource? s_head;
         private BindingValueSource? _next;
@@ -54,25 +53,9 @@ namespace Bindings
             }
         }
 
-        [DebuggerNonUserCode]
-        Unit IValueTaskSource<Unit>.GetResult(short token)
-        {
-            try
-            {
-                return _core.GetResult(token);
-            }
-            finally
-            {
-                Reset();
-            }
-        }
-
         ValueTaskSourceStatus IValueTaskSource.GetStatus(short token) => _core.GetStatus(token);
-        ValueTaskSourceStatus IValueTaskSource<Unit>.GetStatus(short token) => _core.GetStatus(token);
 
         void IValueTaskSource.OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
-            => _core.OnCompleted(continuation, state, token, flags);
-        void IValueTaskSource<Unit>.OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
             => _core.OnCompleted(continuation, state, token, flags);
 
         private void Reset()

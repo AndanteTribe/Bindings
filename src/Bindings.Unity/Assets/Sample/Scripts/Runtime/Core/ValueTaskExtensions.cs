@@ -7,9 +7,10 @@ using UnityEngine;
 
 namespace Bindings
 {
-    public static class ValueTaskExtensions
+    internal static class ValueTaskExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [System.Diagnostics.DebuggerNonUserCode]
         public static void Forget(this ValueTask task)
         {
             var awaiter = task.GetAwaiter();

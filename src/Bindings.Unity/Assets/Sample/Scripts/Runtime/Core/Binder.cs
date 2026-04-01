@@ -115,6 +115,7 @@ namespace Bindings
             }
         }
 
+        [System.Diagnostics.DebuggerNonUserCode]
         private static async ValueTask RunAsync(IView view, CancellationToken cancellationToken)
         {
             await BindingScheduler.EnqueueAsync(cancellationToken);

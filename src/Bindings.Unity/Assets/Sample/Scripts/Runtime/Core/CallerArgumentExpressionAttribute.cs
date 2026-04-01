@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 
 #if !NET6_0_OR_GREATER
+#nullable enable
 
 namespace System.Runtime.CompilerServices
 {

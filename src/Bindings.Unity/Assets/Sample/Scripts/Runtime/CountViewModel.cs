@@ -37,7 +37,7 @@ namespace Bindings.Sample
 
     // Planned to be generated auto.
     [System.Serializable]
-    public partial class CountViewModel : IViewModel
+    public sealed partial class CountViewModel : IViewModel
     {
         private readonly IPublisher _publisher;
 
@@ -57,9 +57,11 @@ namespace Bindings.Sample
             _publisher = publisher;
         }
 
+#if UNITY_EDITOR
         private CountViewModel() : this(null!, null!)
         {
         }
+#endif
 
         public void NotifyCompletedBind() => OnPostBind();
 
@@ -68,7 +70,7 @@ namespace Bindings.Sample
 
     // Planned to be generated auto.
     [System.Serializable]
-    public partial class CountView : IView<CountViewModel>
+    public sealed partial class CountView : IView<CountViewModel>
     {
         private CountViewModel _viewModel = null!;
 
@@ -81,12 +83,12 @@ namespace Bindings.Sample
         [SerializeField]
         private UnityEngine.UI.Button _decrementButton = null!;
 
-        public void Initialize(CountViewModel viewModel)
+        void IView<CountViewModel>.Initialize(CountViewModel viewModel)
         {
             _viewModel = viewModel;
         }
 
-        public System.Threading.Tasks.ValueTask BindAsync(CancellationToken _)
+        System.Threading.Tasks.ValueTask IView.BindAsync(CancellationToken _)
         {
             _text.text = _viewModel.Count.ToString();
             _incrementButton.onClick.RemoveAllListeners();
