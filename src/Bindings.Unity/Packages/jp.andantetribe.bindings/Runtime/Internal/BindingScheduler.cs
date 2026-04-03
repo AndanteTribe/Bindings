@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Bindings
+namespace Bindings.Internal
 {
     /// <summary>
     /// The binding scheduler that runs before rendering the canvas.

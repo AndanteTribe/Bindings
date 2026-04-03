@@ -2,7 +2,7 @@
 
 namespace Bindings
 {
-    public interface IPublisher
+    public interface IMvvmPublisher
     {
         void PublishRebindMessage<T>() where T : IViewModel;
 

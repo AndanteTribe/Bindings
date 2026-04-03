@@ -4,23 +4,26 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Bindings.Internal;
 using UnityEngine;
-using VContainer;
 
 namespace Bindings
 {
-    public sealed class Binder : MonoBehaviour, IPublisher
+    public sealed class Binder : MonoBehaviour, IMvvmPublisher
     {
-        [SerializeReference]
-        private IView[] _views = null!;
-
         [SerializeField]
         private bool _runOnEnable = true;
+
+        [SerializeField]
+
+        [SerializeReference]
+        private IView[] _views = null!;
 
         private readonly List<IView> _nextChangedViews = new();
         private CancellationTokenSource _cancellationTokenSource = null!;
 
-        [Inject]
+#if ENABLE_VCONTAINER
+        [VContainer.Inject]
         public void Initialize(IReadOnlyList<IViewModel> viewModels)
         {
             foreach (var viewModel in viewModels)
@@ -28,6 +31,7 @@ namespace Bindings
                 Initialize(viewModel);
             }
         }
+#endif
 
         private void Awake()
         {
@@ -78,7 +82,7 @@ namespace Bindings
         }
 
         /// <inheritdoc />
-        void IPublisher.PublishRebindMessage<T>()
+        void IMvvmPublisher.PublishRebindMessage<T>()
         {
             foreach (var view in _nextChangedViews)
             {
@@ -104,11 +108,12 @@ namespace Bindings
             throw new InvalidOperationException("No view found for view model of type " + typeof(T).FullName + ".");
         }
 
-        void IPublisher.Publish<T>(T message)
+        /// <inheritdoc />
+        void IMvvmPublisher.Publish<T>(T message)
         {
             foreach (var view in _views.AsSpan())
             {
-                if (view is ISubscriber<T> subscriber)
+                if (view is IMvvmSubscriber<T> subscriber)
                 {
                     subscriber.OnReceivedMessage(message);
                 }

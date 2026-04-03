@@ -11,7 +11,6 @@ namespace Bindings.Sample
         [Model]
         private readonly CountModel _model;
 
-        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text)]
         private int _count;
 
@@ -36,10 +35,9 @@ namespace Bindings.Sample
     }
 
     // Planned to be generated auto.
-    [System.Serializable]
     public sealed partial class CountViewModel : IViewModel
     {
-        private readonly IPublisher _publisher;
+        private readonly IMvvmPublisher _publisher;
 
         public int Count
         {
@@ -51,17 +49,11 @@ namespace Bindings.Sample
             }
         }
 
-        public CountViewModel(CountModel model, IPublisher publisher)
+        public CountViewModel(CountModel model, IMvvmPublisher publisher)
         {
             _model = model;
             _publisher = publisher;
         }
-
-#if UNITY_EDITOR
-        private CountViewModel() : this(null!, null!)
-        {
-        }
-#endif
 
         public void NotifyCompletedBind() => OnPostBind();
 
@@ -90,14 +82,22 @@ namespace Bindings.Sample
 
         System.Threading.Tasks.ValueTask IView.BindAsync(CancellationToken _)
         {
+            BindAll();
+            return default;
+        }
+
+        private void BindAll()
+        {
             _text.text = _viewModel.Count.ToString();
             _incrementButton.onClick.RemoveAllListeners();
             _incrementButton.onClick.AddListener(_viewModel.Increment);
             _decrementButton.onClick.RemoveAllListeners();
             _decrementButton.onClick.AddListener(_viewModel.Decrement);
 
+            OnPostBind();
             _viewModel.NotifyCompletedBind();
-            return default;
         }
+
+        partial void OnPostBind();
     }
 }

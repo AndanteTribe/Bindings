@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks.Sources;
 
-namespace Bindings
+namespace Bindings.Internal
 {
     internal sealed class BindingValueSource : IValueTaskSource
     {

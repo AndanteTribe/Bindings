@@ -2,7 +2,7 @@
 
 using System;
 
-namespace Bindings
+namespace Bindings.Internal
 {
     internal readonly struct Unit : IEquatable<Unit>
     {

@@ -53,6 +53,14 @@
         "com.unity.modules.imgui": "1.0.0"
       }
     },
+    "jp.andantetribe.bindings": {
+      "version": "file:jp.andantetribe.bindings",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.ugui": "2.0.0"
+      }
+    },
     "jp.hadashikick.vcontainer": {
       "version": "https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer",
       "depth": 0,
