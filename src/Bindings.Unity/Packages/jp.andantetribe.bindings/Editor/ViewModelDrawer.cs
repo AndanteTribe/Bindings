@@ -9,7 +9,7 @@ using UnityEngine.UIElements;
 namespace Bindings.Editor
 {
     [CustomPropertyDrawer(typeof(IView), true)]
-    public class ViewDrawer : PropertyDrawer
+    public class ViewModelDrawer : PropertyDrawer
     {
         /// <inheritdoc />
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
@@ -29,25 +29,6 @@ namespace Bindings.Editor
             {
                 style = { marginLeft = 5f, unityFontStyleAndWeight = FontStyle.Bold, fontSize = 13 }
             });
-            var removeBtn = new Button()
-            {
-                style =
-                {
-                    height = 15f,
-                    width = 15f,
-                    top = 4f,
-                    right = 4f,
-                    position = Position.Absolute,
-                    backgroundImage = IconConst.RemoveIcon,
-                    backgroundColor = Color.white
-                }
-            };
-            removeBtn.RegisterCallback<ClickEvent, SerializedProperty>(static (_, prop) =>
-            {
-                prop.DeleteCommand();
-                prop.serializedObject.ApplyModifiedProperties();
-            }, property);
-            foldoutCheck.parent.Add(removeBtn);
             root.Add(new VisualElement()
             {
                 style =

@@ -12,37 +12,39 @@ namespace Bindings
     public sealed class Binder : MonoBehaviour, IMvvmPublisher
     {
         [SerializeField]
-        private bool _runOnEnable = true;
-
-        [SerializeField]
+        private bool _runOnStart = true;
 
         [SerializeReference]
-        private IView[] _views = null!;
+        private IView[] _views = Array.Empty<IView>();
 
         private readonly List<IView> _nextChangedViews = new();
         private CancellationTokenSource _cancellationTokenSource = null!;
-
-#if ENABLE_VCONTAINER
-        [VContainer.Inject]
-        public void Initialize(IReadOnlyList<IViewModel> viewModels)
-        {
-            foreach (var viewModel in viewModels)
-            {
-                Initialize(viewModel);
-            }
-        }
-#endif
 
         private void Awake()
         {
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
         }
 
-        private void OnEnable()
+        private void Start()
         {
-            if (_runOnEnable)
+            if (_runOnStart)
             {
                 Run();
+            }
+        }
+
+        /// <summary>
+        /// Initializes the view with the given view models.
+        /// </summary>
+        /// <param name="viewModels"></param>
+#if ENABLE_VCONTAINER
+        [VContainer.Inject]
+#endif
+        public void Initialize(IReadOnlyList<IViewModel> viewModels)
+        {
+            for (var i = 0; i < viewModels.Count; i++)
+            {
+                Initialize(viewModels[i]);
             }
         }
 

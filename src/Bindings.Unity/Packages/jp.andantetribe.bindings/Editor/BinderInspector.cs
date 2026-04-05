@@ -2,6 +2,7 @@
 
 using System;
 using System.Runtime.CompilerServices;
+using Bindings.Editor.Internal;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -13,6 +14,7 @@ namespace Bindings.Editor
     public class BinderInspector : UnityEditor.Editor, INotifyItemSelected
     {
         private SerializedProperty? _viewsProperty;
+        private TempViewModelContainer? _viewModelContainer;
 
         /// <inheritdoc />
         public override VisualElement CreateInspectorGUI()
@@ -23,9 +25,18 @@ namespace Bindings.Editor
             {
                 style = { paddingLeft = 3f, paddingRight = 3f, paddingTop = 3f, paddingBottom = 3f }
             };
-            root.Add(new PropertyField(serializedObject.FindProperty("_runOnEnable")));
-            root.Add(CreateViewsField(new AdvancedViewDropdown(this)));
+            root.Add(new PropertyField(serializedObject.FindProperty("_runOnStart")));
+            root.Add(CreateViewsField());
+            root.Add(CreatePreviewField());
             return root;
+        }
+
+        protected virtual void OnDestroy()
+        {
+            if (_viewModelContainer != null)
+            {
+                DestroyImmediate(_viewModelContainer);
+            }
         }
 
         /// <inheritdoc />
@@ -41,7 +52,7 @@ namespace Bindings.Editor
             }
         }
 
-        private static VisualElement CreateViewsField(AdvancedViewDropdown addBindElementDropdown)
+        private VisualElement CreateViewsField()
         {
             var addButton = new Button()
             {
@@ -52,11 +63,11 @@ namespace Bindings.Editor
                     alignSelf = Align.Center
                 }
             };
-            addButton.RegisterCallback<ClickEvent, AdvancedViewDropdown>(static (eve, dropdown) =>
+            addButton.RegisterCallback<ClickEvent, AdvancedViewDropdown>(static (evt, dropdown) =>
             {
-                var button = (Button)eve.target;
+                var button = (Button)evt.target;
                 dropdown.Show(button.worldBound);
-            }, addBindElementDropdown);
+            }, new AdvancedViewDropdown(this));
 
             var box = CreateBox("Views");
             box.Add(new ListView
@@ -75,12 +86,77 @@ namespace Bindings.Editor
             return box;
         }
 
+        private VisualElement CreatePreviewField()
+        {
+            var previewButton = new Button()
+            {
+                text = "Preview",
+                style =
+                {
+                    flexGrow = 1f,
+                    marginTop = 5f,
+                    marginBottom = 5f,
+                }
+            };
+            previewButton.RegisterCallback<ClickEvent, BinderInspector>(static (evt, self) =>
+            {
+                if (self._viewsProperty == null)
+                {
+                    return;
+                }
+
+                AnimationMode.StartAnimationMode();
+
+                var button = (Button)evt.target;
+                var root = button.parent;
+                root.Remove(button);
+
+                self._viewModelContainer ??= TempViewModelContainer.Create();
+
+                var viewModels = new ListView
+                {
+                    bindingPath = "_viewModels",
+                    reorderMode = ListViewReorderMode.Animated,
+                    showBorder = true,
+                    showAddRemoveFooter = false,
+                    showFoldoutHeader = false,
+                    showBoundCollectionSize = false,
+                    virtualizationMethod = CollectionVirtualizationMethod.DynamicHeight,
+                    selectionType = SelectionType.None,
+                    showAlternatingRowBackgrounds = AlternatingRowBackground.ContentOnly,
+                };
+                viewModels.Bind(self._viewModelContainer.Build(self._viewsProperty, self.target));
+
+                var invokeButton = new Button()
+                {
+                    text = "Invoke",
+                    style =
+                    {
+                        width = 200f,
+                        alignSelf = Align.Center,
+                    }
+                };
+                invokeButton.RegisterCallback<ClickEvent, BinderInspector>(static (_, self) =>
+                {
+                    self._viewModelContainer?.BindTo(self.target);
+                    SceneView.RepaintAll();
+                }, self);
+
+                var box = CreateBox("Preview");
+                box.Add(viewModels);
+                box.Add(invokeButton);
+                root.Add(box);
+            }, this);
+            return previewButton;
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static VisualElement CreateBox(string label)
+        protected static VisualElement CreateBox(string label)
         {
             var box = new Box
             {
-                style = {
+                style =
+                {
                     marginTop = 6f,
                     marginBottom = 2f,
                     paddingLeft = 4f,

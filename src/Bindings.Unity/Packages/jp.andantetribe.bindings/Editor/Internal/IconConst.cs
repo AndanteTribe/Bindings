@@ -3,7 +3,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Bindings.Editor
+namespace Bindings.Editor.Internal
 {
     internal static class IconConst
     {

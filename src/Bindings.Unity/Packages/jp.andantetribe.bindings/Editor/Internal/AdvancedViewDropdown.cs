@@ -3,13 +3,12 @@
 using System;
 using UnityEditor.IMGUI.Controls;
 
-namespace Bindings.Editor
+namespace Bindings.Editor.Internal
 {
-    public class AdvancedViewDropdown : AdvancedDropdown
+    internal sealed class AdvancedViewDropdown : AdvancedDropdown
     {
         private readonly INotifyItemSelected _inis;
-
-        private readonly Type[] _viewTypes = TypeUtils.GetAllViewTypes();
+        private static readonly ReadOnlyMemory<Type> s_viewTypes = TypeUtils.GetAllViewTypes();
 
         public AdvancedViewDropdown(INotifyItemSelected inis) : base(new AdvancedDropdownState())
         {
@@ -28,7 +27,7 @@ namespace Bindings.Editor
             var currentNameSpace = (string?)null;
             var nameSpaceParent = (AdvancedDropdownItem?)null;
 
-            foreach (var type in _viewTypes)
+            foreach (var type in s_viewTypes.Span)
             {
                 var nameSpace = type.Namespace ?? "";
                 if (nameSpace != currentNameSpace)
@@ -52,7 +51,7 @@ namespace Bindings.Editor
             }
         }
 
-        protected class TypeItem : AdvancedDropdownItem
+        private class TypeItem : AdvancedDropdownItem
         {
             public readonly Type Type;
 

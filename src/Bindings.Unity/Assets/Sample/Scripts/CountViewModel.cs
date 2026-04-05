@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System;
 using System.Threading;
 using UnityEngine;
 
@@ -11,6 +12,7 @@ namespace Bindings.Sample
         [Model]
         private readonly CountModel _model;
 
+        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text)]
         private int _count;
 
@@ -35,6 +37,7 @@ namespace Bindings.Sample
     }
 
     // Planned to be generated auto.
+    [System.Serializable]
     public sealed partial class CountViewModel : IViewModel
     {
         private readonly IMvvmPublisher _publisher;
@@ -64,6 +67,7 @@ namespace Bindings.Sample
     [System.Serializable]
     public sealed partial class CountView : IView<CountViewModel>
     {
+        [NonSerialized]
         private CountViewModel _viewModel = null!;
 
         [SerializeField]
@@ -88,16 +92,28 @@ namespace Bindings.Sample
 
         private void BindAll()
         {
-            _text.text = _viewModel.Count.ToString();
+            _text.SetValue(_viewModel.Count);
             _incrementButton.onClick.RemoveAllListeners();
             _incrementButton.onClick.AddListener(_viewModel.Increment);
             _decrementButton.onClick.RemoveAllListeners();
             _decrementButton.onClick.AddListener(_viewModel.Decrement);
-
             OnPostBind();
             _viewModel.NotifyCompletedBind();
         }
 
         partial void OnPostBind();
     }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+    public sealed partial class CountView : IMvvmSubscriber<global::Bindings.DebugBindMessage>
+    {
+        void IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
+        {
+            message.BindTo(this);
+            _text.SetValue(_viewModel.Count);
+            OnPostBind();
+            _viewModel.NotifyCompletedBind();
+        }
+    }
+#endif
 }
