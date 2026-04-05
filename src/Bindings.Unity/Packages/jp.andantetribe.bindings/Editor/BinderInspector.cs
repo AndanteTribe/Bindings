@@ -105,8 +105,6 @@ namespace Bindings.Editor
                     return;
                 }
 
-                AnimationMode.StartAnimationMode();
-
                 var button = (Button)evt.target;
                 var root = button.parent;
                 root.Remove(button);

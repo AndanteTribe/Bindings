@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 
 namespace Bindings.Editor
 {
-    [CustomPropertyDrawer(typeof(IView), true)]
+    [CustomPropertyDrawer(typeof(IViewModel), true)]
     public class ViewModelDrawer : PropertyDrawer
     {
         /// <inheritdoc />
