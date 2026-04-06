@@ -12,7 +12,21 @@
 
     <ItemGroup>
         <None Remove="DDD.UbiquitousLanguageRegistry.txt"/>
-        <AdditionalFiles Include="DDD.UbiquitousLanguageRegistry.txt"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="Bindings">
+          <HintPath>..\Bindings.Unity\Library\ScriptAssemblies\Bindings.dll</HintPath>
+        </Reference>
+        <Reference Include="Unity.TextMeshPro">
+          <HintPath>..\Bindings.Unity\Library\ScriptAssemblies\Unity.TextMeshPro.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>C:\Program Files\Unity\Hub\Editor\6000.0.40f1\Editor\Data\Managed\UnityEngine.dll</HintPath>
+        </Reference>
+        <Reference Include="UnityEngine.UI">
+          <HintPath>..\Bindings.Unity\Library\ScriptAssemblies\UnityEngine.UI.dll</HintPath>
+        </Reference>
     </ItemGroup>
 
 </Project>
