@@ -22,8 +22,8 @@
 | `[ViewModel]` | クラス | このクラスを ViewModel として扱う |
 | `[ViewModel(requireBindImplementation: true)]` | クラス | `BindAsync` を自動生成せず、ユーザーが実装する |
 | `[Model]` | フィールド | DI コンストラクタ引数として注入するモデル |
-| `[Schema(bindingPath)]` | フィールド・メソッド | UI コンポーネントとのバインド対象を宣言する |
-| `[Schema(bindingPath, id: N)]` | フィールド・メソッド | 同じ `id` を持つスキーマは View 内で同一コンポーネントにバインド |
+| `[Schema(bindingPath)]` | フィールド・メソッド | UI コンポーネントとのバインド対象を宣言する（`id` のデフォルトは `-1` = 未指定） |
+| `[Schema(bindingPath, id: N)]` | フィールド・メソッド | `N ≥ 0`: 同じ `id` を持つスキーマは View 内で同一コンポーネントにバインド。`N < -1`: `BND002` エラー |
 | `[Schema(bindingPath, format: "N0")]` | フィールド | `TMPro.TMP_Text.text` バインド時の書式指定文字列 |
 
 ### 1.2 バインディングパス (`bindingPath`) の解析
@@ -99,10 +99,10 @@ count       →（1）変化なし →（2）該当なし → count
 | 用途 | 変換 | 例（入力 → 正規化後 → 出力） |
 |---|---|---|
 | ViewModel プロパティ名 | 正規化後の先頭を大文字化 | `_count` → `count` → `Count` |
+| | | `count` → `count` → `Count`（プレフィックスなし、先頭小文字 → 大文字化） |
 | | | `m_interactable` → `interactable` → `Interactable` |
 | | | `m_Count` → `Count` → `Count`（すでに大文字） |
 | | | `__value` → `value` → `Value` |
-| | | `count` → `count` → `Count` |
 | コンストラクタ引数名（`[Model]`） | 正規化後の先頭を小文字化 | `_model` → `model` → `model` |
 | | | `_model2` → `model2` → `model2` |
 | | | `m_Model` → `Model` → `model` |
@@ -117,6 +117,7 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 | 診断 ID | レベル | 条件 | メッセージ（案） |
 |---|---|---|---|
 | `BND001` | Error | `[ViewModel]` が付与されたクラス名に `"ViewModel"` が含まれない | `'ClassName' must contain 'ViewModel' in its name to use [ViewModel].` |
+| `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `Schema id must be -1 (unset) or a non-negative integer. Got '{id}'.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
@@ -253,9 +254,9 @@ private global::{Namespace}.{ClassName} _viewModel = null!;
 
 #### 5.5.2 コンポーネントの連番付与ルール
 
-同一コンポーネント型（型部分が同じ）のスキーマをグループ化し、以下の3ケースで処理する。
+`id` のデフォルト値は `-1`（未指定）。ユーザーが `id ≥ 0` を指定した場合は明示的 id。同一コンポーネント型（型部分が同じ）のスキーマをグループ化し、以下の3ケースで処理する。
 
-**ケース A: 同一型のスキーマがすべて id=0（明示的な id なし）**
+**ケース A: 同一型のスキーマがすべて id=-1（明示的 id なし）**
 
 | 同一型の総スキーマ数 | フィールド名 |
 |---|---|
@@ -271,36 +272,32 @@ private global::{Namespace}.{ClassName} _viewModel = null!;
 [Schema("UnityEngine.UI.Button.onClick")]   // → _button2
 ```
 
-**ケース B: 同一型のスキーマがすべて明示的 id（id > 0）**
+**ケース B: 同一型のスキーマがすべて明示的 id（id ≥ 0）**
 
 - 同じ `id` を持つスキーマはすべて同一フィールドを共有する
-- フィールド名: `_{base}{N}`（例: `_button1`、`_button2`）
+- フィールド名: `_{base}{N}`（例: `_button0`、`_button1`、`_button2`）
 
 ```
 // ケース B: id=1 と id=2 のボタン → _button1, _button2
 [Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1
 [Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1（同一フィールドを共有）
 [Schema("UnityEngine.UI.Button.onClick", id: 2)]  // → _button2
+
+// id=0 は明示的な 0 番グループとして扱われる
+[Schema("UnityEngine.UI.Button.onClick", id: 0)]  // → _button0
 ```
 
-**ケース C: id=0 と明示的 id が混在**
+**ケース C: id=-1（未指定）と明示的 id（≥ 0）が混在**
 
-- id=0 のスキーマ → `_{base}0`（`0` 固定）
-- id=N（N > 0）のスキーマ → `_{base}{N}`
+- 明示的 id（≥ 0）のスキーマ → `_{base}{N}`
+- id=-1（未指定）のスキーマ → 明示的 id と重複しない最小の正整数を出現順に割り当て（1から順にスキップしながら）
 
 ```
-// ケース C: id=0 と id=2 → _button0, _button2
-[Schema("UnityEngine.UI.Button.onClick")]           // id=0 → _button0
-[Schema("UnityEngine.UI.Button.onClick", id: 2)]    // id=2 → _button2
+// ケース C: 未指定2つ + id=2 のボタン → _button1, _button2（id=2と共有）, _button3
+[Schema("UnityEngine.UI.Button.onClick")]           // id=-1 → 未使用の最小番 → _button1
+[Schema("UnityEngine.UI.Button.onClick", id: 2)]    // id=2  → _button2
+[Schema("UnityEngine.UI.Button.onClick")]           // id=-1 → 次の未使用番 → _button3
 ```
-
-> **確認事項 Q-mixed:** ケース C において、id=0 のスキーマが**複数ある**場合（下記）はどう扱うか？  
-> 同一フィールド `_button0` を共有する（= id=0 が「id=N に似たグループ」として振る舞う）？それともコンパイルエラー？  
-> ```
-> [Schema("UnityEngine.UI.Button.onClick")]           // id=0 → _button0 ?
-> [Schema("UnityEngine.UI.Button.onClick")]           // id=0 → _button0 と共有? or エラー?
-> [Schema("UnityEngine.UI.Button.onClick", id: 2)]    // id=2 → _button2
-> ```
 
 #### 5.5.3 フィールド宣言
 
@@ -415,6 +412,4 @@ partial void OnPostBind();
 
 ## 7. 未解決事項まとめ
 
-| # | 質問 | 状態 |
-|---|---|---|
-| Q-mixed | ケース C（id=0 と id=N 混在）で id=0 スキーマが複数ある場合、同一フィールド `_type0` を共有するか、コンパイルエラーとするか？ | 要確認 |
+現時点で未解決の事項はありません。

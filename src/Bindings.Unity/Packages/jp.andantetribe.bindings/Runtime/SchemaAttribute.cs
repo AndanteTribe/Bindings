@@ -14,14 +14,14 @@ namespace Bindings
 
         public readonly string Format;
 
-        public SchemaAttribute(string bindingPath, int id = 0, string format = "")
+        public SchemaAttribute(string bindingPath, int id = -1, string format = "")
         {
             BindingPath = bindingPath;
             Id = id;
             Format = format;
         }
 
-        public SchemaAttribute(object bindingPath, int id = 0, string format = "", [CallerArgumentExpression("bindingPath")]string path = "")
+        public SchemaAttribute(object bindingPath, int id = -1, string format = "", [CallerArgumentExpression("bindingPath")]string path = "")
         {
             const string keyword = "Resolver.";
             BindingPath = path.IndexOf(keyword, StringComparison.Ordinal) is var i && i >= 0 ? path[(i + keyword.Length)..] : path;
