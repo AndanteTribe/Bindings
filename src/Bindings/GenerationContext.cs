@@ -3,7 +3,17 @@
 public sealed class GenerationContext
 {
     /// <summary>
-    /// ViewModelAttributeの引数
+    /// 対象クラスのクラス名.
+    /// </summary>
+    public readonly string ClassName;
+
+    /// <summary>
+    /// 対象クラスの名前空間. グローバル名前空間の場合は空文字列.
+    /// </summary>
+    public readonly string Namespace;
+
+    /// <summary>
+    /// ViewModelAttributeの引数.
     /// </summary>
     public readonly bool RequireBindImplementation;
 
@@ -13,31 +23,39 @@ public sealed class GenerationContext
     public readonly bool AlreadySerializable;
 
     /// <summary>
-    /// ModelAttributeが付与されたフィールド変数 or プロパティの型のフルネームと変数名（またはプロパティ名）
+    /// ModelAttributeが付与されたフィールド変数 or プロパティの型のフルネームと変数名（またはプロパティ名）.
+    /// 宣言順.
     /// </summary>
-    public readonly (string typeFullName, string name)[] Models;
+    public readonly (string TypeFullName, string FieldName)[] Models;
 
     /// <summary>
-    /// SchemaAttributeが付与されたフィールド変数 or プロパティの引数情報.
+    /// SchemaAttributeが付与されたフィールド変数 or プロパティごとの引数情報.
+    /// 同一メンバーに複数の[Schema]が付与された場合は複数エントリになる. 宣言順.
     /// </summary>
-    public readonly (string bindingPath, int id, string format) Schemas;
+    public readonly (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)[] SchemaFields;
 
     /// <summary>
-    /// SchemaAttributeが付与された関数の引数情報. Formatは不要なので除外で.
+    /// SchemaAttributeが付与されたメソッドごとの引数情報.
+    /// 同一メソッドに複数の[Schema]が付与された場合は複数エントリになる. 宣言順.
+    /// Format は不要なので除外.
     /// </summary>
-    public readonly (string bindingPath, int id) SchemaMethods;
+    public readonly (string MethodName, string BindingPath, int Id)[] SchemaMethods;
 
     public GenerationContext(
+        string className,
+        string @namespace,
         bool requireBindImplementation,
         bool alreadySerializable,
-        (string typeFullName, string name)[] models,
-        (string bindingPath, int id, string format) schemas,
-        (string bindingPath, int id) schemaMethods)
+        (string TypeFullName, string FieldName)[] models,
+        (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)[] schemaFields,
+        (string MethodName, string BindingPath, int Id)[] schemaMethods)
     {
+        ClassName = className;
+        Namespace = @namespace;
         RequireBindImplementation = requireBindImplementation;
         AlreadySerializable = alreadySerializable;
         Models = models;
-        Schemas = schemas;
+        SchemaFields = schemaFields;
         SchemaMethods = schemaMethods;
     }
 }
