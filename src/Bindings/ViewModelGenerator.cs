@@ -144,6 +144,7 @@ namespace Bindings
         var schemas = schemaFields.Concat(schemaProperties).ToArray();
 
         // SchemaMethods: [Schema] が付与されたメソッド.
+        // MethodKind.Ordinary に限定することでコンストラクタや演算子などの特殊メソッドを除外する.
         var schemaMethods = classSymbol.GetMembers()
             .OfType<IMethodSymbol>()
             .Where(m => m.MethodKind == MethodKind.Ordinary)
