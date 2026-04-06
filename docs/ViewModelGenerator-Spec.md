@@ -73,24 +73,40 @@ public partial class CountViewModel1
 
 ## 2. フィールド名からの識別子変換規則
 
-ユーザーが `[Model]` または `[Schema]` に付与したフィールド名から、コンストラクタ引数名やプロパティ名を導出する。  
-ユーザーが必ずしもアンダースコア形式を使うとは限らないため、以下のアルゴリズムを適用する。
+[CommunityToolkit MVVM `[ObservableProperty]`](https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/generators/observableproperty) の命名規則に準拠する。ユーザーが `[Model]` または `[Schema]` に付与したフィールド名から、コンストラクタ引数名やプロパティ名を導出する。
 
-### 2.1 正規化（ストリッピング）
+### 2.1 正規化アルゴリズム（CommunityToolkit 準拠）
 
-1. 先頭の `_` を1つ取り除く（例: `_count` → `count`）  
-2. 先頭の `m_` を取り除く（例: `m_count` → `count`、`_m_count` → `m_count` → ステップ1後に `m_count` → このケースは `_` 除去後に再判定）  
-3. 上記に該当しない場合はフィールド名をそのまま使用（例: `count` → `count`）
+以下のステップを順に適用する:
+
+1. 先頭の `_` をすべて取り除く（`TrimStart('_')`）  
+2. ステップ1の結果が `m_` で始まる場合、`m_` を取り除く
+
+```text
+_count      →（1）count    →（2）該当なし → count
+__count     →（1）count    →（2）該当なし → count
+m_count     →（1）変化なし →（2）count              → count
+_m_count    →（1）m_count  →（2）count              → count
+m_Count     →（1）変化なし →（2）Count              → Count
+__m_count   →（1）m_count  →（2）count              → count
+count       →（1）変化なし →（2）該当なし → count
+```
+
+> **注意:** フィールド名が `_` や `m_` のみから構成される、または正規化後が空になるケースはコンパイルエラーとして扱う。
 
 ### 2.2 各識別子の導出
 
-| 用途 | 変換 | 例 |
+| 用途 | 変換 | 例（入力 → 正規化後 → 出力） |
 |---|---|---|
-| ViewModel プロパティ名 | 正規化後の先頭を大文字化 | `_count` → `Count`、`m_interactable` → `Interactable`、`count` → `Count` |
-| コンストラクタ引数名（`[Model]`） | 正規化後の先頭を小文字化 | `_model` → `model`、`_model2` → `model2`、`myModel` → `myModel` |
-
-**未解決事項 Q-naming:** `m_Count`（先頭大文字）や `__count`（二重アンダースコア）のようなエッジケースの扱いは？  
-→ 詳細を詰める必要あり。
+| ViewModel プロパティ名 | 正規化後の先頭を大文字化 | `_count` → `count` → `Count` |
+| | | `m_interactable` → `interactable` → `Interactable` |
+| | | `m_Count` → `Count` → `Count`（すでに大文字） |
+| | | `__value` → `value` → `Value` |
+| | | `count` → `count` → `Count` |
+| コンストラクタ引数名（`[Model]`） | 正規化後の先頭を小文字化 | `_model` → `model` → `model` |
+| | | `_model2` → `model2` → `model2` |
+| | | `m_Model` → `Model` → `model` |
+| | | `myModel` → `myModel` → `myModel`（先頭はすでに小文字） |
 
 ---
 
@@ -237,28 +253,54 @@ private global::{Namespace}.{ClassName} _viewModel = null!;
 
 #### 5.5.2 コンポーネントの連番付与ルール
 
-同一コンポーネント型（型部分が同じ）の複数スキーマを処理する際のフィールド名の決定ルール：
+同一コンポーネント型（型部分が同じ）のスキーマをグループ化し、以下の3ケースで処理する。
 
-**ステップ1: id=N（N > 0）のスキーマを処理する**
-- 同じ `id` を持つスキーマはすべて同一フィールドを参照する
-- フィールド名: `_{base}{N}` （例: `_button1`、`_button3`）
+**ケース A: 同一型のスキーマがすべて id=0（明示的な id なし）**
 
-**ステップ2: id=0（デフォルト）のスキーマを処理する**
-- 同一型の全スキーマ（id=0 のもの + id=N のもの）を合わせた数に応じて：
-  - **同一型のスキーマが全体で1つ（かつ id=0）:** 連番なし → `_{base}` （例: `_text`、`_toggle`）
-  - **同一型のスキーマが全体で複数:** すべて連番あり
-    - id=0 のものは出現順に **ステップ1で既に使われた番号と重複しない** 番号を割り当てる
-    - id=0 のスキーマが複数ある場合は出現順に1から連番（ただし id=N で使われた番号はスキップ）
-
-**id=0 と id=N が混在する場合の例:**
+| 同一型の総スキーマ数 | フィールド名 |
+|---|---|
+| 1つ | `_{base}`（連番なし）例: `_text`、`_toggle` |
+| 2つ以上 | `_{base}1`, `_{base}2`, ...（出現順に1から連番）例: `_button1`, `_button2` |
 
 ```
-[Schema("UnityEngine.UI.Button.onClick")]          // id=0、1つ目 → _button0（0はデフォルト値として確定）
-[Schema("UnityEngine.UI.Button.onClick", id: 2)]   // id=2       → _button2
+// ケース A-1: テキストが1つ → _text
+[Schema("TMPro.TMP_Text.text")]
+
+// ケース A-2: ボタンが2つ → _button1, _button2
+[Schema("UnityEngine.UI.Button.onClick")]   // → _button1
+[Schema("UnityEngine.UI.Button.onClick")]   // → _button2
 ```
 
-> **未解決事項 Q-mixed:** id=0 と id=N が混在する場合の id=0 のフィールド名の番号は `0` で固定か、それとも最小の非衝突番号か？  
-> 暫定素案: id=0 のものは `_button0` とし、id=N のものは `_button{N}` とする。
+**ケース B: 同一型のスキーマがすべて明示的 id（id > 0）**
+
+- 同じ `id` を持つスキーマはすべて同一フィールドを共有する
+- フィールド名: `_{base}{N}`（例: `_button1`、`_button2`）
+
+```
+// ケース B: id=1 と id=2 のボタン → _button1, _button2
+[Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1
+[Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1（同一フィールドを共有）
+[Schema("UnityEngine.UI.Button.onClick", id: 2)]  // → _button2
+```
+
+**ケース C: id=0 と明示的 id が混在**
+
+- id=0 のスキーマ → `_{base}0`（`0` 固定）
+- id=N（N > 0）のスキーマ → `_{base}{N}`
+
+```
+// ケース C: id=0 と id=2 → _button0, _button2
+[Schema("UnityEngine.UI.Button.onClick")]           // id=0 → _button0
+[Schema("UnityEngine.UI.Button.onClick", id: 2)]    // id=2 → _button2
+```
+
+> **確認事項 Q-mixed:** ケース C において、id=0 のスキーマが**複数ある**場合（下記）はどう扱うか？  
+> 同一フィールド `_button0` を共有する（= id=0 が「id=N に似たグループ」として振る舞う）？それともコンパイルエラー？  
+> ```
+> [Schema("UnityEngine.UI.Button.onClick")]           // id=0 → _button0 ?
+> [Schema("UnityEngine.UI.Button.onClick")]           // id=0 → _button0 と共有? or エラー?
+> [Schema("UnityEngine.UI.Button.onClick", id: 2)]    // id=2 → _button2
+> ```
 
 #### 5.5.3 フィールド宣言
 
@@ -375,5 +417,4 @@ partial void OnPostBind();
 
 | # | 質問 | 状態 |
 |---|---|---|
-| Q-naming | `m_Count`（大文字）や `__count`（二重 `_`）などエッジケースの正規化ルールは？ | 未解決 |
-| Q-mixed | id=0 と id=N が同一型コンポーネントで混在する場合、id=0 のフィールド名の番号は `0` 固定か否か？ | 暫定: `_type0` |
+| Q-mixed | ケース C（id=0 と id=N 混在）で id=0 スキーマが複数ある場合、同一フィールド `_type0` を共有するか、コンパイルエラーとするか？ | 要確認 |
