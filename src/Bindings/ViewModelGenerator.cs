@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
@@ -8,7 +9,8 @@ using Microsoft.CodeAnalysis.Text;
 namespace Bindings;
 
 /// <summary>
-/// [ViewModel]属性が付与されたクラスからバインディングメタデータを収集するソースジェネレータ.
+/// [ViewModel]属性が付与されたクラスからバインディングメタデータを収集し、
+/// コメントアウト形式でコードを生成するソースジェネレータ.
 /// </summary>
 [Generator]
 public class ViewModelGenerator : IIncrementalGenerator
@@ -128,18 +130,18 @@ namespace Bindings
 
         var models = modelFields.Concat(modelProperties).ToArray();
 
-        // Schemas: [Schema] が付与されたフィールドとプロパティ.
+        // Schemas: [Schema] が付与されたフィールドとプロパティ (memberName・型情報も収集).
         var schemaFields = classSymbol.GetMembers()
             .OfType<IFieldSymbol>()
             .SelectMany(f => f.GetAttributes()
                 .Where(a => a.AttributeClass?.Name == SchemaAttributeName)
-                .Select(BuildSchemaEntry));
+                .Select(attr => BuildSchemaEntry(attr, f.Name, f.Type.ToDisplayString())));
 
         var schemaProperties = classSymbol.GetMembers()
             .OfType<IPropertySymbol>()
             .SelectMany(p => p.GetAttributes()
                 .Where(a => a.AttributeClass?.Name == SchemaAttributeName)
-                .Select(BuildSchemaEntry));
+                .Select(attr => BuildSchemaEntry(attr, p.Name, p.Type.ToDisplayString())));
 
         var schemas = schemaFields.Concat(schemaProperties).ToArray();
 
@@ -150,27 +152,32 @@ namespace Bindings
             .Where(m => m.MethodKind == MethodKind.Ordinary)
             .SelectMany(m => m.GetAttributes()
                 .Where(a => a.AttributeClass?.Name == SchemaAttributeName)
-                .Select(BuildSchemaMethodEntry))
+                .Select(attr => BuildSchemaMethodEntry(attr, m.Name)))
             .ToArray();
 
         return new GenerationContext(requireBindImplementation, alreadySerializable, models, schemas, schemaMethods);
     }
 
-    private static (string bindingPath, int id, string format) BuildSchemaEntry(AttributeData attr)
+    private static (string bindingPath, int id, string format, string memberName, string memberTypeFullName)
+        BuildSchemaEntry(AttributeData attr, string memberName, string memberTypeFullName)
     {
         var args = attr.ConstructorArguments;
         return (
             bindingPath: args.Length > 0 ? args[0].Value?.ToString() ?? string.Empty : string.Empty,
             id: args.Length > 1 && args[1].Value is int id ? id : 0,
-            format: args.Length > 2 ? args[2].Value?.ToString() ?? string.Empty : string.Empty);
+            format: args.Length > 2 ? args[2].Value?.ToString() ?? string.Empty : string.Empty,
+            memberName,
+            memberTypeFullName);
     }
 
-    private static (string bindingPath, int id) BuildSchemaMethodEntry(AttributeData attr)
+    private static (string bindingPath, int id, string methodName)
+        BuildSchemaMethodEntry(AttributeData attr, string methodName)
     {
         var args = attr.ConstructorArguments;
         return (
             bindingPath: args.Length > 0 ? args[0].Value?.ToString() ?? string.Empty : string.Empty,
-            id: args.Length > 1 && args[1].Value is int id ? id : 0);
+            id: args.Length > 1 && args[1].Value is int id ? id : 0,
+            methodName);
     }
 
     private static void GenerateCode(
@@ -194,8 +201,8 @@ namespace Bindings
     }
 
     /// <summary>
-    /// GenerationContext をもとにプレースホルダーの partial クラスを生成する.
-    /// 実際のバインディングコード生成は後続のステップで実装する.
+    /// GenerationContext をもとにバインディングコードをコメントアウト形式で生成する.
+    /// ファイルはコンパイル可能な空の partial クラスを含み、その下にコメントで生成予定コードを出力する.
     /// </summary>
     private static string GeneratePartialClass(
         string namespaceName,
@@ -207,9 +214,211 @@ namespace Bindings
         sb.AppendLine();
         sb.AppendLine($"namespace {namespaceName};");
         sb.AppendLine();
+
+        // 空の partial クラスでコンパイルを通す.
         sb.AppendLine($"partial class {className}");
         sb.AppendLine("{");
         sb.AppendLine("}");
+        sb.AppendLine();
+
+        // コメントアウトされた ViewModel 実装.
+        AppendViewModelCode(sb, className, ctx);
+        sb.AppendLine("//");
+
+        // コメントアウトされた View 実装.
+        var viewName = className.EndsWith("ViewModel", StringComparison.Ordinal)
+            ? className.Substring(0, className.Length - "ViewModel".Length) + "View"
+            : className + "View";
+        AppendViewCode(sb, className, viewName, ctx);
+
         return sb.ToString();
+    }
+
+    // -------------------------------------------------------------------------
+    // ViewModel コード生成
+    // -------------------------------------------------------------------------
+
+    private static void AppendViewModelCode(StringBuilder sb, string className, GenerationContext ctx)
+    {
+        // [System.Serializable] は AlreadySerializable が false の場合のみ付与.
+        if (!ctx.AlreadySerializable)
+            C(sb, "[System.Serializable]");
+
+        C(sb, $"public sealed partial class {className} : global::Bindings.IViewModel");
+        C(sb, "{");
+
+        // IMvvmPublisher フィールド.
+        C(sb, "    private readonly global::Bindings.IMvvmPublisher _publisher;");
+        C(sb, "");
+
+        // [Schema] フィールドに対応するプロパティを生成.
+        foreach (var schema in ctx.Schemas)
+        {
+            var propName = ToPropertyName(schema.memberName);
+            C(sb, $"    public {schema.memberTypeFullName} {propName}");
+            C(sb, "    {");
+            C(sb, $"        get => {schema.memberName};");
+            C(sb, "        set");
+            C(sb, "        {");
+            C(sb, $"            {schema.memberName} = value;");
+            C(sb, $"            _publisher.PublishRebindMessage<{className}>();");
+            C(sb, "        }");
+            C(sb, "    }");
+            C(sb, "");
+        }
+
+        // コンストラクタ: [Model] フィールド + publisher.
+        var ctorParams = string.Join(", ",
+            ctx.Models.Select(m => $"{m.typeFullName} {ToParameterName(m.name)}")
+                .Append("global::Bindings.IMvvmPublisher publisher"));
+        C(sb, $"    public {className}({ctorParams})");
+        C(sb, "    {");
+        foreach (var model in ctx.Models)
+            C(sb, $"        {model.name} = {ToParameterName(model.name)};");
+        C(sb, "        _publisher = publisher;");
+        C(sb, "    }");
+        C(sb, "");
+
+        C(sb, "    public void NotifyCompletedBind() => OnPostBind();");
+        C(sb, "");
+        C(sb, "    partial void OnPostBind();");
+        C(sb, "}");
+    }
+
+    // -------------------------------------------------------------------------
+    // View コード生成
+    // -------------------------------------------------------------------------
+
+    private static void AppendViewCode(StringBuilder sb, string className, string viewName, GenerationContext ctx)
+    {
+        C(sb, "[System.Serializable]");
+        C(sb, $"public sealed partial class {viewName} : global::Bindings.IView<{className}>");
+        C(sb, "{");
+
+        // ViewModel フィールド.
+        C(sb, "    [System.NonSerialized]");
+        C(sb, $"    private {className} _viewModel = null!;");
+        C(sb, "");
+
+        // [Schema] フィールドに対応する UI コンポーネントフィールド.
+        foreach (var schema in ctx.Schemas)
+        {
+            var (typeName, typeNs, propName) = ParseBindingPath(schema.bindingPath);
+            var fieldType = string.IsNullOrEmpty(typeNs)
+                ? typeName
+                : $"global::{typeNs}.{typeName}";
+            var viewFieldName = "_" + propName;
+
+            C(sb, "    [UnityEngine.SerializeField]");
+            C(sb, $"    private {fieldType} {viewFieldName} = null!;");
+            C(sb, "");
+        }
+
+        // [Schema] メソッドに対応する UI コンポーネントフィールド.
+        foreach (var schemaMethod in ctx.SchemaMethods)
+        {
+            var (typeName, typeNs, _) = ParseBindingPath(schemaMethod.bindingPath);
+            var fieldType = string.IsNullOrEmpty(typeNs)
+                ? typeName
+                : $"global::{typeNs}.{typeName}";
+            var viewFieldName = "_" + ToCamelCase(schemaMethod.methodName) + typeName;
+
+            C(sb, "    [UnityEngine.SerializeField]");
+            C(sb, $"    private {fieldType} {viewFieldName} = null!;");
+            C(sb, "");
+        }
+
+        // Initialize メソッド.
+        C(sb, $"    void global::Bindings.IView<{className}>.Initialize({className} viewModel)");
+        C(sb, "    {");
+        C(sb, "        _viewModel = viewModel;");
+        C(sb, "    }");
+        C(sb, "");
+
+        // BindAsync メソッド.
+        C(sb, "    global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global::System.Threading.CancellationToken _)");
+        C(sb, "    {");
+        C(sb, "        BindAll();");
+        C(sb, "        return default;");
+        C(sb, "    }");
+        C(sb, "");
+
+        // BindAll メソッド.
+        C(sb, "    private void BindAll()");
+        C(sb, "    {");
+
+        // フィールドスキーマのバインディング.
+        foreach (var schema in ctx.Schemas)
+        {
+            var (_, _, propName) = ParseBindingPath(schema.bindingPath);
+            var viewFieldName = "_" + propName;
+            var vmPropName = ToPropertyName(schema.memberName);
+            C(sb, $"        {viewFieldName}.SetValue(_viewModel.{vmPropName});");
+        }
+
+        // メソッドスキーマのバインディング (イベント).
+        foreach (var schemaMethod in ctx.SchemaMethods)
+        {
+            var (typeName, _, eventName) = ParseBindingPath(schemaMethod.bindingPath);
+            var viewFieldName = "_" + ToCamelCase(schemaMethod.methodName) + typeName;
+            C(sb, $"        {viewFieldName}.{eventName}.RemoveAllListeners();");
+            C(sb, $"        {viewFieldName}.{eventName}.AddListener(_viewModel.{schemaMethod.methodName});");
+        }
+
+        C(sb, "        OnPostBind();");
+        C(sb, "        _viewModel.NotifyCompletedBind();");
+        C(sb, "    }");
+        C(sb, "");
+
+        C(sb, "    partial void OnPostBind();");
+        C(sb, "}");
+    }
+
+    // -------------------------------------------------------------------------
+    // ヘルパーメソッド
+    // -------------------------------------------------------------------------
+
+    /// <summary>コメントアウトした行を StringBuilder に追加する.</summary>
+    private static void C(StringBuilder sb, string line)
+        => sb.AppendLine(line.Length > 0 ? $"// {line}" : "//");
+
+    /// <summary>
+    /// バインディングパスを解析して (typeName, typeNamespace, propertyName) を返す.
+    /// 例: "TMPro.TMP_Text.text" → ("TMP_Text", "TMPro", "text")
+    ///     "UnityEngine.UI.Button.onClick" → ("Button", "UnityEngine.UI", "onClick")
+    /// </summary>
+    private static (string typeName, string typeNs, string propertyName) ParseBindingPath(string bindingPath)
+    {
+        var parts = bindingPath.Split('.');
+        if (parts.Length < 2)
+            return (string.Empty, string.Empty, bindingPath);
+
+        var propertyName = parts[parts.Length - 1];
+        var typeName = parts[parts.Length - 2];
+        var ns = parts.Length > 2 ? string.Join(".", parts, 0, parts.Length - 2) : string.Empty;
+        return (typeName, ns, propertyName);
+    }
+
+    /// <summary>フィールド名をプロパティ名に変換する. 例: _count → Count</summary>
+    private static string ToPropertyName(string memberName)
+    {
+        var name = memberName.TrimStart('_');
+        if (name.Length == 0) return memberName;
+        return char.ToUpperInvariant(name[0]) + name.Substring(1);
+    }
+
+    /// <summary>コンストラクタ引数名を生成する. 例: _model → model</summary>
+    private static string ToParameterName(string memberName)
+    {
+        var name = memberName.TrimStart('_');
+        if (name.Length == 0) return memberName;
+        return char.ToLowerInvariant(name[0]) + name.Substring(1);
+    }
+
+    /// <summary>先頭文字を小文字に変換する. 例: Increment → increment</summary>
+    private static string ToCamelCase(string name)
+    {
+        if (name.Length == 0) return name;
+        return char.ToLowerInvariant(name[0]) + name.Substring(1);
     }
 }

@@ -19,20 +19,22 @@ public sealed class GenerationContext
 
     /// <summary>
     /// SchemaAttributeが付与されたフィールド変数 or プロパティの引数情報.
+    /// memberName はフィールド名またはプロパティ名、memberTypeFullName はその型のフルネーム.
     /// </summary>
-    public readonly (string bindingPath, int id, string format)[] Schemas;
+    public readonly (string bindingPath, int id, string format, string memberName, string memberTypeFullName)[] Schemas;
 
     /// <summary>
     /// SchemaAttributeが付与された関数の引数情報. Formatは不要なので除外で.
+    /// methodName はメソッド名.
     /// </summary>
-    public readonly (string bindingPath, int id)[] SchemaMethods;
+    public readonly (string bindingPath, int id, string methodName)[] SchemaMethods;
 
     public GenerationContext(
         bool requireBindImplementation,
         bool alreadySerializable,
         (string typeFullName, string name)[] models,
-        (string bindingPath, int id, string format)[] schemas,
-        (string bindingPath, int id)[] schemaMethods)
+        (string bindingPath, int id, string format, string memberName, string memberTypeFullName)[] schemas,
+        (string bindingPath, int id, string methodName)[] schemaMethods)
     {
         RequireBindImplementation = requireBindImplementation;
         AlreadySerializable = alreadySerializable;

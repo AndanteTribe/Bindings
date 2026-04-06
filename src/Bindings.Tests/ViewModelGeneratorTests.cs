@@ -135,6 +135,8 @@ public class PlainClass { }
 
         Assert.Single(ctx.Schemas);
         Assert.Equal("path/to/text", ctx.Schemas[0].bindingPath);
+        Assert.Equal("_value", ctx.Schemas[0].memberName);
+        Assert.Equal("int", ctx.Schemas[0].memberTypeFullName);
     }
 
     [Fact]
@@ -151,6 +153,7 @@ public class PlainClass { }
 
         Assert.Single(ctx.SchemaMethods);
         Assert.Equal("path/to/button", ctx.SchemaMethods[0].bindingPath);
+        Assert.Equal("OnClick", ctx.SchemaMethods[0].methodName);
     }
 
     [Fact]
@@ -181,5 +184,37 @@ public class PlainClass { }
         var ctx = ViewModelGenerator.BuildGenerationContext(classSymbol!);
 
         Assert.True(ctx.AlreadySerializable);
+    }
+
+    [Fact]
+    public void GeneratedFile_ContainsCommentedViewModelImplementation()
+    {
+        var driver = CreateDriver();
+        var compilation = CreateCompilation(SampleViewModelText);
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+        var generatedFile = runResult.GeneratedTrees.First(t => t.FilePath.EndsWith("TestViewModel.g.cs"));
+        var text = generatedFile.GetText().ToString();
+
+        // ViewModel 実装がコメントアウトで含まれていることを確認.
+        Assert.Contains("// public sealed partial class TestViewModel : global::Bindings.IViewModel", text);
+        Assert.Contains("//     public int Value", text);
+        Assert.Contains("//     public void NotifyCompletedBind() => OnPostBind();", text);
+    }
+
+    [Fact]
+    public void GeneratedFile_ContainsCommentedViewImplementation()
+    {
+        var driver = CreateDriver();
+        var compilation = CreateCompilation(SampleViewModelText);
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+        var generatedFile = runResult.GeneratedTrees.First(t => t.FilePath.EndsWith("TestViewModel.g.cs"));
+        var text = generatedFile.GetText().ToString();
+
+        // View 実装がコメントアウトで含まれていることを確認.
+        Assert.Contains("// public sealed partial class TestView : global::Bindings.IView<TestViewModel>", text);
+        Assert.Contains("//     private TestViewModel _viewModel = null!;", text);
+        Assert.Contains("//     private void BindAll()", text);
     }
 }
