@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace Bindings;
 
 /// <summary>
-/// [ViewModel] アノテーションが付与されたクラスを解析し、ViewModel と View の partial クラスを生成する
+/// [ViewModel] アノテーションが付与されたクラスまたは構造体を解析し、ViewModel と View の partial 型を生成する
 /// Roslyn IIncrementalGenerator.
 /// </summary>
 [Generator]
@@ -18,15 +18,15 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string ViewModelAttributeFullName = "Bindings.ViewModelAttribute";
     private const string ModelAttributeFullName = "Bindings.ModelAttribute";
     private const string SchemaAttributeFullName = "Bindings.SchemaAttribute";
-    private const string SerializableAttributeFullName = "System.SerializableAttribute";
+    private const string SerializableAttributeFullName = nameof(System.SerializableAttribute);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // [ViewModel] が付与されたクラスを効率的に抽出する
+        // [ViewModel] が付与されたクラスまたは構造体を効率的に抽出する
         var viewModelClasses = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 ViewModelAttributeFullName,
-                predicate: static (node, _) => node is ClassDeclarationSyntax,
+                predicate: static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax,
                 transform: static (ctx, ct) => CollectGenerationContext(ctx, ct));
 
         // 収集したメタデータをコメントアウトした形式で出力（検証用）
@@ -36,13 +36,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// [ViewModel] クラスのシンボルから必要なメタデータをすべて収集する.
+    /// [ViewModel] クラスまたは構造体のシンボルから必要なメタデータをすべて収集する.
     /// </summary>
     private static GenerationContext CollectGenerationContext(
         GeneratorAttributeSyntaxContext ctx,
         CancellationToken ct)
     {
-        var classSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
+        var typeSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
+        var isStruct = typeSymbol.TypeKind == TypeKind.Struct;
 
         // 1. [ViewModel] 属性の引数 (requireBindImplementation)
         var viewModelAttr = ctx.Attributes[0];
@@ -51,9 +52,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // 2. クラス自体に [System.Serializable] が既に付与されているか確認
         var alreadySerializable = false;
-        foreach (var attr in classSymbol.GetAttributes())
+        foreach (var attr in typeSymbol.GetAttributes())
         {
-            if (attr.AttributeClass?.ToDisplayString() == SerializableAttributeFullName)
+            if (attr.AttributeClass?.Name == SerializableAttributeFullName)
             {
                 alreadySerializable = true;
                 break;
@@ -61,16 +62,16 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         }
 
         // 3. 名前空間（グローバル名前空間の場合は空文字列）
-        var ns = classSymbol.ContainingNamespace.IsGlobalNamespace
+        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
             ? string.Empty
-            : classSymbol.ContainingNamespace.ToDisplayString();
+            : typeSymbol.ContainingNamespace.ToDisplayString();
 
         // 4. メンバーを走査して [Model] / [Schema] 情報を収集
         var models = new List<(string TypeFullName, string FieldName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)>();
         var schemaMethods = new List<(string MethodName, string BindingPath, int Id)>();
 
-        foreach (var member in classSymbol.GetMembers())
+        foreach (var member in typeSymbol.GetMembers())
         {
             ct.ThrowIfCancellationRequested();
 
@@ -141,8 +142,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         }
 
         return new GenerationContext(
-            className: classSymbol.Name,
+            className: typeSymbol.Name,
             @namespace: ns,
+            isStruct: isStruct,
             requireBindImplementation: requireBind,
             alreadySerializable: alreadySerializable,
             models: models.ToArray(),
@@ -209,6 +211,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         sb.AppendLine("// *** Collected metadata (commented-out dump for verification) ***");
         sb.AppendLine($"// Namespace          : {data.Namespace}");
         sb.AppendLine($"// ClassName          : {data.ClassName}");
+        sb.AppendLine($"// IsStruct           : {data.IsStruct}");
         sb.AppendLine($"// RequireBind        : {data.RequireBindImplementation}");
         sb.AppendLine($"// AlreadySerializable: {data.AlreadySerializable}");
 

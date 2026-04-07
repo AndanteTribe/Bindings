@@ -13,6 +13,11 @@ public sealed class GenerationContext
     public readonly string Namespace;
 
     /// <summary>
+    /// 対象が構造体かどうか. false の場合はクラス.
+    /// </summary>
+    public readonly bool IsStruct;
+
+    /// <summary>
     /// ViewModelAttributeの引数.
     /// </summary>
     public readonly bool RequireBindImplementation;
@@ -44,6 +49,7 @@ public sealed class GenerationContext
     public GenerationContext(
         string className,
         string @namespace,
+        bool isStruct,
         bool requireBindImplementation,
         bool alreadySerializable,
         (string TypeFullName, string FieldName)[] models,
@@ -52,6 +58,7 @@ public sealed class GenerationContext
     {
         ClassName = className;
         Namespace = @namespace;
+        IsStruct = isStruct;
         RequireBindImplementation = requireBindImplementation;
         AlreadySerializable = alreadySerializable;
         Models = models;
