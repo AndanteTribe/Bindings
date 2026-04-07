@@ -3,52 +3,52 @@
 public sealed class GenerationContext
 {
     /// <summary>
-    /// 対象クラスのクラス名.
+    /// Class name of the target type.
     /// </summary>
     public readonly string ClassName;
 
     /// <summary>
-    /// 対象クラスの名前空間. グローバル名前空間の場合は空文字列.
+    /// Namespace of the target type. Empty string when the type is in the global namespace.
     /// </summary>
     public readonly string Namespace;
 
     /// <summary>
-    /// 対象が構造体かどうか. false の場合はクラス.
+    /// Whether the target is a struct. When false, the target is a class.
     /// </summary>
     public readonly bool IsStruct;
 
     /// <summary>
-    /// 対象が readonly 修飾子を持つ構造体かどうか.
-    /// true の場合、[Schema] フィールドの公開プロパティには set アクセサを生成しない.
+    /// Whether the target is a struct with the readonly modifier.
+    /// When true, no set accessor is generated for [Schema] field properties.
     /// </summary>
     public readonly bool IsReadOnly;
 
     /// <summary>
-    /// ViewModelAttributeの引数.
+    /// Argument of ViewModelAttribute (requireBindImplementation).
     /// </summary>
     public readonly bool RequireBindImplementation;
 
     /// <summary>
-    /// すでに<see cref="System.SerializableAttribute"/>を付与されているかどうか.
+    /// Whether <see cref="System.SerializableAttribute"/> is already applied to the type.
     /// </summary>
     public readonly bool AlreadySerializable;
 
     /// <summary>
-    /// ModelAttributeが付与されたフィールド変数 or プロパティの型のフルネームと変数名（またはプロパティ名）.
-    /// 宣言順.
+    /// Fully-qualified type name and field name (or property name) of each field/property
+    /// annotated with ModelAttribute, in declaration order.
     /// </summary>
     public readonly (string TypeFullName, string FieldName)[] Models;
 
     /// <summary>
-    /// SchemaAttributeが付与されたフィールド変数 or プロパティごとの引数情報.
-    /// 同一メンバーに複数の[Schema]が付与された場合は複数エントリになる. 宣言順.
+    /// Attribute arguments for each field/property annotated with SchemaAttribute, in declaration order.
+    /// Multiple entries are created when multiple [Schema] attributes are applied to the same member.
     /// </summary>
     public readonly (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)[] SchemaFields;
 
     /// <summary>
-    /// SchemaAttributeが付与されたメソッドごとの引数情報.
-    /// 同一メソッドに複数の[Schema]が付与された場合は複数エントリになる. 宣言順.
-    /// Format は不要なので除外.
+    /// Attribute arguments for each method annotated with SchemaAttribute, in declaration order.
+    /// Multiple entries are created when multiple [Schema] attributes are applied to the same method.
+    /// Format is omitted because it is not needed for methods.
     /// </summary>
     public readonly (string MethodName, string BindingPath, int Id)[] SchemaMethods;
 

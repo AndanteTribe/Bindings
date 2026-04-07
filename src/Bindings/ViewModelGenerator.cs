@@ -9,8 +9,8 @@ using Microsoft.CodeAnalysis.Text;
 namespace Bindings;
 
 /// <summary>
-/// [ViewModel] アノテーションが付与されたクラスまたは構造体を解析し、ViewModel と View の partial 型を生成する
-/// Roslyn IIncrementalGenerator.
+/// Roslyn IIncrementalGenerator that analyzes classes and structs annotated with [ViewModel]
+/// and emits partial ViewModel and sealed partial View types.
 /// </summary>
 [Generator]
 public sealed class ViewModelGenerator : IIncrementalGenerator
@@ -22,14 +22,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // [ViewModel] が付与されたクラスまたは構造体を効率的に抽出する
+        // Efficiently find all classes/structs annotated with [ViewModel]
         var viewModelTypes = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 ViewModelAttributeFullName,
                 predicate: static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax,
                 transform: static (ctx, ct) => CollectGenerationContext(ctx, ct));
 
-        // ViewModel の partial 型と View の sealed partial 型を生成する
+        // Generate partial ViewModel type and sealed partial View type for each annotated type
         context.RegisterSourceOutput(
             viewModelTypes,
             static (ctx, data) =>
@@ -40,7 +40,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// [ViewModel] クラスまたは構造体のシンボルから必要なメタデータをすべて収集する.
+    /// Collects all required metadata from the symbol of a [ViewModel] class or struct.
     /// </summary>
     private static GenerationContext CollectGenerationContext(
         GeneratorAttributeSyntaxContext ctx,
@@ -49,12 +49,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var typeSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
         var isStruct = typeSymbol.TypeKind == TypeKind.Struct;
 
-        // 1. [ViewModel] 属性の引数 (requireBindImplementation)
+        // 1. Extract [ViewModel] attribute argument (requireBindImplementation)
         var viewModelAttr = ctx.Attributes[0];
         var requireBind = viewModelAttr.ConstructorArguments.Length > 0
                           && viewModelAttr.ConstructorArguments[0].Value is true;
 
-        // 2. クラス自体に [System.Serializable] が既に付与されているか確認
+        // 2. Check whether [System.Serializable] is already applied to the type
         var alreadySerializable = false;
         foreach (var attr in typeSymbol.GetAttributes())
         {
@@ -65,12 +65,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             }
         }
 
-        // 3. 名前空間（グローバル名前空間の場合は空文字列）
+        // 3. Namespace (empty string when the type is in the global namespace)
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
             ? string.Empty
             : typeSymbol.ContainingNamespace.ToDisplayString();
 
-        // 4. メンバーを走査して [Model] / [Schema] 情報を収集
+        // 4. Walk members to collect [Model] / [Schema] information
         var models = new List<(string TypeFullName, string FieldName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)>();
         var schemaMethods = new List<(string MethodName, string BindingPath, int Id)>();
@@ -158,25 +158,26 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// SchemaAttribute の ConstructorArguments から bindingPath 文字列を取得する.
+    /// Retrieves the binding path string from SchemaAttribute's ConstructorArguments.
     ///
-    /// string オーバーロード: ConstructorArguments[0] が直接バインディングパス文字列.
-    /// object オーバーロード: CallerArgumentExpression により ConstructorArguments[3] に
-    ///   生の式文字列（例: "PathResolver.TMPro.TMP_Text.text"）が入る. "Resolver." 以降を取り出す.
+    /// String overload: ConstructorArguments[0] holds the binding path string directly.
+    /// Object overload: CallerArgumentExpression places the raw expression string (e.g.
+    ///   "PathResolver.TMPro.TMP_Text.text") in ConstructorArguments[3]; the substring
+    ///   after "Resolver." is extracted.
     ///
-    /// PathResolver の定数 (const string) を使う場合は string オーバーロードが呼ばれるため、
-    /// 通常は ConstructorArguments[0] の分岐で取得できる.
+    /// PathResolver constants (const string) always invoke the string overload, so
+    /// ConstructorArguments[0] is the common path.
     /// </summary>
     private static string GetBindingPath(AttributeData attr)
     {
         if (attr.ConstructorArguments.Length == 0) return string.Empty;
 
-        // string オーバーロード: 第1引数がバインディングパス文字列
+        // String overload: first argument is the binding path string
         var firstArg = attr.ConstructorArguments[0];
         if (firstArg.Kind == TypedConstantKind.Primitive && firstArg.Value is string path)
             return path;
 
-        // object オーバーロード: CallerArgumentExpression が第4引数 (index 3) に入る
+        // Object overload: CallerArgumentExpression places the raw expression in the fourth argument (index 3)
         if (attr.ConstructorArguments.Length > 3 && attr.ConstructorArguments[3].Value is string rawExpr)
         {
             const string keyword = "Resolver.";
@@ -188,8 +189,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// SchemaAttribute の ConstructorArguments から id を取得する.
-    /// 指定がない場合は -1 (未指定センチネル) を返す.
+    /// Retrieves the id value from SchemaAttribute's ConstructorArguments.
+    /// Returns -1 (unset sentinel) when no id is specified.
     /// </summary>
     private static int GetSchemaId(AttributeData attr)
         => attr.ConstructorArguments.Length > 1 && attr.ConstructorArguments[1].Value is int id
@@ -197,8 +198,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             : -1;
 
     /// <summary>
-    /// SchemaAttribute の ConstructorArguments から format 文字列を取得する.
-    /// 指定がない場合は空文字列を返す.
+    /// Retrieves the format string from SchemaAttribute's ConstructorArguments.
+    /// Returns an empty string when no format is specified.
     /// </summary>
     private static string GetSchemaFormat(AttributeData attr)
         => attr.ConstructorArguments.Length > 2 && attr.ConstructorArguments[2].Value is string fmt
@@ -206,13 +207,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             : string.Empty;
 
     // -------------------------------------------------------------------------
-    // 識別子変換ヘルパー
+    // Identifier conversion helpers
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// CommunityToolkit ObservableProperty 規則に従ってフィールド名を正規化する.
-    /// 1. 先頭の '_' をすべて除去 (TrimStart)
-    /// 2. 結果が 'm_' で始まる場合はその 'm_' を除去
+    /// Normalizes a field name following the CommunityToolkit ObservableProperty convention.
+    /// 1. Trim all leading '_' characters.
+    /// 2. If the result starts with "m_", remove that prefix.
     /// </summary>
     private static string NormalizeFieldIdentifier(string fieldName)
     {
@@ -223,8 +224,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// フィールド名から ViewModel プロパティ名を生成する（正規化後の先頭を大文字化）.
-    /// 例: _count → Count, m_Count → Count, _interactable → Interactable
+    /// Generates a ViewModel property name from a field name (capitalizes the first letter after normalization).
+    /// e.g. _count → Count, m_Count → Count, _interactable → Interactable
     /// </summary>
     private static string ToPropertyName(string fieldName)
     {
@@ -234,8 +235,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// フィールド名からコンストラクタ引数名を生成する（正規化後の先頭を小文字化）.
-    /// 例: _model → model, _model2 → model2, m_Model → model
+    /// Generates a constructor parameter name from a field name (lowercases the first letter after normalization).
+    /// e.g. _model → model, _model2 → model2, m_Model → model
     /// </summary>
     private static string ToParamName(string fieldName)
     {
@@ -245,8 +246,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// バインディングパスを最後の '.' で分割し、型部分とメンバ名を返す.
-    /// 例: "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
+    /// Splits a binding path at the last '.' and returns the type part and member name.
+    /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
     /// </summary>
     private static (string TypePart, string MemberName) SplitBindingPath(string path)
     {
@@ -256,9 +257,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// バインディングパスの型部分から View フィールドのベース名（小文字始まり）を返す.
-    /// 例: "TMPro.TMP_Text" → "text", "UnityEngine.UI.Button" → "button"
-    /// アルゴリズム: クラス名の最後の '_' より後ろ → 先頭を小文字化
+    /// Returns the lowercase-first base name for a View field derived from the type part of a binding path.
+    /// e.g. "TMPro.TMP_Text" → "text", "UnityEngine.UI.Button" → "button"
+    /// Algorithm: extract class name (text after last '.'), then take the substring after the last '_'
+    /// (falls back to the full class name when no '_' exists or when the substring after '_' is empty),
+    /// then lowercase the first letter.
     /// </summary>
     private static string TypePartToFieldBase(string typePart)
     {
@@ -271,7 +274,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// ViewModel の global:: 付き完全修飾型名を返す.
+    /// Returns the fully-qualified type name of the ViewModel with the global:: prefix.
     /// </summary>
     private static string GetViewModelFullName(GenerationContext data) =>
         string.IsNullOrEmpty(data.Namespace)
@@ -279,26 +282,26 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             : $"global::{data.Namespace}.{data.ClassName}";
 
     // -------------------------------------------------------------------------
-    // View コンポーネントフィールド割り当て
+    // View component field assignment
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// 各スキーマエントリ（SchemaField / SchemaMethod）に View コンポーネントフィールド名を割り当てる.
+    /// Assigns a View component field name to each schema entry (SchemaField / SchemaMethod).
     ///
-    /// 割り当てルール（同一型部分のスキーマをグループ化して判定）:
-    ///   ケース A — 全エントリが id=-1（未指定）
-    ///     1つのみ: _{base}（連番なし）
-    ///     複数:    _{base}1, _{base}2, ...（出現順に 1 から連番）
-    ///   ケース B — 全エントリが id≥0（明示的 id）
-    ///     各エントリ: _{base}{id}（同一 id のエントリは同一フィールドを共有）
-    ///   ケース C — id=-1 と id≥0 が混在
-    ///     id≥0:  _{base}{id}
-    ///     id=-1: 明示的 id と衝突しない最小正整数を出現順に割り当て
+    /// Assignment rules (entries are grouped by their type part):
+    ///   Case A — all entries have id=-1 (unset)
+    ///     single entry : _{base} (no number suffix)
+    ///     multiple     : _{base}1, _{base}2, ... (numbered from 1 in appearance order)
+    ///   Case B — all entries have id>=0 (explicit id)
+    ///     each entry   : _{base}{id} (entries with the same id share one field)
+    ///   Case C — mixed id=-1 and id>=0
+    ///     id>=0  : _{base}{id}
+    ///     id=-1  : assigned the smallest positive integer that does not conflict with any explicit id
     ///
-    /// 返値:
-    ///   FieldAssignments[i]  — SchemaFields[i] に対応する View フィールド名
-    ///   MethodAssignments[i] — SchemaMethods[i] に対応する View フィールド名
-    ///   OrderedFields        — View に宣言するフィールドの (TypePart, FieldName) リスト（初出順・重複なし）
+    /// Return values:
+    ///   FieldAssignments[i]  — View field name corresponding to SchemaFields[i]
+    ///   MethodAssignments[i] — View field name corresponding to SchemaMethods[i]
+    ///   OrderedFields        — (TypePart, FieldName) list of fields to declare in the View (deduplicated, initial-appearance order)
     /// </summary>
     private static (
         string[] FieldAssignments,
@@ -312,7 +315,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var fieldAssignments = new string[fieldCount];
         var methodAssignments = new string[methodCount];
 
-        // 各スキーマエントリの型部分を事前計算
+        // Pre-compute the type part for each schema entry
         var fieldTypeParts = new string[fieldCount];
         var methodTypeParts = new string[methodCount];
         for (var i = 0; i < fieldCount; i++)
@@ -320,7 +323,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         for (var i = 0; i < methodCount; i++)
             (methodTypeParts[i], _) = SplitBindingPath(data.SchemaMethods[i].BindingPath);
 
-        // 初出順で型部分のリストを作成（フィールド → メソッドの順）
+        // Build an ordered list of unique type parts (fields first, then methods)
         var typePartSet = new HashSet<string>();
         var typePartOrder = new List<string>();
         for (var i = 0; i < fieldCount; i++)
@@ -328,12 +331,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         for (var i = 0; i < methodCount; i++)
             if (typePartSet.Add(methodTypeParts[i])) typePartOrder.Add(methodTypeParts[i]);
 
-        // 型部分ごとにフィールド名を決定
+        // Determine field names for each type part
         foreach (var typePart in typePartOrder)
         {
             var fieldBase = TypePartToFieldBase(typePart);
 
-            // この型部分に属するエントリを収集（フィールド → メソッドの出現順）
+            // Collect entries belonging to this type part (fields first, then methods, in appearance order)
             var entries = new List<(bool IsMethod, int Index, int Id)>();
             for (var i = 0; i < fieldCount; i++)
                 if (fieldTypeParts[i] == typePart)
@@ -342,7 +345,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 if (methodTypeParts[i] == typePart)
                     entries.Add((true, i, data.SchemaMethods[i].Id));
 
-            // ケース判定
+            // Determine which cases apply
             var hasExplicit = false;
             var hasUnset = false;
             foreach (var (_, _, id) in entries)
@@ -353,28 +356,28 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
             if (!hasExplicit)
             {
-                // ケース A: 全 id=-1
+                // Case A: all id=-1
                 if (entries.Count == 1)
                 {
-                    // 1つのみ → 連番なし
+                    // Single entry: no number suffix
                     Assign(entries[0], $"_{fieldBase}", fieldAssignments, methodAssignments);
                 }
                 else
                 {
-                    // 複数 → 1 から連番
+                    // Multiple entries: number from 1
                     for (var i = 0; i < entries.Count; i++)
                         Assign(entries[i], $"_{fieldBase}{i + 1}", fieldAssignments, methodAssignments);
                 }
             }
             else if (!hasUnset)
             {
-                // ケース B: 全 id≥0 → _{base}{id}（同一 id はフィールドを共有）
+                // Case B: all id>=0 → _{base}{id} (entries with the same id share one field)
                 foreach (var entry in entries)
                     Assign(entry, $"_{fieldBase}{entry.Id}", fieldAssignments, methodAssignments);
             }
             else
             {
-                // ケース C: 混在 — まず明示的 id を割り当て、次に未指定 id に空き番を割り当て
+                // Case C: mixed — first assign explicit ids, then assign available numbers to unset ids
                 var usedIds = new HashSet<int>();
                 foreach (var (_, _, id) in entries)
                     if (id >= 0) usedIds.Add(id);
@@ -397,7 +400,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             }
         }
 
-        // 宣言フィールドリストを構築（初出順・重複なし）
+        // Build the ordered field declaration list (deduplicated, initial-appearance order)
         var seenNames = new HashSet<string>();
         var orderedFields = new List<(string TypePart, string FieldName)>();
         for (var i = 0; i < fieldCount; i++)
@@ -421,29 +424,29 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     // -------------------------------------------------------------------------
-    // ViewModel partial 生成 → {ClassName}.g.cs
+    // ViewModel partial generation → {ClassName}.g.cs
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// ViewModel の partial クラスまたは構造体を生成する.
+    /// Generates the partial class or struct for the ViewModel.
     ///
-    /// 生成内容:
-    ///   - [global::System.Serializable]（ユーザーが未付与の場合のみ）
-    ///   - IViewModel 実装
-    ///   - _publisher フィールド
-    ///   - [Schema] フィールドごとの公開プロパティ（宣言順）
-    ///   - コンストラクタ（[Model] フィールド順 → publisher）
-    ///   - NotifyCompletedBind / OnPostBind / PublishRebindMessage
+    /// Generated contents:
+    ///   - [global::System.Serializable] (only when not already applied by the user)
+    ///   - IViewModel implementation
+    ///   - _publisher field
+    ///   - One public property per [Schema] field (in declaration order)
+    ///   - Constructor ([Model] fields in declaration order, then publisher)
+    ///   - NotifyCompletedBind / OnPostBind / PublishRebindMessage helpers
     /// </summary>
     private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext data)
     {
         var typeKw = data.IsStruct ? "struct" : "class";
         var hasNs = !string.IsNullOrEmpty(data.Namespace);
-        // インデント（名前空間ブロックがある場合は 1 段深くなる）
-        var i1 = hasNs ? "    " : "";        // クラスレベル
-        var i2 = i1 + "    ";               // メンバーレベル
-        var i3 = i2 + "    ";               // メソッドボディ
-        var i4 = i3 + "    ";               // ネストされたブロック
+        // Indentation depth: one extra level when inside a namespace block
+        var i1 = hasNs ? "    " : "";        // class level
+        var i2 = i1 + "    ";               // member level
+        var i3 = i2 + "    ";               // method body
+        var i4 = i3 + "    ";               // nested block
 
         var sb = new StringBuilder();
         sb.AppendLine("#nullable enable");
@@ -455,17 +458,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             sb.AppendLine("{");
         }
 
-        // [Serializable] はユーザーが未付与の場合のみ生成
+        // Emit [Serializable] only when the user has not already applied it
         if (!data.AlreadySerializable)
             sb.AppendLine($"{i1}[global::System.Serializable]");
 
         sb.AppendLine($"{i1}public partial {typeKw} {data.ClassName} : global::Bindings.IViewModel");
         sb.AppendLine($"{i1}{{");
 
-        // _publisher フィールド
+        // _publisher field
         sb.AppendLine($"{i2}private readonly global::Bindings.IMvvmPublisher _publisher;");
 
-        // [Schema] フィールドごとの公開プロパティ（宣言順）
+        // One public property per [Schema] field (in declaration order)
         foreach (var (fieldName, fieldTypeName, _, _, _) in data.SchemaFields)
         {
             var propName = ToPropertyName(fieldName);
@@ -473,7 +476,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             sb.AppendLine($"{i2}public {fieldTypeName} {propName}");
             sb.AppendLine($"{i2}{{");
             sb.AppendLine($"{i3}get => {fieldName};");
-            // readonly struct にはフィールドへの書き込みが不可のため set アクセサを生成しない
+            // readonly struct: writing to fields is not allowed, so no set accessor is generated
             if (!data.IsReadOnly)
             {
                 sb.AppendLine($"{i3}set");
@@ -485,7 +488,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             sb.AppendLine($"{i2}}}");
         }
 
-        // コンストラクタ: [Model] フィールド順 → publisher
+        // Constructor: [Model] fields in declaration order, then publisher
         sb.AppendLine();
         var ctorParams = new List<string>();
         var ctorBodyLines = new List<string>();
@@ -504,7 +507,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         sb.AppendLine($"{i3}_publisher = publisher;");
         sb.AppendLine($"{i2}}}");
 
-        // ヘルパーメソッド
+        // Helper methods
         sb.AppendLine();
         sb.AppendLine($"{i2}public void NotifyCompletedBind() => OnPostBind();");
         sb.AppendLine();
@@ -513,7 +516,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         sb.AppendLine($"{i2}[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
         sb.AppendLine($"{i2}private void PublishRebindMessage()");
         sb.AppendLine($"{i2}{{");
-        // global:: 付き完全修飾型名を使用（ユーザー定義型との衝突を避けるため）
+        // Use global::-prefixed fully-qualified type name to avoid conflicts with user-defined types
         sb.AppendLine($"{i3}_publisher.PublishRebindMessage<{GetViewModelFullName(data)}>();");
         sb.AppendLine($"{i2}}}");
 
@@ -524,25 +527,25 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     // -------------------------------------------------------------------------
-    // View sealed partial 生成 → {ViewClassName}.g.cs
+    // View sealed partial generation → {ViewClassName}.g.cs
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// View の sealed partial クラスを生成する.
-    /// クラス名に "ViewModel" が含まれない場合（BND001）は生成をスキップする.
+    /// Generates the sealed partial class for the View.
+    /// Skips generation when the class name does not contain "ViewModel" (BND001).
     ///
-    /// 生成内容:
-    ///   - [global::System.Serializable]（常に付与）
-    ///   - IView&lt;T&gt; 実装（_viewModel フィールド・Initialize）
-    ///   - UI コンポーネントフィールド（スキーマから導出・重複排除）
-    ///   - BindAsync（requireBindImplementation=false の場合のみ）
-    ///   - BindAll（フィールドバインド → イベントバインド → OnPostBind → NotifyCompletedBind）
+    /// Generated contents:
+    ///   - [global::System.Serializable] (always emitted)
+    ///   - IView&lt;T&gt; implementation (_viewModel field, Initialize)
+    ///   - UI component fields derived from schema entries (deduplicated)
+    ///   - BindAsync (only when requireBindImplementation=false)
+    ///   - BindAll (field bindings → event bindings → OnPostBind → NotifyCompletedBind)
     ///   - partial void OnPostBind
-    ///   - デバッグ用サブスクライバ（#if UNITY_EDITOR || ... ブロック）
+    ///   - Debug subscriber block (#if UNITY_EDITOR || ... )
     /// </summary>
     private static void EmitViewSource(SourceProductionContext ctx, GenerationContext data)
     {
-        // BND001: クラス名に "ViewModel" が含まれない場合はスキップ（View クラス名を導出できない）
+        // BND001: skip generation when the class name does not contain "ViewModel" (View class name cannot be derived)
         if (!data.ClassName.Contains("ViewModel"))
             return;
 
@@ -565,17 +568,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             sb.AppendLine("{");
         }
 
-        // View クラス宣言（常に [Serializable] を付与）
+        // View class declaration ([Serializable] is always emitted)
         sb.AppendLine($"{i1}[global::System.Serializable]");
         sb.AppendLine($"{i1}public sealed partial class {viewClassName} : global::Bindings.IView<{vmFullName}>");
         sb.AppendLine($"{i1}{{");
 
-        // _viewModel フィールド（クラスは null! で初期化、構造体は値型のため初期化子なし）
+        // _viewModel field (classes use null! initializer; structs are value types so no initializer is needed)
         var vmFieldInit = data.IsStruct ? string.Empty : " = null!";
         sb.AppendLine($"{i2}[global::System.NonSerialized]");
         sb.AppendLine($"{i2}private {vmFullName} _viewModel{vmFieldInit};");
 
-        // UI コンポーネントフィールド（初出順・重複なし）
+        // UI component fields (deduplicated, initial-appearance order)
         foreach (var (typePart, fieldName) in orderedFields)
         {
             sb.AppendLine();
@@ -583,14 +586,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             sb.AppendLine($"{i2}private global::{typePart} {fieldName} = null!;");
         }
 
-        // Initialize（明示的インターフェース実装）
+        // Initialize (explicit interface implementation)
         sb.AppendLine();
         sb.AppendLine($"{i2}void global::Bindings.IView<{vmFullName}>.Initialize({vmFullName} viewModel)");
         sb.AppendLine($"{i2}{{");
         sb.AppendLine($"{i3}_viewModel = viewModel;");
         sb.AppendLine($"{i2}}}");
 
-        // BindAsync（requireBindImplementation=false の場合のみ生成）
+        // BindAsync (only emitted when requireBindImplementation=false)
         if (!data.RequireBindImplementation)
         {
             sb.AppendLine();
@@ -601,7 +604,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             sb.AppendLine($"{i2}}}");
         }
 
-        // BindAll: フィールドバインド（宣言順）→ イベントバインド（宣言順）
+        // BindAll: field bindings (declaration order) → event bindings (declaration order)
         sb.AppendLine();
         sb.AppendLine($"{i2}private void BindAll()");
         sb.AppendLine($"{i2}{{");
@@ -615,7 +618,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         sb.AppendLine($"{i2}partial void OnPostBind();");
         sb.AppendLine($"{i1}}}"); // end View class
 
-        // デバッグ用サブスクライバブロック（フィールドバインドのみ再実行）
+        // Debug subscriber block (re-runs field bindings only)
         sb.AppendLine();
         sb.AppendLine("#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT");
         sb.AppendLine($"{i1}public sealed partial class {viewClassName} : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>");
@@ -623,7 +626,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         sb.AppendLine($"{i2}void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)");
         sb.AppendLine($"{i2}{{");
         sb.AppendLine($"{i3}message.BindTo(this);");
-        AppendFieldBindings(sb, i3, data.SchemaFields, fieldAssignments); // フィールドバインドのみ
+        AppendFieldBindings(sb, i3, data.SchemaFields, fieldAssignments); // field bindings only
         sb.AppendLine($"{i3}OnPostBind();");
         sb.AppendLine($"{i3}_viewModel.NotifyCompletedBind();");
         sb.AppendLine($"{i2}}}");
@@ -636,16 +639,16 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     // -------------------------------------------------------------------------
-    // BindAll 内コード生成ヘルパー
+    // BindAll code-generation helpers
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// [Schema] フィールドのバインドコードを生成する.
+    /// Generates field binding code for [Schema] fields.
     ///
-    /// バインドルール:
-    ///   - "TMPro.TMP_Text.text" かつ format なし → SetValue(_field, _viewModel.Prop)
-    ///   - "TMPro.TMP_Text.text" かつ format あり → SetValue(_field, _viewModel.Prop, "fmt")
-    ///   - それ以外すべて                         → _field.member = _viewModel.Prop
+    /// Binding rules:
+    ///   - "TMPro.TMP_Text.text" with no format    → SetValue(_field, _viewModel.Prop)
+    ///   - "TMPro.TMP_Text.text" with format       → SetValue(_field, _viewModel.Prop, "fmt")
+    ///   - all other paths                         → _field.member = _viewModel.Prop
     /// </summary>
     private static void AppendFieldBindings(
         StringBuilder sb,
@@ -661,7 +664,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
             if (bindingPath == "TMPro.TMP_Text.text")
             {
-                // TMPro.TMP_Text.text のみ SetValue 拡張メソッドを使用
+                // Only TMPro.TMP_Text.text uses the SetValue extension method
                 if (string.IsNullOrEmpty(format))
                     sb.AppendLine($"{indent}global::Bindings.TextMeshProExtensions.SetValue({viewField}, _viewModel.{propName});");
                 else
@@ -669,7 +672,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             }
             else
             {
-                // その他すべては直接代入
+                // All other paths use direct assignment
                 var (_, memberName) = SplitBindingPath(bindingPath);
                 sb.AppendLine($"{indent}{viewField}.{memberName} = _viewModel.{propName};");
             }
@@ -677,9 +680,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
-    /// [Schema] メソッドのイベントバインドコードを生成する.
-    /// 同一 (フィールド名, イベント名) グループの先頭で RemoveAllListeners を1回だけ呼ぶ.
-    /// グループの順序は初出順に従う.
+    /// Generates event binding code for [Schema] methods.
+    /// RemoveAllListeners is called once per (viewField, eventName) group, followed by all AddListener calls.
+    /// Groups are processed in initial-appearance order.
     /// </summary>
     private static void AppendMethodBindings(
         StringBuilder sb,
@@ -687,7 +690,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         (string MethodName, string BindingPath, int Id)[] schemaMethods,
         string[] methodAssignments)
     {
-        // (viewFieldName, memberName) をキーにグループ化（初出順）
+        // Group by (viewFieldName, memberName) in initial-appearance order
         var groupOrder = new List<(string ViewField, string MemberName)>();
         var groups = new Dictionary<(string, string), List<string>>();
 
@@ -709,7 +712,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         foreach (var key in groupOrder)
         {
             var (viewField, memberName) = key;
-            // RemoveAllListeners は同一グループで1回のみ
+            // RemoveAllListeners is called only once per group
             sb.AppendLine($"{indent}{viewField}.{memberName}.RemoveAllListeners();");
             foreach (var methodName in groups[key])
                 sb.AppendLine($"{indent}{viewField}.{memberName}.AddListener(_viewModel.{methodName});");
