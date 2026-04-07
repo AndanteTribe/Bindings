@@ -125,7 +125,7 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 ## 4. 生成ルール：ViewModel (`{ClassName}.g.cs`)
 
-### 4.1 クラス宣言
+### 4.1 クラス/構造体宣言
 
 ```csharp
 #nullable enable
@@ -133,9 +133,13 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 namespace {Namespace}
 {
     [global::System.Serializable]          // ※ユーザーが既に [System.Serializable] を付与している場合は省略
-    public partial class {ClassName} : global::Bindings.IViewModel
+    public partial class {ClassName} : global::Bindings.IViewModel    // クラスの場合
+    // public partial struct {ClassName} : global::Bindings.IViewModel  // 通常 struct の場合
+    // public partial struct {ClassName} : global::Bindings.IViewModel  // readonly struct の場合
     {
 ```
+
+> **注意:** 対象が `readonly struct` の場合でも `struct` キーワードのみを使用する（`readonly` は不要）。ユーザーが記述した `readonly` 修飾子は partial 側で保持される。
 
 ### 4.2 自動生成フィールド
 
@@ -144,6 +148,8 @@ private readonly global::Bindings.IMvvmPublisher _publisher;
 ```
 
 ### 4.3 公開プロパティ（`[Schema]` フィールドごと、宣言順）
+
+**通常のクラスまたは通常の struct の場合** (`get` + `set`):
 
 ```csharp
 public {FieldType} {PropertyName}
@@ -154,6 +160,17 @@ public {FieldType} {PropertyName}
         {fieldName} = value;
         PublishRebindMessage();
     }
+}
+```
+
+**`readonly struct` の場合** (`get` のみ):
+
+`readonly struct` ではフィールドへの書き込みができないため、`set` アクセサを生成しない。
+
+```csharp
+public {FieldType} {PropertyName}
+{
+    get => {fieldName};
 }
 ```
 
@@ -256,6 +273,10 @@ private global::{Namespace}.{ClassName} _viewModel = null!;
 
 `id` のデフォルト値は `-1`（未指定）。ユーザーが `id ≥ 0` を指定した場合は明示的 id。同一コンポーネント型（型部分が同じ）のスキーマをグループ化し、以下の3ケースで処理する。
 
+> **id 共有の原則（非 -1 の場合）:** `[Schema]` フィールドと `[Schema]` メソッドが同じ型部分かつ同じ `id ≥ 0` を持つ場合、View 内で同一コンポーネントフィールドを共有する。例えば、フィールド `[Schema("Button.interactable", id: 1)]` とメソッド `[Schema("Button.onClick", id: 1)]` は両方とも `_button1` を参照する。
+
+> **id=-1 の場合:** 各エントリは独立して扱われる（他の id=-1 エントリとの共有はない）。同一型内でそれぞれ別のフィールドに割り当てられる。
+
 **ケース A: 同一型のスキーマがすべて id=-1（明示的 id なし）**
 
 | 同一型の総スキーマ数 | フィールド名 |
@@ -267,21 +288,25 @@ private global::{Namespace}.{ClassName} _viewModel = null!;
 // ケース A-1: テキストが1つ → _text
 [Schema("TMPro.TMP_Text.text")]
 
-// ケース A-2: ボタンが2つ → _button1, _button2
+// ケース A-2: ボタンが2つ（両方 id=-1） → _button1, _button2（それぞれ独立したフィールド）
 [Schema("UnityEngine.UI.Button.onClick")]   // → _button1
 [Schema("UnityEngine.UI.Button.onClick")]   // → _button2
 ```
 
 **ケース B: 同一型のスキーマがすべて明示的 id（id ≥ 0）**
 
-- 同じ `id` を持つスキーマはすべて同一フィールドを共有する
+- 同じ `id` を持つスキーマはすべて同一フィールドを共有する（`[Schema]` フィールドと `[Schema]` メソッドが混在してもよい）
 - フィールド名: `_{base}{N}`（例: `_button0`、`_button1`、`_button2`）
 
 ```
-// ケース B: id=1 と id=2 のボタン → _button1, _button2
+// ケース B-1: id=1 と id=2 のボタン → _button1, _button2
 [Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1
 [Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1（同一フィールドを共有）
 [Schema("UnityEngine.UI.Button.onClick", id: 2)]  // → _button2
+
+// ケース B-2: フィールドとメソッドが同じ id → 共有
+[Schema("UnityEngine.UI.Button.interactable", id: 1)]  // フィールド → _button1
+[Schema("UnityEngine.UI.Button.onClick", id: 1)]        // メソッド → _button1（同一フィールドを共有）
 
 // id=0 は明示的な 0 番グループとして扱われる
 [Schema("UnityEngine.UI.Button.onClick", id: 0)]  // → _button0
@@ -405,8 +430,9 @@ partial void OnPostBind();
 | 3 | alreadySerializable | ユーザーが `[System.Serializable]` 付与済み | `[Serializable]` 重複付与しない | なし |
 | 4 | non model | `[Model]` なし | コンストラクタ引数は `publisher` のみ | なし |
 | 5 | multi models | 複数 `[Model]` | コンストラクタに複数 Model 引数 | なし |
-| 6 | same id pair | 同一 `id` の `[Schema]` メソッドが複数 | なし | 同一コンポーネントフィールドを共有 |
+| 6 | same id pair | 同一 `id` の `[Schema]` メソッドが複数（ケース B） | なし | 同一コンポーネントフィールドを共有。`RemoveAllListeners` は1回のみ |
 | 7 | format + non-text field | `format` 指定 + `TMPro.TMP_Text.text` 以外のフィールドスキーマ | なし | `SetValue` に `format` 引数追加、その他は直接代入 |
+| 8 | readonly struct | `readonly partial struct` | `[Schema]` フィールドのプロパティは `get` のみ（`set` なし） | 変化なし |
 
 ---
 

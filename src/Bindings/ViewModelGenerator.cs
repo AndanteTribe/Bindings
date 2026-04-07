@@ -149,6 +149,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             className: typeSymbol.Name,
             @namespace: ns,
             isStruct: isStruct,
+            isReadOnly: typeSymbol.IsReadOnly,
             requireBindImplementation: requireBind,
             alreadySerializable: alreadySerializable,
             models: models.ToArray(),
@@ -472,11 +473,15 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             sb.AppendLine($"{i2}public {fieldTypeName} {propName}");
             sb.AppendLine($"{i2}{{");
             sb.AppendLine($"{i3}get => {fieldName};");
-            sb.AppendLine($"{i3}set");
-            sb.AppendLine($"{i3}{{");
-            sb.AppendLine($"{i4}{fieldName} = value;");
-            sb.AppendLine($"{i4}PublishRebindMessage();");
-            sb.AppendLine($"{i3}}}");
+            // readonly struct にはフィールドへの書き込みが不可のため set アクセサを生成しない
+            if (!data.IsReadOnly)
+            {
+                sb.AppendLine($"{i3}set");
+                sb.AppendLine($"{i3}{{");
+                sb.AppendLine($"{i4}{fieldName} = value;");
+                sb.AppendLine($"{i4}PublishRebindMessage();");
+                sb.AppendLine($"{i3}}}");
+            }
             sb.AppendLine($"{i2}}}");
         }
 

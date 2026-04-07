@@ -18,6 +18,12 @@ public sealed class GenerationContext
     public readonly bool IsStruct;
 
     /// <summary>
+    /// 対象が readonly 修飾子を持つ構造体かどうか.
+    /// true の場合、[Schema] フィールドの公開プロパティには set アクセサを生成しない.
+    /// </summary>
+    public readonly bool IsReadOnly;
+
+    /// <summary>
     /// ViewModelAttributeの引数.
     /// </summary>
     public readonly bool RequireBindImplementation;
@@ -50,6 +56,7 @@ public sealed class GenerationContext
         string className,
         string @namespace,
         bool isStruct,
+        bool isReadOnly,
         bool requireBindImplementation,
         bool alreadySerializable,
         (string TypeFullName, string FieldName)[] models,
@@ -59,6 +66,7 @@ public sealed class GenerationContext
         ClassName = className;
         Namespace = @namespace;
         IsStruct = isStruct;
+        IsReadOnly = isReadOnly;
         RequireBindImplementation = requireBindImplementation;
         AlreadySerializable = alreadySerializable;
         Models = models;
