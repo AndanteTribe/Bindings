@@ -58,7 +58,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var alreadySerializable = false;
         foreach (var attr in typeSymbol.GetAttributes())
         {
-            if (attr.AttributeClass?.Name == SerializableAttributeFullName)
+            if (attr.AttributeClass?.ToDisplayString() == SerializableAttributeFullName)
             {
                 alreadySerializable = true;
                 break;

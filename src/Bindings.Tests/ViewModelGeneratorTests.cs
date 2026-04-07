@@ -259,4 +259,30 @@ namespace Bindings.Sample
         Assert.DoesNotContain("_button0", viewSource);
         Assert.DoesNotContain("_button1", viewSource);
     }
+
+    // -------------------------------------------------------------------------
+    // シナリオ: [System.Serializable] 付与済みクラスは重複して付与しない
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void AlreadySerializable_DoesNotAddSerializableAgain()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    [System.Serializable]
+    public partial class CountViewModelSerializable
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        // [Serializable] は既に付与されているため生成コードには含まれない
+        Assert.DoesNotContain("[global::System.Serializable]", vmSource);
+    }
 }
