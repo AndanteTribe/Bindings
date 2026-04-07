@@ -15,10 +15,10 @@ namespace Bindings;
 [Generator]
 public sealed class ViewModelGenerator : IIncrementalGenerator
 {
-    private const string ViewModelAttributeFullName = "Bindings.ViewModelAttribute";
-    private const string ModelAttributeFullName = "Bindings.ModelAttribute";
-    private const string SchemaAttributeFullName = "Bindings.SchemaAttribute";
-    private const string SerializableAttributeFullName = nameof(System.SerializableAttribute);
+    private const string ViewModelAttributeFullName = nameof(Bindings) + ".ViewModelAttribute";
+    private const string ModelAttributeFullName = nameof(Bindings) + ".ModelAttribute";
+    private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
+    private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
