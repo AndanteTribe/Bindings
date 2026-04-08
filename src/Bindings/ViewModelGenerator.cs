@@ -20,41 +20,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
 
-    /// <summary>
-    /// BND001: emitted when a [ViewModel] class/struct name does not contain "ViewModel".
-    /// View class name cannot be derived, so no View is generated.
-    /// </summary>
-    private static readonly DiagnosticDescriptor s_diagBND001 = new DiagnosticDescriptor(
-        id: "BND001",
-        title: "ViewModel type name must contain \"ViewModel\"",
-        messageFormat: "Type '{0}' is annotated with [ViewModel] but its name does not contain \"ViewModel\". No View will be generated.",
-        category: "Bindings",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    /// <summary>
-    /// BND002: emitted when a [Schema] id value is less than -1. Only -1 (unset) or 0+ are valid.
-    /// </summary>
-    private static readonly DiagnosticDescriptor s_diagBND002 = new DiagnosticDescriptor(
-        id: "BND002",
-        title: "Invalid [Schema] id value",
-        messageFormat: "[Schema] id value {0} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.",
-        category: "Bindings",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    /// <summary>
-    /// BND003: emitted when multiple [Schema] entries that share the same View component field
-    /// specify different non-empty tooltip strings. Only the first tooltip encountered is used.
-    /// </summary>
-    private static readonly DiagnosticDescriptor s_diagBND003 = new DiagnosticDescriptor(
-        id: "BND003",
-        title: "Conflicting tooltip values for the same View field",
-        messageFormat: "View field '{0}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.",
-        category: "Bindings",
-        defaultSeverity: DiagnosticSeverity.Warning,
-        isEnabledByDefault: true);
-
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Efficiently find all classes/structs annotated with [ViewModel]
@@ -116,7 +81,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         // BND001: class name must contain "ViewModel"
         if (!typeSymbol.Name.Contains("ViewModel"))
         {
-            diagnostics.Add((s_diagBND001, typeLocation, new[] { typeSymbol.Name }));
+            diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, new[] { typeSymbol.Name }));
         }
 
         // 5. Walk members to collect [Model] / [Schema] information
@@ -150,7 +115,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
                                               ?? typeLocation;
-                                diagnostics.Add((s_diagBND002, attrLoc, new[] { id.ToString() }));
+                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaFields.Add((
@@ -191,7 +156,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
                                               ?? typeLocation;
-                                diagnostics.Add((s_diagBND002, attrLoc, new[] { id.ToString() }));
+                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaMethods.Add((
@@ -680,7 +645,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // BND003: report a warning for each View field that has conflicting tooltip values
         foreach (var fieldName in conflictingTooltipFields)
-            ctx.ReportDiagnostic(Diagnostic.Create(s_diagBND003, Location.None, fieldName));
+            ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
 
         var sb = new StringBuilder();
         sb.AppendLine("#nullable enable");

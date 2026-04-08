@@ -494,4 +494,289 @@ namespace Bindings.Sample
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd002.Severity);
         Assert.Contains("-2", bnd002.GetMessage());
     }
+
+    // -------------------------------------------------------------------------
+    // RequireBindImplementation=true → no BindAsync emitted in View
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void RequireBindImplementationTrueOmitsBindAsync()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel(requireBindImplementation: true)]
+    public partial class CountViewModelRequireBind
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.DoesNotContain("BindAsync", viewSource);
+        // BindAll is still emitted
+        Assert.Contains("BindAll", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // RequireBindImplementation=false (default) → BindAsync IS emitted
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void RequireBindImplementationFalseEmitsBindAsync()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelDefaultBind
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.Contains("BindAsync", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Non-readonly struct generates set accessor
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void RegularStructGeneratesSetAccessor()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial struct CountViewModelStruct
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.Contains("get => _count;", vmSource);
+        Assert.Contains("set", vmSource);
+        // Generated as struct, not class
+        Assert.Contains("public partial struct CountViewModelStruct", vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Non-TMPro field binding uses direct assignment (_field.member = _viewModel.Prop)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void NonTmproFieldBindingUsesDirectAssignment()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelDirect
+    {
+        [Bindings.Schema(""UnityEngine.UI.Image.fillAmount"")]
+        private float _progress;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        // Direct assignment, not SetValue
+        Assert.Contains("_image.fillAmount = _viewModel.Progress;", viewSource);
+        Assert.DoesNotContain("SetValue", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // TMPro field binding with format → SetValue with format argument
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void TmproFieldBindingWithFormatUsesSetValueWithFormat()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelFormat
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"", format: ""N0"")]
+        private int _count;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.Contains("SetValue(_text, _viewModel.Count, \"N0\");", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Case C: mixed id=-1 and id≥0 entries for the same type part
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void CaseCMixedIdAssignsCorrectFieldNumbers()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelCaseC
+    {
+        // id=2 → _button2; id=-1 (unset) → _button1 (first available, skipping 2)
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 2)]
+        public void Submit() { }
+
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
+        public void Cancel() { }
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        // id=2 → _button2
+        Assert.Contains("_button2", viewSource);
+        // id=-1 unset → first available integer not taken by explicit ids (1)
+        Assert.Contains("_button1", viewSource);
+        Assert.DoesNotContain("_button3", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Global namespace (no namespace declaration)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void GlobalNamespaceViewModelGeneratesWithoutNamespace()
+    {
+        const string userCode = @"
+[Bindings.ViewModel]
+public partial class GlobalViewModel
+{
+    [Bindings.Schema(""TMPro.TMP_Text.text"")]
+    private int _count;
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+        // No namespace block — type appears at the top level
+        Assert.DoesNotContain("namespace", vmSource);
+        Assert.DoesNotContain("namespace", viewSource);
+        // But the fully-qualified IViewModel reference must still have global:: prefix
+        Assert.Contains("global::Bindings.IViewModel", vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // [Model] on property (not field) is collected for the constructor
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void ModelOnPropertyIsIncludedInConstructor()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelPropModel
+    {
+        [Bindings.Model]
+        public object Model { get; }
+
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        // [Model] on property → constructor param named after the property
+        Assert.Contains("model,", vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // BND002 on a method schema with id < -1
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void BND002NegativeSchemaIdOnMethodReportsError()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelMethodBnd002
+    {
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: -3)]
+        public void Increment() { }
+    }
+}";
+
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+
+        var bnd002 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND002");
+        Assert.NotNull(bnd002);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd002.Severity);
+        Assert.Contains("-3", bnd002.GetMessage());
+    }
+
+    // -------------------------------------------------------------------------
+    // Field and method with same explicit id share one View field (Case B combined)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void FieldAndMethodWithSameExplicitIdShareViewField()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelFieldMethodShared
+    {
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
+        private bool _interactable;
+
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
+        public void OnClick() { }
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        // Both field and method share _button1
+        Assert.Contains("_button1", viewSource);
+        Assert.DoesNotContain("_button2", viewSource);
+        Assert.Contains("_button1.onClick.AddListener(_viewModel.OnClick)", viewSource);
+    }
 }
