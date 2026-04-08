@@ -32,4 +32,21 @@ jobs:
                   dotnet-version: '8.0.x'
             - run: dotnet restore src/Bindings.Tests/Bindings.Tests.csproj
             - run: dotnet build src/Bindings.Tests/Bindings.Tests.csproj --configuration Release --no-restore
-            - run: dotnet test src/Bindings.Tests/Bindings.Tests.csproj --configuration Release --no-build --verbosity normal
+            - run: dotnet test src/Bindings.Tests/Bindings.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+            - name: Find coverage output path
+              shell: pwsh
+              run: |
+                  $files = Get-ChildItem -Path . -Filter "coverage.cobertura.xml" -Recurse -File
+                  foreach ($file in $files) {
+                      Copy-Item -Path $file.FullName -Destination . -Force
+                  }
+            - name: Run ReportGenerator
+              shell: pwsh
+              run: |
+                  dotnet tool install -g dotnet-reportgenerator-globaltool
+                  reportgenerator -reports:"coverage.cobertura.xml" -targetdir:"report" -reporttypes:"Html;MarkdownSummary"
+                  Get-Content report/Summary.md | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: report/
