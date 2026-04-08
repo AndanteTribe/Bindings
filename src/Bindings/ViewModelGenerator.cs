@@ -20,6 +20,18 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
 
+    /// <summary>
+    /// BND003: emitted when multiple [Schema] entries that share the same View component field
+    /// specify different non-empty tooltip strings. Only the first tooltip encountered is used.
+    /// </summary>
+    private static readonly DiagnosticDescriptor DiagBND003 = new DiagnosticDescriptor(
+        id: "BND003",
+        title: "Conflicting tooltip values for the same View field",
+        messageFormat: "View field '{0}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.",
+        category: "Bindings",
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Efficiently find all classes/structs annotated with [ViewModel]
@@ -72,8 +84,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // 4. Walk members to collect [Model] / [Schema] information
         var models = new List<(string TypeFullName, string FieldName)>();
-        var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)>();
-        var schemaMethods = new List<(string MethodName, string BindingPath, int Id)>();
+        var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)>();
+        var schemaMethods = new List<(string MethodName, string BindingPath, int Id, string Tooltip)>();
 
         foreach (var member in typeSymbol.GetMembers())
         {
@@ -99,7 +111,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 FieldTypeName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 BindingPath: GetBindingPath(attr),
                                 Id: GetSchemaId(attr),
-                                Format: GetSchemaFormat(attr)));
+                                Format: GetSchemaFormat(attr),
+                                Tooltip: GetSchemaTooltip(attr)));
                         }
                     }
                     break;
@@ -122,7 +135,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 FieldTypeName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 BindingPath: GetBindingPath(attr),
                                 Id: GetSchemaId(attr),
-                                Format: GetSchemaFormat(attr)));
+                                Format: GetSchemaFormat(attr),
+                                Tooltip: GetSchemaTooltip(attr)));
                         }
                     }
                     break;
@@ -137,7 +151,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             schemaMethods.Add((
                                 MethodName: method.Name,
                                 BindingPath: GetBindingPath(attr),
-                                Id: GetSchemaId(attr)));
+                                Id: GetSchemaId(attr),
+                                Tooltip: GetSchemaTooltip(attr)));
                         }
                     }
                     break;
@@ -177,8 +192,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         if (firstArg.Kind == TypedConstantKind.Primitive && firstArg.Value is string path)
             return path;
 
-        // Object overload: CallerArgumentExpression places the raw expression in the fourth argument (index 3)
-        if (attr.ConstructorArguments.Length > 3 && attr.ConstructorArguments[3].Value is string rawExpr)
+        // Object overload: CallerArgumentExpression places the raw expression in the fifth parameter (index 4)
+        // Signature: (object bindingPath, int id, string format, string tooltip, [CallerArgumentExpression] string path)
+        if (attr.ConstructorArguments.Length > 4 && attr.ConstructorArguments[4].Value is string rawExpr)
         {
             const string keyword = "Resolver.";
             var idx = rawExpr.IndexOf(keyword, StringComparison.Ordinal);
@@ -204,6 +220,18 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private static string GetSchemaFormat(AttributeData attr)
         => attr.ConstructorArguments.Length > 2 && attr.ConstructorArguments[2].Value is string fmt
             ? fmt
+            : string.Empty;
+
+    /// <summary>
+    /// Retrieves the tooltip string from SchemaAttribute's ConstructorArguments.
+    /// Both overloads place tooltip at index 3:
+    ///   String overload: (bindingPath=0, id=1, format=2, tooltip=3)
+    ///   Object overload: (bindingPath=0, id=1, format=2, tooltip=3, path=4)
+    /// Returns an empty string when no tooltip is specified.
+    /// </summary>
+    private static string GetSchemaTooltip(AttributeData attr)
+        => attr.ConstructorArguments.Length > 3 && attr.ConstructorArguments[3].Value is string tooltip
+            ? tooltip
             : string.Empty;
 
     // -------------------------------------------------------------------------
@@ -298,15 +326,21 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///     id>=0  : _{base}{id}
     ///     id=-1  : assigned the smallest positive integer that does not conflict with any explicit id
     ///
+    /// Tooltip conflict (BND003): when multiple entries that share the same View field specify
+    /// different non-empty tooltip strings, the conflicting field names are returned in ConflictingTooltipFields.
+    ///
     /// Return values:
-    ///   FieldAssignments[i]  — View field name corresponding to SchemaFields[i]
-    ///   MethodAssignments[i] — View field name corresponding to SchemaMethods[i]
-    ///   OrderedFields        — (TypePart, FieldName) list of fields to declare in the View (deduplicated, initial-appearance order)
+    ///   FieldAssignments[i]       — View field name corresponding to SchemaFields[i]
+    ///   MethodAssignments[i]      — View field name corresponding to SchemaMethods[i]
+    ///   OrderedFields             — (TypePart, FieldName, Tooltip) list of fields to declare in the View
+    ///                               (deduplicated, initial-appearance order; tooltip is the first non-empty value)
+    ///   ConflictingTooltipFields  — field names where tooltip conflict (BND003) was detected
     /// </summary>
     private static (
         string[] FieldAssignments,
         string[] MethodAssignments,
-        List<(string TypePart, string FieldName)> OrderedFields)
+        List<(string TypePart, string FieldName, string Tooltip)> OrderedFields,
+        HashSet<string> ConflictingTooltipFields)
         BuildComponentFieldAssignments(GenerationContext data)
     {
         var fieldCount = data.SchemaFields.Length;
@@ -331,24 +365,29 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         for (var i = 0; i < methodCount; i++)
             if (typePartSet.Add(methodTypeParts[i])) typePartOrder.Add(methodTypeParts[i]);
 
+        // Track tooltip per assigned View field name (first non-empty value wins)
+        var fieldTooltips = new Dictionary<string, string>();
+        // Track fields that have conflicting tooltip values (HashSet for O(1) lookup)
+        var conflictingTooltipFields = new HashSet<string>();
+
         // Determine field names for each type part
         foreach (var typePart in typePartOrder)
         {
             var fieldBase = TypePartToFieldBase(typePart);
 
             // Collect entries belonging to this type part (fields first, then methods, in appearance order)
-            var entries = new List<(bool IsMethod, int Index, int Id)>();
+            var entries = new List<(bool IsMethod, int Index, int Id, string Tooltip)>();
             for (var i = 0; i < fieldCount; i++)
                 if (fieldTypeParts[i] == typePart)
-                    entries.Add((false, i, data.SchemaFields[i].Id));
+                    entries.Add((false, i, data.SchemaFields[i].Id, data.SchemaFields[i].Tooltip));
             for (var i = 0; i < methodCount; i++)
                 if (methodTypeParts[i] == typePart)
-                    entries.Add((true, i, data.SchemaMethods[i].Id));
+                    entries.Add((true, i, data.SchemaMethods[i].Id, data.SchemaMethods[i].Tooltip));
 
             // Determine which cases apply
             var hasExplicit = false;
             var hasUnset = false;
-            foreach (var (_, _, id) in entries)
+            foreach (var (_, _, id, _) in entries)
             {
                 if (id >= 0) hasExplicit = true;
                 else hasUnset = true;
@@ -379,7 +418,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             {
                 // Case C: mixed — first assign explicit ids, then assign available numbers to unset ids
                 var usedIds = new HashSet<int>();
-                foreach (var (_, _, id) in entries)
+                foreach (var (_, _, id, _) in entries)
                     if (id >= 0) usedIds.Add(id);
 
                 foreach (var entry in entries)
@@ -398,23 +437,55 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     }
                 }
             }
+
+            // BND003: detect conflicting tooltip values among entries that share the same View field
+            foreach (var entry in entries)
+            {
+                var assignedField = entry.IsMethod
+                    ? methodAssignments[entry.Index]
+                    : fieldAssignments[entry.Index];
+                var tooltip = entry.Tooltip;
+                if (string.IsNullOrEmpty(tooltip)) continue;
+
+                if (!fieldTooltips.ContainsKey(assignedField))
+                {
+                    fieldTooltips[assignedField] = tooltip;
+                }
+                else if (fieldTooltips[assignedField] != tooltip)
+                {
+                    // HashSet.Add is a no-op when the element already exists
+                    conflictingTooltipFields.Add(assignedField);
+                }
+            }
         }
 
         // Build the ordered field declaration list (deduplicated, initial-appearance order)
         var seenNames = new HashSet<string>();
-        var orderedFields = new List<(string TypePart, string FieldName)>();
+        var orderedFields = new List<(string TypePart, string FieldName, string Tooltip)>();
         for (var i = 0; i < fieldCount; i++)
-            if (seenNames.Add(fieldAssignments[i]))
-                orderedFields.Add((fieldTypeParts[i], fieldAssignments[i]));
+        {
+            var fn = fieldAssignments[i];
+            if (seenNames.Add(fn))
+            {
+                fieldTooltips.TryGetValue(fn, out var tt);
+                orderedFields.Add((fieldTypeParts[i], fn, tt ?? string.Empty));
+            }
+        }
         for (var i = 0; i < methodCount; i++)
-            if (seenNames.Add(methodAssignments[i]))
-                orderedFields.Add((methodTypeParts[i], methodAssignments[i]));
+        {
+            var fn = methodAssignments[i];
+            if (seenNames.Add(fn))
+            {
+                fieldTooltips.TryGetValue(fn, out var tt);
+                orderedFields.Add((methodTypeParts[i], fn, tt ?? string.Empty));
+            }
+        }
 
-        return (fieldAssignments, methodAssignments, orderedFields);
+        return (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields);
     }
 
     private static void Assign(
-        (bool IsMethod, int Index, int Id) entry,
+        (bool IsMethod, int Index, int Id, string Tooltip) entry,
         string fieldName,
         string[] fieldAssignments,
         string[] methodAssignments)
@@ -469,7 +540,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         sb.AppendLine($"{i2}private readonly global::Bindings.IMvvmPublisher _publisher;");
 
         // One public property per [Schema] field (in declaration order)
-        foreach (var (fieldName, fieldTypeName, _, _, _) in data.SchemaFields)
+        foreach (var (fieldName, fieldTypeName, _, _, _, _) in data.SchemaFields)
         {
             var propName = ToPropertyName(fieldName);
             sb.AppendLine();
@@ -556,7 +627,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var i2 = i1 + "    ";
         var i3 = i2 + "    ";
 
-        var (fieldAssignments, methodAssignments, orderedFields) = BuildComponentFieldAssignments(data);
+        var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) =
+            BuildComponentFieldAssignments(data);
+
+        // BND003: report a warning for each View field that has conflicting tooltip values
+        foreach (var fieldName in conflictingTooltipFields)
+            ctx.ReportDiagnostic(Diagnostic.Create(DiagBND003, Location.None, fieldName));
 
         var sb = new StringBuilder();
         sb.AppendLine("#nullable enable");
@@ -579,9 +655,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         sb.AppendLine($"{i2}private {vmFullName} _viewModel{vmFieldInit};");
 
         // UI component fields (deduplicated, initial-appearance order)
-        foreach (var (typePart, fieldName) in orderedFields)
+        // When a tooltip is specified, [UnityEngine.Tooltip] is emitted before [SerializeField]
+        foreach (var (typePart, fieldName, tooltip) in orderedFields)
         {
             sb.AppendLine();
+            if (!string.IsNullOrEmpty(tooltip))
+                sb.AppendLine($"{i2}[global::UnityEngine.Tooltip(\"{tooltip}\")]");
             sb.AppendLine($"{i2}[global::UnityEngine.SerializeField]");
             sb.AppendLine($"{i2}private global::{typePart} {fieldName} = null!;");
         }
@@ -653,12 +732,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private static void AppendFieldBindings(
         StringBuilder sb,
         string indent,
-        (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)[] schemaFields,
+        (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] schemaFields,
         string[] fieldAssignments)
     {
         for (var i = 0; i < schemaFields.Length; i++)
         {
-            var (fieldName, _, bindingPath, _, format) = schemaFields[i];
+            var (fieldName, _, bindingPath, _, format, _) = schemaFields[i];
             var viewField = fieldAssignments[i];
             var propName = ToPropertyName(fieldName);
 
@@ -687,7 +766,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private static void AppendMethodBindings(
         StringBuilder sb,
         string indent,
-        (string MethodName, string BindingPath, int Id)[] schemaMethods,
+        (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods,
         string[] methodAssignments)
     {
         // Group by (viewFieldName, memberName) in initial-appearance order
@@ -696,7 +775,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         for (var i = 0; i < schemaMethods.Length; i++)
         {
-            var (methodName, bindingPath, _) = schemaMethods[i];
+            var (methodName, bindingPath, _, _) = schemaMethods[i];
             var viewField = methodAssignments[i];
             var (_, memberName) = SplitBindingPath(bindingPath);
             var key = (viewField, memberName);

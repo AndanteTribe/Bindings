@@ -36,19 +36,22 @@ namespace Bindings
         public readonly string BindingPath;
         public readonly int Id;
         public readonly string Format;
+        public readonly string Tooltip;
 
-        public SchemaAttribute(string bindingPath, int id = -1, string format = """")
+        public SchemaAttribute(string bindingPath, int id = -1, string format = """", string tooltip = """")
         {
             BindingPath = bindingPath;
             Id = id;
             Format = format;
+            Tooltip = tooltip;
         }
 
-        public SchemaAttribute(object bindingPath, int id = -1, string format = """", [CallerArgumentExpression(""bindingPath"")]string path = """")
+        public SchemaAttribute(object bindingPath, int id = -1, string format = """", string tooltip = """", [CallerArgumentExpression(""bindingPath"")]string path = """")
         {
             BindingPath = path;
             Id = id;
             Format = format;
+            Tooltip = tooltip;
         }
     }
 
@@ -261,7 +264,113 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // シナリオ: [System.Serializable] 付与済みクラスは重複して付与しない
+    // Tooltip: single [Schema] with tooltip → [Tooltip] attribute on View field
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Tooltip_SingleSchema_EmitsTooltipAttribute()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelTooltip
+    {
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", tooltip: ""Increment the count"")]
+        public void Increment() { }
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.Contains("[global::UnityEngine.Tooltip(\"Increment the count\")]", viewSource);
+        Assert.Contains("[global::UnityEngine.SerializeField]", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Tooltip: no tooltip specified → no [Tooltip] attribute on View field
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Tooltip_NoTooltip_DoesNotEmitTooltipAttribute()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelNoTooltip
+    {
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
+        public void Increment() { }
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.DoesNotContain("UnityEngine.Tooltip", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Tooltip BND003: same View field with conflicting tooltips → diagnostic warning
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void Tooltip_ConflictingTooltips_ReportsBND003()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelConflictTooltip
+    {
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1, tooltip: ""Increment"")]
+        public void Increment() { }
+
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1, tooltip: ""Decrement"")]
+        public void Decrement() { }
+    }
+}";
+
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+
+        // BND003 should be reported
+        var bnd003 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND003");
+        Assert.NotNull(bnd003);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Warning, bnd003.Severity);
+        Assert.Contains("_button1", bnd003.GetMessage());
+
+        // View field should still be generated with the first tooltip
+        var viewSource = runResult.GeneratedTrees
+            .FirstOrDefault(t =>
+            {
+                var name = System.IO.Path.GetFileName(t.FilePath);
+                return name.Contains("View") && !name.Contains("ViewModel") && t.FilePath.EndsWith(".g.cs");
+            })
+            ?.GetText().ToString();
+        Assert.NotNull(viewSource);
+        Assert.Contains("[global::UnityEngine.Tooltip(\"Increment\")]", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // [System.Serializable] already applied: do not add it again
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -282,7 +391,7 @@ namespace Bindings.Sample
         var (vmSource, _) = RunGenerator(userCode);
 
         Assert.NotNull(vmSource);
-        // [Serializable] は既に付与されているため生成コードには含まれない
+        // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
     }
 }

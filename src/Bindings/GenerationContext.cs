@@ -43,14 +43,14 @@ public sealed class GenerationContext
     /// Attribute arguments for each field/property annotated with SchemaAttribute, in declaration order.
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same member.
     /// </summary>
-    public readonly (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)[] SchemaFields;
+    public readonly (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] SchemaFields;
 
     /// <summary>
     /// Attribute arguments for each method annotated with SchemaAttribute, in declaration order.
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same method.
     /// Format is omitted because it is not needed for methods.
     /// </summary>
-    public readonly (string MethodName, string BindingPath, int Id)[] SchemaMethods;
+    public readonly (string MethodName, string BindingPath, int Id, string Tooltip)[] SchemaMethods;
 
     public GenerationContext(
         string className,
@@ -60,8 +60,8 @@ public sealed class GenerationContext
         bool requireBindImplementation,
         bool alreadySerializable,
         (string TypeFullName, string FieldName)[] models,
-        (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format)[] schemaFields,
-        (string MethodName, string BindingPath, int Id)[] schemaMethods)
+        (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] schemaFields,
+        (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods)
     {
         ClassName = className;
         Namespace = @namespace;

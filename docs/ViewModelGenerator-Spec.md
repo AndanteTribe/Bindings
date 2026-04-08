@@ -25,6 +25,7 @@
 | `[Schema(bindingPath)]` | フィールド・メソッド | UI コンポーネントとのバインド対象を宣言する（`id` のデフォルトは `-1` = 未指定） |
 | `[Schema(bindingPath, id: N)]` | フィールド・メソッド | `N ≥ 0`: 同じ `id` を持つスキーマは View 内で同一コンポーネントにバインド。`N < -1`: `BND002` エラー |
 | `[Schema(bindingPath, format: "N0")]` | フィールド | `TMPro.TMP_Text.text` バインド時の書式指定文字列 |
+| `[Schema(bindingPath, tooltip: "text")]` | フィールド・メソッド | Unity Inspector に表示するツールチップ文字列。View コンポーネントフィールドに `[global::UnityEngine.Tooltip("text")]` が付与される。同一 View フィールドに対して異なる tooltip が指定された場合は `BND003` 警告 |
 
 ### 1.2 バインディングパス (`bindingPath`) の解析
 
@@ -118,6 +119,7 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 |---|---|---|---|
 | `BND001` | Error | `[ViewModel]` が付与されたクラス名に `"ViewModel"` が含まれない | `'ClassName' must contain 'ViewModel' in its name to use [ViewModel].` |
 | `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `Schema id must be -1 (unset) or a non-negative integer. Got '{id}'.` |
+| `BND003` | Warning | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
@@ -326,12 +328,26 @@ private global::{Namespace}.{ClassName} _viewModel = null!;
 
 #### 5.5.3 フィールド宣言
 
+`tooltip` が指定されている場合は `[global::UnityEngine.Tooltip]` を `[global::UnityEngine.SerializeField]` の直前に付与する。
+
 ```csharp
+// tooltip が指定された場合
+[global::UnityEngine.Tooltip("{tooltip}")]
+[global::UnityEngine.SerializeField]
+private global::{TypePart} {_fieldName} = null!;
+
+// tooltip が指定されていない場合
 [global::UnityEngine.SerializeField]
 private global::{TypePart} {_fieldName} = null!;
 ```
 
 フィールドの順序: `[Schema]` フィールド（宣言順）→ `[Schema]` メソッド（宣言順）。同一コンポーネントが複数の `[Schema]` から参照される場合でもフィールドは1つ。
+
+#### 5.5.4 tooltip の決定規則
+
+- 同一 View コンポーネントフィールドに紐付く複数の `[Schema]` エントリのうち、**最初に現れる非空 tooltip 値** を採用する。
+- 異なる非空 tooltip 値が複数存在する場合は `BND003` 警告を出力する（最初の値を使用し続ける）。
+- id=-1 のエントリはそれぞれ独立したフィールドになるため、tooltip の競合は発生しない。
 
 ### 5.6 Initialize メソッド（インタフェース明示実装）
 
