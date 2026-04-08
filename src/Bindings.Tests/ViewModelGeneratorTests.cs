@@ -6,13 +6,13 @@ using Xunit;
 namespace Bindings.Tests;
 
 /// <summary>
-/// ViewModelGenerator のテストクラス.
-/// 各シナリオで生成コードが仕様通りかを検証する.
+/// Test class for ViewModelGenerator.
+/// Verifies that generated code matches the specification for each scenario.
 /// </summary>
 public class ViewModelGeneratorTests
 {
     // -------------------------------------------------------------------------
-    // テスト用のスタブ定義（Unity 依存型の代替）
+    // Stub definitions for testing (substitutes for Unity-dependent types)
     // -------------------------------------------------------------------------
 
     private const string AttributeStubs = @"
@@ -122,11 +122,11 @@ namespace Bindings
     }
 
     // -------------------------------------------------------------------------
-    // シナリオ 1: id=-1 (デフォルト) の複数の同一型メソッドは別々のフィールドになる
+    // Scenario 1: multiple same-type methods with id=-1 (default) produce separate fields
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void CountViewModel1_MultipleDefaultIdMethods_ProduceSeparateFields()
+    public void CountViewModel1MultipleDefaultIdMethodsProduceSeparateFields()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -151,14 +151,14 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // id=-1 の複数 Button エントリは _button1, _button2 に分かれる（Case A）
+        // id=-1 with multiple Button entries splits into _button1, _button2 (Case A)
         Assert.Contains("_button1", viewSource);
         Assert.Contains("_button2", viewSource);
         Assert.DoesNotContain("_button0", viewSource);
-        // TMP_Text は 1 つだけなので _text（連番なし）
+        // TMP_Text has only one entry so uses _text (no suffix)
         Assert.Contains("_text ", viewSource);
         Assert.DoesNotContain("_text0", viewSource);
-        // Increment / Decrement はそれぞれ別の button に AddListener
+        // Increment / Decrement each AddListener on their respective button
         Assert.Contains("_button1.onClick.RemoveAllListeners", viewSource);
         Assert.Contains("_button1.onClick.AddListener(_viewModel.Increment)", viewSource);
         Assert.Contains("_button2.onClick.RemoveAllListeners", viewSource);
@@ -166,11 +166,11 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // シナリオ 6: 同一 id≥0 のフィールドとメソッドは同一フィールドを共有する
+    // Scenario 6: field and method with the same explicit id≥0 share one View field
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void CountViewModel6_SameExplicitIdMethodsShareField()
+    public void CountViewModel6SameExplicitIdMethodsShareField()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -195,21 +195,21 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // id=1 の 2 エントリは同一フィールド _button1 を共有する（Case B）
+        // 2 entries with id=1 share the same _button1 field (Case B)
         Assert.Contains("_button1", viewSource);
         Assert.DoesNotContain("_button2", viewSource);
-        // 同一フィールドに 2 つの AddListener
+        // Both methods AddListener on the same field
         Assert.Contains("_button1.onClick.RemoveAllListeners", viewSource);
         Assert.Contains("_button1.onClick.AddListener(_viewModel.Increment)", viewSource);
         Assert.Contains("_button1.onClick.AddListener(_viewModel.Decrement)", viewSource);
     }
 
     // -------------------------------------------------------------------------
-    // シナリオ: readonly struct は set アクセサを生成しない
+    // Scenario: readonly struct does not generate a set accessor
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void ReadOnlyStruct_DoesNotGenerateSetAccessor()
+    public void ReadOnlyStructDoesNotGenerateSetAccessor()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -225,18 +225,18 @@ namespace Bindings.Sample
         var (vmSource, _) = RunGenerator(userCode);
 
         Assert.NotNull(vmSource);
-        // get アクセサは生成される
+        // get accessor is generated
         Assert.Contains("get => _count;", vmSource);
-        // set アクセサは生成されない（readonly struct）
+        // set accessor is NOT generated (readonly struct)
         Assert.DoesNotContain("set", vmSource);
     }
 
     // -------------------------------------------------------------------------
-    // シナリオ: id=-1 のシングルエントリは連番なし
+    // Scenario: single id=-1 entry produces a field without suffix
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void SingleDefaultIdEntry_ProducesFieldWithoutSuffix()
+    public void SingleDefaultIdEntryProducesFieldWithoutSuffix()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -255,7 +255,7 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // 各型が 1 つずつなので連番なし
+        // One entry per type → no numeric suffix
         Assert.Contains("_text ", viewSource);
         Assert.Contains("_button ", viewSource);
         Assert.DoesNotContain("_text0", viewSource);
@@ -268,7 +268,7 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void Tooltip_SingleSchema_EmitsTooltipAttribute()
+    public void TooltipSingleSchemaEmitsTooltipAttribute()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -293,7 +293,7 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void Tooltip_NoTooltip_DoesNotEmitTooltipAttribute()
+    public void TooltipNoTooltipDoesNotEmitTooltipAttribute()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -317,7 +317,7 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void Tooltip_ConflictingTooltips_ReportsBND003()
+    public void TooltipConflictingTooltipsReportsBND003()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -374,7 +374,7 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void AlreadySerializable_DoesNotAddSerializableAgain()
+    public void AlreadySerializableDoesNotAddSerializableAgain()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -400,7 +400,7 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void BND001_TypeNameWithoutViewModel_ReportsErrorAndSkipsViewGeneration()
+    public void BND001TypeNameWithoutViewModelReportsErrorAndSkipsViewGeneration()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -457,7 +457,7 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void BND002_NegativeSchemaId_ReportsError()
+    public void BND002NegativeSchemaIdReportsError()
     {
         const string userCode = @"
 namespace Bindings.Sample
