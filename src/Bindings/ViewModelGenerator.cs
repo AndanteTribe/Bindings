@@ -21,6 +21,29 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
 
     /// <summary>
+    /// BND001: emitted when a [ViewModel] class/struct name does not contain "ViewModel".
+    /// View class name cannot be derived, so no View is generated.
+    /// </summary>
+    private static readonly DiagnosticDescriptor DiagBND001 = new DiagnosticDescriptor(
+        id: "BND001",
+        title: "ViewModel type name must contain \"ViewModel\"",
+        messageFormat: "Type '{0}' is annotated with [ViewModel] but its name does not contain \"ViewModel\". No View will be generated.",
+        category: "Bindings",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// BND002: emitted when a [Schema] id value is less than -1. Only -1 (unset) or 0+ are valid.
+    /// </summary>
+    private static readonly DiagnosticDescriptor DiagBND002 = new DiagnosticDescriptor(
+        id: "BND002",
+        title: "Invalid [Schema] id value",
+        messageFormat: "[Schema] id value {0} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.",
+        category: "Bindings",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
     /// BND003: emitted when multiple [Schema] entries that share the same View component field
     /// specify different non-empty tooltip strings. Only the first tooltip encountered is used.
     /// </summary>
@@ -46,6 +69,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             viewModelTypes,
             static (ctx, data) =>
             {
+                // Report all diagnostics collected during the transform phase (BND001, BND002)
+                foreach (var (descriptor, location, args) in data.Diagnostics)
+                    ctx.ReportDiagnostic(Diagnostic.Create(descriptor, location, args));
+
                 EmitViewModelSource(ctx, data);
                 EmitViewSource(ctx, data);
             });
@@ -60,6 +87,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     {
         var typeSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
         var isStruct = typeSymbol.TypeKind == TypeKind.Struct;
+        var typeLocation = ctx.TargetNode.GetLocation();
 
         // 1. Extract [ViewModel] attribute argument (requireBindImplementation)
         var viewModelAttr = ctx.Attributes[0];
@@ -82,7 +110,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             ? string.Empty
             : typeSymbol.ContainingNamespace.ToDisplayString();
 
-        // 4. Walk members to collect [Model] / [Schema] information
+        // 4. Collect early diagnostics
+        var diagnostics = new List<(DiagnosticDescriptor, Location, string[])>();
+
+        // BND001: class name must contain "ViewModel"
+        if (!typeSymbol.Name.Contains("ViewModel"))
+        {
+            diagnostics.Add((DiagBND001, typeLocation, new[] { typeSymbol.Name }));
+        }
+
+        // 5. Walk members to collect [Model] / [Schema] information
+        // [Schema] is only valid on fields and methods; properties are excluded.
         var models = new List<(string TypeFullName, string FieldName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)>();
         var schemaMethods = new List<(string MethodName, string BindingPath, int Id, string Tooltip)>();
@@ -106,37 +144,36 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                         }
                         else if (attrName == SchemaAttributeFullName)
                         {
+                            var id = GetSchemaId(attr);
+                            // BND002: id < -1 is invalid
+                            if (id < -1)
+                            {
+                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
+                                              ?? typeLocation;
+                                diagnostics.Add((DiagBND002, attrLoc, new[] { id.ToString() }));
+                                id = -1; // treat as unset to avoid further errors
+                            }
                             schemaFields.Add((
                                 FieldName: field.Name,
                                 FieldTypeName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 BindingPath: GetBindingPath(attr),
-                                Id: GetSchemaId(attr),
+                                Id: id,
                                 Format: GetSchemaFormat(attr),
                                 Tooltip: GetSchemaTooltip(attr)));
                         }
                     }
                     break;
                 }
+                // [Model] on properties is still supported; [Schema] on properties is excluded.
                 case IPropertySymbol prop:
                 {
                     foreach (var attr in prop.GetAttributes())
                     {
-                        var attrName = attr.AttributeClass?.ToDisplayString();
-                        if (attrName == ModelAttributeFullName)
+                        if (attr.AttributeClass?.ToDisplayString() == ModelAttributeFullName)
                         {
                             models.Add((
                                 TypeFullName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 FieldName: prop.Name));
-                        }
-                        else if (attrName == SchemaAttributeFullName)
-                        {
-                            schemaFields.Add((
-                                FieldName: prop.Name,
-                                FieldTypeName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-                                BindingPath: GetBindingPath(attr),
-                                Id: GetSchemaId(attr),
-                                Format: GetSchemaFormat(attr),
-                                Tooltip: GetSchemaTooltip(attr)));
                         }
                     }
                     break;
@@ -148,10 +185,19 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     {
                         if (attr.AttributeClass?.ToDisplayString() == SchemaAttributeFullName)
                         {
+                            var id = GetSchemaId(attr);
+                            // BND002: id < -1 is invalid
+                            if (id < -1)
+                            {
+                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
+                                              ?? typeLocation;
+                                diagnostics.Add((DiagBND002, attrLoc, new[] { id.ToString() }));
+                                id = -1; // treat as unset to avoid further errors
+                            }
                             schemaMethods.Add((
                                 MethodName: method.Name,
                                 BindingPath: GetBindingPath(attr),
-                                Id: GetSchemaId(attr),
+                                Id: id,
                                 Tooltip: GetSchemaTooltip(attr)));
                         }
                     }
@@ -169,7 +215,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             alreadySerializable: alreadySerializable,
             models: models.ToArray(),
             schemaFields: schemaFields.ToArray(),
-            schemaMethods: schemaMethods.ToArray());
+            schemaMethods: schemaMethods.ToArray(),
+            diagnostics: diagnostics.ToArray());
     }
 
     /// <summary>
@@ -177,8 +224,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///
     /// String overload: ConstructorArguments[0] holds the binding path string directly.
     /// Object overload: CallerArgumentExpression places the raw expression string (e.g.
-    ///   "PathResolver.TMPro.TMP_Text.text") in ConstructorArguments[3]; the substring
+    ///   "PathResolver.TMPro.TMP_Text.text") in ConstructorArguments[4]; the substring
     ///   after "Resolver." is extracted.
+    ///   Signature: (object bindingPath, int id, string format, string tooltip, [CallerArgumentExpression] string path)
     ///
     /// PathResolver constants (const string) always invoke the string overload, so
     /// ConstructorArguments[0] is the common path.
@@ -603,7 +651,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
     /// <summary>
     /// Generates the sealed partial class for the View.
-    /// Skips generation when the class name does not contain "ViewModel" (BND001).
+    /// Skips generation when the class name does not contain "ViewModel" (BND001 is reported in RegisterSourceOutput).
     ///
     /// Generated contents:
     ///   - [global::System.Serializable] (always emitted)
@@ -616,7 +664,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// </summary>
     private static void EmitViewSource(SourceProductionContext ctx, GenerationContext data)
     {
-        // BND001: skip generation when the class name does not contain "ViewModel" (View class name cannot be derived)
+        // BND001 was already reported in RegisterSourceOutput; skip View generation here
         if (!data.ClassName.Contains("ViewModel"))
             return;
 

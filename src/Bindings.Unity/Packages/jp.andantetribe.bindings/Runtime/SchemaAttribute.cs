@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace Bindings
 {
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class SchemaAttribute : Attribute
     {
         public readonly string BindingPath;

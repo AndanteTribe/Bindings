@@ -1,4 +1,6 @@
-﻿namespace Bindings;
+﻿using Microsoft.CodeAnalysis;
+
+namespace Bindings;
 
 public sealed class GenerationContext
 {
@@ -34,13 +36,13 @@ public sealed class GenerationContext
     public readonly bool AlreadySerializable;
 
     /// <summary>
-    /// Fully-qualified type name and field name (or property name) of each field/property
+    /// Fully-qualified type name and field name of each field
     /// annotated with ModelAttribute, in declaration order.
     /// </summary>
     public readonly (string TypeFullName, string FieldName)[] Models;
 
     /// <summary>
-    /// Attribute arguments for each field/property annotated with SchemaAttribute, in declaration order.
+    /// Attribute arguments for each field annotated with SchemaAttribute, in declaration order.
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same member.
     /// </summary>
     public readonly (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] SchemaFields;
@@ -52,6 +54,12 @@ public sealed class GenerationContext
     /// </summary>
     public readonly (string MethodName, string BindingPath, int Id, string Tooltip)[] SchemaMethods;
 
+    /// <summary>
+    /// Diagnostics collected during metadata extraction (BND001, BND002).
+    /// These are reported in RegisterSourceOutput so they appear in the IDE/build output.
+    /// </summary>
+    public readonly (DiagnosticDescriptor Descriptor, Location Location, string[] Args)[] Diagnostics;
+
     public GenerationContext(
         string className,
         string @namespace,
@@ -61,7 +69,8 @@ public sealed class GenerationContext
         bool alreadySerializable,
         (string TypeFullName, string FieldName)[] models,
         (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] schemaFields,
-        (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods)
+        (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods,
+        (DiagnosticDescriptor Descriptor, Location Location, string[] Args)[] diagnostics)
     {
         ClassName = className;
         Namespace = @namespace;
@@ -72,5 +81,6 @@ public sealed class GenerationContext
         Models = models;
         SchemaFields = schemaFields;
         SchemaMethods = schemaMethods;
+        Diagnostics = diagnostics;
     }
 }

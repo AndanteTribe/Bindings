@@ -30,7 +30,7 @@ namespace Bindings
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class ModelAttribute : Attribute { }
 
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class SchemaAttribute : Attribute
     {
         public readonly string BindingPath;
@@ -393,5 +393,105 @@ namespace Bindings.Sample
         Assert.NotNull(vmSource);
         // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // BND001: [ViewModel] class name does not contain "ViewModel" → error diagnostic, no View generated
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void BND001_TypeNameWithoutViewModel_ReportsErrorAndSkipsViewGeneration()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountModel
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+
+        // BND001 must be reported as an Error
+        var bnd001 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND001");
+        Assert.NotNull(bnd001);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd001.Severity);
+        Assert.Contains("CountModel", bnd001.GetMessage());
+
+        // No View should be generated for this type
+        var viewSource = runResult.GeneratedTrees
+            .FirstOrDefault(t =>
+            {
+                var name = System.IO.Path.GetFileName(t.FilePath);
+                return name.Contains("View") && !name.Contains("ViewModel") && t.FilePath.EndsWith(".g.cs");
+            });
+        Assert.Null(viewSource);
+
+        // ViewModel partial is still generated
+        var vmSource = runResult.GeneratedTrees
+            .FirstOrDefault(t => System.IO.Path.GetFileName(t.FilePath).Contains("CountModel") && t.FilePath.EndsWith(".g.cs"));
+        Assert.NotNull(vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // BND002: [Schema] id < -1 → error diagnostic, id treated as -1 (auto-number)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void BND002_NegativeSchemaId_ReportsError()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModel
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"", id: -2)]
+        private int _count;
+    }
+}";
+
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+
+        // BND002 must be reported as an Error
+        var bnd002 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND002");
+        Assert.NotNull(bnd002);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd002.Severity);
+        Assert.Contains("-2", bnd002.GetMessage());
     }
 }

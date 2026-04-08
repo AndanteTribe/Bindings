@@ -117,8 +117,8 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 | 診断 ID | レベル | 条件 | メッセージ（案） |
 |---|---|---|---|
-| `BND001` | Error | `[ViewModel]` が付与されたクラス名に `"ViewModel"` が含まれない | `'ClassName' must contain 'ViewModel' in its name to use [ViewModel].` |
-| `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `Schema id must be -1 (unset) or a non-negative integer. Got '{id}'.` |
+| `BND001` | Error | `[ViewModel]` が付与されたクラス名に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No View will be generated.` |
+| `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `[Schema] id value {id} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.` |
 | `BND003` | Warning | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
