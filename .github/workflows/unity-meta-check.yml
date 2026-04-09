@@ -1,0 +1,27 @@
+name: unity-meta-check (github-hosted ubuntu-latest)
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+  push:
+    branches:
+      - main
+    paths:
+      - src/Bindings.Unity/Assets/**
+      - src/Bindings.Unity/Packages/**
+  workflow_dispatch: {}
+
+jobs:
+  meta-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repository
+        uses: actions/checkout@v6
+        with:
+          submodules: false
+          lfs: true
+      - name: Unity meta files check (github-hosted ubuntu-latest)
+        uses: DeNA/unity-meta-check@v4
+        with:
+          target_path: src/Bindings.Unity
