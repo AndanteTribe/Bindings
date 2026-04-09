@@ -157,7 +157,6 @@ namespace Bindings.GeneratorCore
                 {
                     sb.Append(indent);
                     sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
-                    sb.Append(string.IsNullOrEmpty(format) ? ");\n" : $", \"{format}\");\n");
                     if (string.IsNullOrEmpty(format))
                     {
                         sb.Append(");");
