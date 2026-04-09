@@ -252,41 +252,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Normalizes a field name following the CommunityToolkit ObservableProperty convention.
-    /// 1. Trim all leading '_' characters.
-    /// 2. If the result starts with "m_", remove that prefix.
-    /// </summary>
-    private static string NormalizeFieldIdentifier(string fieldName)
-    {
-        var s = fieldName.TrimStart('_');
-        if (s.StartsWith("m_", StringComparison.Ordinal))
-            s = s.Substring(2);
-        return s;
-    }
-
-    /// <summary>
-    /// Generates a ViewModel property name from a field name (capitalizes the first letter after normalization).
-    /// e.g. _count → Count, m_Count → Count, _interactable → Interactable
-    /// </summary>
-    private static string ToPropertyName(string fieldName)
-    {
-        var s = NormalizeFieldIdentifier(fieldName);
-        if (s.Length == 0) return fieldName;
-        return char.ToUpperInvariant(s[0]) + s.Substring(1);
-    }
-
-    /// <summary>
-    /// Generates a constructor parameter name from a field name (lowercases the first letter after normalization).
-    /// e.g. _model → model, _model2 → model2, m_Model → model
-    /// </summary>
-    private static string ToParamName(string fieldName)
-    {
-        var s = NormalizeFieldIdentifier(fieldName);
-        if (s.Length == 0) return fieldName;
-        return char.ToLowerInvariant(s[0]) + s.Substring(1);
-    }
-
-    /// <summary>
     /// Splits a binding path at the last '.' and returns the type part and member name.
     /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
     /// </summary>
@@ -313,14 +278,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         if (baseName.Length == 0) baseName = className;
         return char.ToLowerInvariant(baseName[0]) + baseName.Substring(1);
     }
-
-    /// <summary>
-    /// Returns the fully-qualified type name of the ViewModel with the global:: prefix.
-    /// </summary>
-    private static string GetViewModelFullName(GenerationContext data) =>
-        string.IsNullOrEmpty(data.Namespace)
-            ? $"global::{data.ClassName}"
-            : $"global::{data.Namespace}.{data.ClassName}";
 
     // -------------------------------------------------------------------------
     // View component field assignment
@@ -512,7 +469,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Generates the partial class or struct for the ViewModel.
+    /// Generates the partial class or struct for the ViewModel using the <see cref="ViewModelTemplate"/>.
     ///
     /// Generated contents:
     ///   - [global::System.Serializable] (only when not already applied by the user)
@@ -524,90 +481,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// </summary>
     private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext data)
     {
-        var typeKw = data.IsStruct ? "struct" : "class";
-        var hasNs = !string.IsNullOrEmpty(data.Namespace);
-        // Indentation depth: one extra level when inside a namespace block
-        var i1 = hasNs ? "    " : "";        // class level
-        var i2 = i1 + "    ";               // member level
-        var i3 = i2 + "    ";               // method body
-        var i4 = i3 + "    ";               // nested block
-
-        var sb = new StringBuilder();
-        sb.AppendLine("#nullable enable");
-        sb.AppendLine();
-
-        if (hasNs)
-        {
-            sb.AppendLine($"namespace {data.Namespace}");
-            sb.AppendLine("{");
-        }
-
-        // Emit [Serializable] only when the user has not already applied it
-        if (!data.AlreadySerializable)
-            sb.AppendLine($"{i1}[global::System.Serializable]");
-
-        sb.AppendLine($"{i1}public partial {typeKw} {data.ClassName} : global::Bindings.IViewModel");
-        sb.AppendLine($"{i1}{{");
-
-        // _publisher field
-        sb.AppendLine($"{i2}private readonly global::Bindings.IMvvmPublisher _publisher;");
-
-        // One public property per [Schema] field (in declaration order)
-        foreach (var (fieldName, fieldTypeName, _, _, _, _) in data.SchemaFields)
-        {
-            var propName = ToPropertyName(fieldName);
-            sb.AppendLine();
-            sb.AppendLine($"{i2}public {fieldTypeName} {propName}");
-            sb.AppendLine($"{i2}{{");
-            sb.AppendLine($"{i3}get => {fieldName};");
-            // readonly struct: writing to fields is not allowed, so no set accessor is generated
-            if (!data.IsReadOnly)
-            {
-                sb.AppendLine($"{i3}set");
-                sb.AppendLine($"{i3}{{");
-                sb.AppendLine($"{i4}{fieldName} = value;");
-                sb.AppendLine($"{i4}PublishRebindMessage();");
-                sb.AppendLine($"{i3}}}");
-            }
-            sb.AppendLine($"{i2}}}");
-        }
-
-        // Constructor: [Model] fields in declaration order, then publisher
-        sb.AppendLine();
-        var ctorParams = new List<string>();
-        var ctorBodyLines = new List<string>();
-        foreach (var (typeFullName, fieldName) in data.Models)
-        {
-            var paramName = ToParamName(fieldName);
-            ctorParams.Add($"{typeFullName} {paramName}");
-            ctorBodyLines.Add($"{i3}{fieldName} = {paramName};");
-        }
-        ctorParams.Add("global::Bindings.IMvvmPublisher publisher");
-
-        sb.AppendLine($"{i2}public {data.ClassName}({string.Join(", ", ctorParams)})");
-        sb.AppendLine($"{i2}{{");
-        foreach (var line in ctorBodyLines)
-            sb.AppendLine(line);
-        sb.AppendLine($"{i3}_publisher = publisher;");
-        sb.AppendLine($"{i2}}}");
-
-        // Helper methods
-        sb.AppendLine();
-        sb.AppendLine($"{i2}public void NotifyCompletedBind() => OnPostBind();");
-        sb.AppendLine();
-        sb.AppendLine($"{i2}partial void OnPostBind();");
-        sb.AppendLine();
-        sb.AppendLine($"{i2}[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
-        sb.AppendLine($"{i2}private void PublishRebindMessage()");
-        sb.AppendLine($"{i2}{{");
-        // Use global::-prefixed fully-qualified type name to avoid conflicts with user-defined types
-        sb.AppendLine($"{i3}_publisher.PublishRebindMessage<{GetViewModelFullName(data)}>();");
-        sb.AppendLine($"{i2}}}");
-
-        sb.AppendLine($"{i1}}}");
-        if (hasNs) sb.AppendLine("}");
-
-        ctx.AddSource($"{data.ClassName}.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
+        var template = new ViewModelTemplate { Data = data };
+        ctx.AddSource($"{data.ClassName}.g.cs", SourceText.From(template.TransformText(), Encoding.UTF8));
     }
 
     // -------------------------------------------------------------------------
@@ -615,7 +490,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Generates the sealed partial class for the View.
+    /// Generates the sealed partial class for the View using the <see cref="ViewTemplate"/>.
     /// Skips generation when the class name does not contain "ViewModel" (BND001 is reported in RegisterSourceOutput).
     ///
     /// Generated contents:
@@ -633,13 +508,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         if (!data.ClassName.Contains("ViewModel"))
             return;
 
-        var viewClassName = data.ClassName.Replace("ViewModel", "View");
-        var vmFullName = GetViewModelFullName(data);
-        var hasNs = !string.IsNullOrEmpty(data.Namespace);
-        var i1 = hasNs ? "    " : "";
-        var i2 = i1 + "    ";
-        var i3 = i2 + "    ";
-
         var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) =
             BuildComponentFieldAssignments(data);
 
@@ -647,167 +515,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         foreach (var fieldName in conflictingTooltipFields)
             ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
 
-        var sb = new StringBuilder();
-        sb.AppendLine("#nullable enable");
-        sb.AppendLine();
-
-        if (hasNs)
+        var viewClassName = data.ClassName.Replace("ViewModel", "View");
+        var template = new ViewTemplate
         {
-            sb.AppendLine($"namespace {data.Namespace}");
-            sb.AppendLine("{");
-        }
-
-        // View class declaration ([Serializable] is always emitted)
-        sb.AppendLine($"{i1}[global::System.Serializable]");
-        sb.AppendLine($"{i1}public sealed partial class {viewClassName} : global::Bindings.IView<{vmFullName}>");
-        sb.AppendLine($"{i1}{{");
-
-        // _viewModel field (classes use null! initializer; structs are value types so no initializer is needed)
-        var vmFieldInit = data.IsStruct ? string.Empty : " = null!";
-        sb.AppendLine($"{i2}[global::System.NonSerialized]");
-        sb.AppendLine($"{i2}private {vmFullName} _viewModel{vmFieldInit};");
-
-        // UI component fields (deduplicated, initial-appearance order)
-        // When a tooltip is specified, [UnityEngine.Tooltip] is emitted before [SerializeField]
-        foreach (var (typePart, fieldName, tooltip) in orderedFields)
-        {
-            sb.AppendLine();
-            if (!string.IsNullOrEmpty(tooltip))
-                sb.AppendLine($"{i2}[global::UnityEngine.Tooltip(\"{tooltip}\")]");
-            sb.AppendLine($"{i2}[global::UnityEngine.SerializeField]");
-            sb.AppendLine($"{i2}private global::{typePart} {fieldName} = null!;");
-        }
-
-        // Initialize (explicit interface implementation)
-        sb.AppendLine();
-        sb.AppendLine($"{i2}void global::Bindings.IView<{vmFullName}>.Initialize({vmFullName} viewModel)");
-        sb.AppendLine($"{i2}{{");
-        sb.AppendLine($"{i3}_viewModel = viewModel;");
-        sb.AppendLine($"{i2}}}");
-
-        // BindAsync (only emitted when requireBindImplementation=false)
-        if (!data.RequireBindImplementation)
-        {
-            sb.AppendLine();
-            sb.AppendLine($"{i2}global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global::System.Threading.CancellationToken _)");
-            sb.AppendLine($"{i2}{{");
-            sb.AppendLine($"{i3}BindAll();");
-            sb.AppendLine($"{i3}return default;");
-            sb.AppendLine($"{i2}}}");
-        }
-
-        // BindAll: field bindings (declaration order) → event bindings (declaration order)
-        sb.AppendLine();
-        sb.AppendLine($"{i2}private void BindAll()");
-        sb.AppendLine($"{i2}{{");
-        AppendFieldBindings(sb, i3, data.SchemaFields, fieldAssignments);
-        AppendMethodBindings(sb, i3, data.SchemaMethods, methodAssignments);
-        sb.AppendLine($"{i3}OnPostBind();");
-        sb.AppendLine($"{i3}_viewModel.NotifyCompletedBind();");
-        sb.AppendLine($"{i2}}}");
-
-        sb.AppendLine();
-        sb.AppendLine($"{i2}partial void OnPostBind();");
-        sb.AppendLine($"{i1}}}"); // end View class
-
-        // Debug subscriber block (re-runs field bindings only)
-        sb.AppendLine();
-        sb.AppendLine("#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT");
-        sb.AppendLine($"{i1}public sealed partial class {viewClassName} : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>");
-        sb.AppendLine($"{i1}{{");
-        sb.AppendLine($"{i2}void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)");
-        sb.AppendLine($"{i2}{{");
-        sb.AppendLine($"{i3}message.BindTo(this);");
-        AppendFieldBindings(sb, i3, data.SchemaFields, fieldAssignments); // field bindings only
-        sb.AppendLine($"{i3}OnPostBind();");
-        sb.AppendLine($"{i3}_viewModel.NotifyCompletedBind();");
-        sb.AppendLine($"{i2}}}");
-        sb.AppendLine($"{i1}}}");
-        sb.AppendLine("#endif");
-
-        if (hasNs) sb.AppendLine("}");
-
-        ctx.AddSource($"{viewClassName}.g.cs", SourceText.From(sb.ToString(), Encoding.UTF8));
-    }
-
-    // -------------------------------------------------------------------------
-    // BindAll code-generation helpers
-    // -------------------------------------------------------------------------
-
-    /// <summary>
-    /// Generates field binding code for [Schema] fields.
-    ///
-    /// Binding rules:
-    ///   - "TMPro.TMP_Text.text" with no format    → SetValue(_field, _viewModel.Prop)
-    ///   - "TMPro.TMP_Text.text" with format       → SetValue(_field, _viewModel.Prop, "fmt")
-    ///   - all other paths                         → _field.member = _viewModel.Prop
-    /// </summary>
-    private static void AppendFieldBindings(
-        StringBuilder sb,
-        string indent,
-        (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] schemaFields,
-        string[] fieldAssignments)
-    {
-        for (var i = 0; i < schemaFields.Length; i++)
-        {
-            var (fieldName, _, bindingPath, _, format, _) = schemaFields[i];
-            var viewField = fieldAssignments[i];
-            var propName = ToPropertyName(fieldName);
-
-            if (bindingPath == "TMPro.TMP_Text.text")
-            {
-                // Only TMPro.TMP_Text.text uses the SetValue extension method
-                if (string.IsNullOrEmpty(format))
-                    sb.AppendLine($"{indent}global::Bindings.TextMeshProExtensions.SetValue({viewField}, _viewModel.{propName});");
-                else
-                    sb.AppendLine($"{indent}global::Bindings.TextMeshProExtensions.SetValue({viewField}, _viewModel.{propName}, \"{format}\");");
-            }
-            else
-            {
-                // All other paths use direct assignment
-                var (_, memberName) = SplitBindingPath(bindingPath);
-                sb.AppendLine($"{indent}{viewField}.{memberName} = _viewModel.{propName};");
-            }
-        }
-    }
-
-    /// <summary>
-    /// Generates event binding code for [Schema] methods.
-    /// RemoveAllListeners is called once per (viewField, eventName) group, followed by all AddListener calls.
-    /// Groups are processed in initial-appearance order.
-    /// </summary>
-    private static void AppendMethodBindings(
-        StringBuilder sb,
-        string indent,
-        (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods,
-        string[] methodAssignments)
-    {
-        // Group by (viewFieldName, memberName) in initial-appearance order
-        var groupOrder = new List<(string ViewField, string MemberName)>();
-        var groups = new Dictionary<(string, string), List<string>>();
-
-        for (var i = 0; i < schemaMethods.Length; i++)
-        {
-            var (methodName, bindingPath, _, _) = schemaMethods[i];
-            var viewField = methodAssignments[i];
-            var (_, memberName) = SplitBindingPath(bindingPath);
-            var key = (viewField, memberName);
-
-            if (!groups.ContainsKey(key))
-            {
-                groups[key] = new List<string>();
-                groupOrder.Add(key);
-            }
-            groups[key].Add(methodName);
-        }
-
-        foreach (var key in groupOrder)
-        {
-            var (viewField, memberName) = key;
-            // RemoveAllListeners is called only once per group
-            sb.AppendLine($"{indent}{viewField}.{memberName}.RemoveAllListeners();");
-            foreach (var methodName in groups[key])
-                sb.AppendLine($"{indent}{viewField}.{memberName}.AddListener(_viewModel.{methodName});");
-        }
+            Data = data,
+            FieldAssignments = fieldAssignments,
+            MethodAssignments = methodAssignments,
+            OrderedFields = orderedFields.ToArray(),
+        };
+        ctx.AddSource($"{viewClassName}.g.cs", SourceText.From(template.TransformText(), Encoding.UTF8));
     }
 }
