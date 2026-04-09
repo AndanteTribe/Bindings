@@ -313,7 +313,7 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // Tooltip BND003: same View field with conflicting tooltips → diagnostic warning
+    // Tooltip BND003: same View field with conflicting tooltips → diagnostic error
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -354,7 +354,7 @@ namespace Bindings.Sample
         // BND003 should be reported
         var bnd003 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND003");
         Assert.NotNull(bnd003);
-        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Warning, bnd003.Severity);
+        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd003.Severity);
         Assert.Contains("_button1", bnd003.GetMessage());
 
         // View field should still be generated with the first tooltip
