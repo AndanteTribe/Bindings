@@ -18,10 +18,12 @@
         <None Update="GeneratorCore\ViewModelTemplate.tt">
             <Generator>TextTemplatingFilePreprocessor</Generator>
             <LastGenOutput>ViewModelTemplate.cs</LastGenOutput>
+            <TransformOnBuild>true</TransformOnBuild>
         </None>
         <None Update="GeneratorCore\ViewTemplate.tt">
-            <Generator>TextTemplatingFileGenerator</Generator>
+            <Generator>TextTemplatingFilePreprocessor</Generator>
             <LastGenOutput>ViewTemplate.cs</LastGenOutput>
+            <TransformOnBuild>true</TransformOnBuild>
         </None>
     </ItemGroup>
 
