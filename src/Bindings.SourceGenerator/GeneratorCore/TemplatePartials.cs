@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -6,12 +7,12 @@ namespace Bindings.GeneratorCore
     /// <summary>
     /// Context fields and helper methods for the <see cref="ViewModelTemplate"/> partial class.
     /// </summary>
-    public partial class ViewModelTemplate
+    public partial class ViewModelTemplate(GenerationContext context)
     {
         /// <summary>
         /// The generation context for the [ViewModel] type being processed.
         /// </summary>
-        public readonly GenerationContext Context;
+        public readonly GenerationContext Context = context;
 
         public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
         public string TypeKeyword => Context.IsStruct ? "struct" : "class";
@@ -34,20 +35,14 @@ namespace Bindings.GeneratorCore
         {
             get
             {
-                var parts = new List<string>();
-                foreach (var (typeFullName, fieldName) in Context.Models)
+                var sb = new StringBuilder();
+                foreach (var (typeFullName, fieldName) in Context.Models.AsSpan())
                 {
-                    parts.Add($"{typeFullName} {ToParamName(fieldName)}");
+                    sb.Append(typeFullName).Append(' ').Append(ToParamName(fieldName)).Append(", ");
                 }
-
-                parts.Add("global::Bindings.IMvvmPublisher publisher");
-                return string.Join(", ", parts);
+                sb.Append("global::Bindings.IMvvmPublisher publisher");
+                return sb.ToString();
             }
-        }
-
-        public ViewModelTemplate(GenerationContext context)
-        {
-            Context = context;
         }
 
         /// <summary>
@@ -55,7 +50,7 @@ namespace Bindings.GeneratorCore
         /// Strips leading underscores and m_ prefix.
         /// </summary>
         private static string NormalizeFieldIdentifier(string fieldName) =>
-            TemplateHelpers.NormalizeFieldIdentifier(fieldName);
+            TemplateHelpers.NormalizeFieldIdentifier(fieldName).ToString();
 
         /// <summary>
         /// Returns the ViewModel property name derived from a field name (first letter uppercased).
@@ -75,27 +70,31 @@ namespace Bindings.GeneratorCore
     /// <summary>
     /// Context fields and helper methods for the <see cref="ViewTemplate"/> partial class.
     /// </summary>
-    public partial class ViewTemplate
+    public partial class ViewTemplate(
+        GenerationContext context,
+        string[] fieldAssignments,
+        string[] methodAssignments,
+        (string TypePart, string FieldName, string Tooltip)[] orderedFields)
     {
         /// <summary>
         /// The generation context for the [ViewModel] type being processed.
         /// </summary>
-        public readonly GenerationContext Context;
+        public readonly GenerationContext Context = context;
 
         /// <summary>
         /// View component field name assigned to each SchemaFields[i] entry.
         /// </summary>
-        public readonly string[] FieldAssignments;
+        public readonly string[] FieldAssignments = fieldAssignments;
 
         /// <summary>
         /// View component field name assigned to each SchemaMethods[i] entry.
         /// </summary>
-        public readonly string[] MethodAssignments;
+        public readonly string[] MethodAssignments = methodAssignments;
 
         /// <summary>
         /// Ordered (deduplicated) list of View component fields to declare, with type and tooltip.
         /// </summary>
-        public readonly (string TypePart, string FieldName, string Tooltip)[] OrderedFields;
+        public readonly (string TypePart, string FieldName, string Tooltip)[] OrderedFields = orderedFields;
 
         public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
 
@@ -107,10 +106,7 @@ namespace Bindings.GeneratorCore
         /// <summary>
         /// The fully-qualified type name of the ViewModel with the global:: prefix.
         /// </summary>
-        public string ViewModelFullName =>
-            string.IsNullOrEmpty(Context.Namespace)
-                ? $"global::{Context.ClassName}"
-                : $"global::{Context.Namespace}.{Context.ClassName}";
+        public string ViewModelFullName => string.IsNullOrEmpty(Context.Namespace) ? "global::" + Context.ClassName : "global::" + Context.Namespace + "." + Context.ClassName;
 
         /// <summary>
         /// The View class name derived from the ViewModel class name.
@@ -121,15 +117,7 @@ namespace Bindings.GeneratorCore
         /// Initializer expression for the _viewModel field.
         /// Classes use " = null!"; structs are value types with no initializer needed.
         /// </summary>
-        public string VmFieldInit => Context.IsStruct ? string.Empty : " = null!";
-
-        public ViewTemplate(GenerationContext context, string[] fieldAssignments, string[] methodAssignments, (string TypePart, string FieldName, string Tooltip)[] orderedFields)
-        {
-            Context = context;
-            FieldAssignments = fieldAssignments;
-            MethodAssignments = methodAssignments;
-            OrderedFields = orderedFields;
-        }
+        public string VmFieldInit => Context.IsStruct ? "" : " = null!";
 
         /// <summary>
         /// Returns the ViewModel property name derived from a field name (first letter uppercased).
@@ -144,7 +132,11 @@ namespace Bindings.GeneratorCore
         public static (string TypePart, string MemberName) SplitBindingPath(string path)
         {
             var lastDot = path.LastIndexOf('.');
-            if (lastDot < 0) return (path, string.Empty);
+            if (lastDot < 0)
+            {
+                return (path, "");
+            }
+
             return (path.Substring(0, lastDot), path.Substring(lastDot + 1));
         }
 
@@ -163,20 +155,31 @@ namespace Bindings.GeneratorCore
 
                 if (bindingPath == "TMPro.TMP_Text.text")
                 {
+                    sb.Append(indent);
+                    sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
+                    sb.Append(string.IsNullOrEmpty(format) ? ");\n" : $", \"{format}\");\n");
                     if (string.IsNullOrEmpty(format))
-                        sb.Append($"{indent}global::Bindings.TextMeshProExtensions.SetValue({viewField}, _viewModel.{propName});\n");
+                    {
+                        sb.Append(");");
+                    }
                     else
-                        sb.Append($"{indent}global::Bindings.TextMeshProExtensions.SetValue({viewField}, _viewModel.{propName}, \"{format}\");\n");
+                    {
+                        sb.Append(", \"").Append(format).Append("\");");
+                    }
                 }
                 else
                 {
                     var (_, memberName) = SplitBindingPath(bindingPath);
-                    sb.Append($"{indent}{viewField}.{memberName} = _viewModel.{propName};\n");
+                    sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(" = _viewModel.").Append(propName).Append(";");
                 }
+                sb.AppendLine();
             }
             // Remove trailing newline so the template's surrounding whitespace is consistent
             if (sb.Length > 0 && sb[sb.Length - 1] == '\n')
+            {
                 sb.Length--;
+            }
+
             return sb.ToString();
         }
 
@@ -209,13 +212,20 @@ namespace Bindings.GeneratorCore
             foreach (var key in groupOrder)
             {
                 var (viewField, memberName) = key;
-                sb.Append($"{indent}{viewField}.{memberName}.RemoveAllListeners();\n");
+                sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".RemoveAllListeners();");
+                sb.AppendLine();
                 foreach (var methodName in groups[key])
-                    sb.Append($"{indent}{viewField}.{memberName}.AddListener(_viewModel.{methodName});\n");
+                {
+                    sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".AddListener(_viewModel.").Append(methodName).Append(");");
+                    sb.AppendLine();
+                }
             }
             // Remove trailing newline so the template's surrounding whitespace is consistent
             if (sb.Length > 0 && sb[sb.Length - 1] == '\n')
+            {
                 sb.Length--;
+            }
+
             return sb.ToString();
         }
     }
