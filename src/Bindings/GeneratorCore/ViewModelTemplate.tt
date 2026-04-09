@@ -1,0 +1,52 @@
+<#@ template debug="false" hostspecific="false" linePragmas="false" language="C#" #>
+<#@ assembly name="System.Core" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Collections.Generic" #>
+#nullable enable
+<# if (HasNamespace) { #>
+namespace <#= Data.Namespace #>
+{
+<# } #>
+<# if (!Data.AlreadySerializable) { #>
+<#= I1 #>[global::System.Serializable]
+<# } #>
+<#= I1 #>public partial <#= TypeKeyword #> <#= Data.ClassName #> : global::Bindings.IViewModel
+<#= I1 #>{
+<#= I2 #>private readonly global::Bindings.IMvvmPublisher _publisher;
+<# foreach (var schemaField in Data.SchemaFields) { #>
+
+<#= I2 #>public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
+<#= I2 #>{
+<#= I3 #>get => <#= schemaField.FieldName #>;
+<# if (!Data.IsReadOnly) { #>
+<#= I3 #>set
+<#= I3 #>{
+<#= I4 #><#= schemaField.FieldName #> = value;
+<#= I4 #>PublishRebindMessage();
+<#= I3 #>}
+<# } #>
+<#= I2 #>}
+<# } #>
+
+<#= I2 #>public <#= Data.ClassName #>(<#= ConstructorParamList #>)
+<#= I2 #>{
+<# foreach (var model in Data.Models) { #>
+<#= I3 #><#= model.FieldName #> = <#= ToParamName(model.FieldName) #>;
+<# } #>
+<#= I3 #>_publisher = publisher;
+<#= I2 #>}
+
+<#= I2 #>public void NotifyCompletedBind() => OnPostBind();
+
+<#= I2 #>partial void OnPostBind();
+
+<#= I2 #>[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+<#= I2 #>private void PublishRebindMessage()
+<#= I2 #>{
+<#= I3 #>_publisher.PublishRebindMessage<<#= ViewModelFullName #>>();
+<#= I2 #>}
+<#= I1 #>}
+<# if (HasNamespace) { #>
+}
+<# } #>
