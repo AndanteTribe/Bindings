@@ -350,7 +350,6 @@ namespace Bindings.GeneratorCore
     {
         #region Fields
         private global::System.Text.StringBuilder generationEnvironmentField;
-        private global::System.CodeDom.Compiler.CompilerErrorCollection errorsField;
         private global::System.Collections.Generic.List<int> indentLengthsField;
         private string currentIndentField = "";
         private bool endsWithNewline;
@@ -373,20 +372,6 @@ namespace Bindings.GeneratorCore
             set
             {
                 this.generationEnvironmentField = value;
-            }
-        }
-        /// <summary>
-        /// The error collection for the generation process
-        /// </summary>
-        public System.CodeDom.Compiler.CompilerErrorCollection Errors
-        {
-            get
-            {
-                if ((this.errorsField == null))
-                {
-                    this.errorsField = new global::System.CodeDom.Compiler.CompilerErrorCollection();
-                }
-                return this.errorsField;
             }
         }
         /// <summary>
@@ -447,7 +432,7 @@ namespace Bindings.GeneratorCore
                 this.endsWithNewline = false;
             }
             // Check if the current text ends with a newline
-            if (textToAppend.EndsWith(global::System.Environment.NewLine, global::System.StringComparison.CurrentCulture))
+            if (textToAppend.EndsWith("\r\n", global::System.StringComparison.Ordinal))
             {
                 this.endsWithNewline = true;
             }
@@ -459,7 +444,7 @@ namespace Bindings.GeneratorCore
                 return;
             }
             // Everywhere there is a newline in the text, add an indent after it
-            textToAppend = textToAppend.Replace(global::System.Environment.NewLine, (global::System.Environment.NewLine + this.currentIndentField));
+            textToAppend = textToAppend.Replace("\r\n", ("\r\n" + this.currentIndentField));
             // If the text ends with a newline, then we should strip off the indent added at the very end
             // because the appropriate indent will be added when the next time Write() is called
             if (this.endsWithNewline)
@@ -485,33 +470,14 @@ namespace Bindings.GeneratorCore
         /// </summary>
         public void Write(string format, params object[] args)
         {
-            this.Write(string.Format(global::System.Globalization.CultureInfo.CurrentCulture, format, args));
+            this.Write(string.Format(global::System.Globalization.CultureInfo.InvariantCulture, format, args));
         }
         /// <summary>
         /// Write formatted text directly into the generated output
         /// </summary>
         public void WriteLine(string format, params object[] args)
         {
-            this.WriteLine(string.Format(global::System.Globalization.CultureInfo.CurrentCulture, format, args));
-        }
-        /// <summary>
-        /// Raise an error
-        /// </summary>
-        public void Error(string message)
-        {
-            System.CodeDom.Compiler.CompilerError error = new global::System.CodeDom.Compiler.CompilerError();
-            error.ErrorText = message;
-            this.Errors.Add(error);
-        }
-        /// <summary>
-        /// Raise a warning
-        /// </summary>
-        public void Warning(string message)
-        {
-            System.CodeDom.Compiler.CompilerError error = new global::System.CodeDom.Compiler.CompilerError();
-            error.ErrorText = message;
-            error.IsWarning = true;
-            this.Errors.Add(error);
+            this.WriteLine(string.Format(global::System.Globalization.CultureInfo.InvariantCulture, format, args));
         }
         /// <summary>
         /// Increase the indent
