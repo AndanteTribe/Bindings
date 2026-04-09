@@ -1,22 +1,20 @@
-#nullable disable
-
 using System.Collections.Generic;
 using System.Text;
 
-namespace Bindings
+namespace Bindings.GeneratorCore
 {
     /// <summary>
-    /// Data properties and helper methods for the <see cref="ViewModelTemplate"/> partial class.
+    /// Context fields and helper methods for the <see cref="ViewModelTemplate"/> partial class.
     /// </summary>
     public partial class ViewModelTemplate
     {
         /// <summary>
         /// The generation context for the [ViewModel] type being processed.
         /// </summary>
-        public GenerationContext Data { get; set; }
+        public readonly GenerationContext Context;
 
-        public bool HasNamespace => !string.IsNullOrEmpty(Data.Namespace);
-        public string TypeKeyword => Data.IsStruct ? "struct" : "class";
+        public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
+        public string TypeKeyword => Context.IsStruct ? "struct" : "class";
 
         // Indentation helpers (one extra level when inside a namespace block)
         public string I1 => HasNamespace ? "    " : "";
@@ -27,10 +25,7 @@ namespace Bindings
         /// <summary>
         /// The fully-qualified type name of the ViewModel with the global:: prefix.
         /// </summary>
-        public string ViewModelFullName =>
-            string.IsNullOrEmpty(Data.Namespace)
-                ? $"global::{Data.ClassName}"
-                : $"global::{Data.Namespace}.{Data.ClassName}";
+        public string ViewModelFullName => string.IsNullOrEmpty(Context.Namespace) ? "global::" + Context.ClassName : "global::" + Context.Namespace + "." + Context.ClassName;
 
         /// <summary>
         /// Comma-separated constructor parameter list: [Model] fields first, then publisher.
@@ -40,11 +35,19 @@ namespace Bindings
             get
             {
                 var parts = new List<string>();
-                foreach (var (typeFullName, fieldName) in Data.Models)
+                foreach (var (typeFullName, fieldName) in Context.Models)
+                {
                     parts.Add($"{typeFullName} {ToParamName(fieldName)}");
+                }
+
                 parts.Add("global::Bindings.IMvvmPublisher publisher");
                 return string.Join(", ", parts);
             }
+        }
+
+        public ViewModelTemplate(GenerationContext context)
+        {
+            Context = context;
         }
 
         /// <summary>
@@ -70,31 +73,31 @@ namespace Bindings
     }
 
     /// <summary>
-    /// Data properties and helper methods for the <see cref="ViewTemplate"/> partial class.
+    /// Context fields and helper methods for the <see cref="ViewTemplate"/> partial class.
     /// </summary>
     public partial class ViewTemplate
     {
         /// <summary>
         /// The generation context for the [ViewModel] type being processed.
         /// </summary>
-        public GenerationContext Data { get; set; }
+        public readonly GenerationContext Context;
 
         /// <summary>
         /// View component field name assigned to each SchemaFields[i] entry.
         /// </summary>
-        public string[] FieldAssignments { get; set; }
+        public readonly string[] FieldAssignments;
 
         /// <summary>
         /// View component field name assigned to each SchemaMethods[i] entry.
         /// </summary>
-        public string[] MethodAssignments { get; set; }
+        public readonly string[] MethodAssignments;
 
         /// <summary>
         /// Ordered (deduplicated) list of View component fields to declare, with type and tooltip.
         /// </summary>
-        public (string TypePart, string FieldName, string Tooltip)[] OrderedFields { get; set; }
+        public readonly (string TypePart, string FieldName, string Tooltip)[] OrderedFields;
 
-        public bool HasNamespace => !string.IsNullOrEmpty(Data.Namespace);
+        public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
 
         // Indentation helpers (one extra level when inside a namespace block)
         public string I1 => HasNamespace ? "    " : "";
@@ -105,20 +108,28 @@ namespace Bindings
         /// The fully-qualified type name of the ViewModel with the global:: prefix.
         /// </summary>
         public string ViewModelFullName =>
-            string.IsNullOrEmpty(Data.Namespace)
-                ? $"global::{Data.ClassName}"
-                : $"global::{Data.Namespace}.{Data.ClassName}";
+            string.IsNullOrEmpty(Context.Namespace)
+                ? $"global::{Context.ClassName}"
+                : $"global::{Context.Namespace}.{Context.ClassName}";
 
         /// <summary>
         /// The View class name derived from the ViewModel class name.
         /// </summary>
-        public string ViewClassName => Data.ClassName.Replace("ViewModel", "View");
+        public string ViewClassName => Context.ClassName.Replace("ViewModel", "View");
 
         /// <summary>
         /// Initializer expression for the _viewModel field.
         /// Classes use " = null!"; structs are value types with no initializer needed.
         /// </summary>
-        public string VmFieldInit => Data.IsStruct ? string.Empty : " = null!";
+        public string VmFieldInit => Context.IsStruct ? string.Empty : " = null!";
+
+        public ViewTemplate(GenerationContext context, string[] fieldAssignments, string[] methodAssignments, (string TypePart, string FieldName, string Tooltip)[] orderedFields)
+        {
+            Context = context;
+            FieldAssignments = fieldAssignments;
+            MethodAssignments = methodAssignments;
+            OrderedFields = orderedFields;
+        }
 
         /// <summary>
         /// Returns the ViewModel property name derived from a field name (first letter uppercased).
@@ -144,9 +155,9 @@ namespace Bindings
         public string WriteFieldBindings(string indent)
         {
             var sb = new StringBuilder();
-            for (var i = 0; i < Data.SchemaFields.Length; i++)
+            for (var i = 0; i < Context.SchemaFields.Length; i++)
             {
-                var (fieldName, _, bindingPath, _, format, _) = Data.SchemaFields[i];
+                var (fieldName, _, bindingPath, _, format, _) = Context.SchemaFields[i];
                 var viewField = FieldAssignments[i];
                 var propName = ToPropertyName(fieldName);
 
@@ -179,9 +190,9 @@ namespace Bindings
             var groupOrder = new List<(string ViewField, string MemberName)>();
             var groups = new Dictionary<(string, string), List<string>>();
 
-            for (var i = 0; i < Data.SchemaMethods.Length; i++)
+            for (var i = 0; i < Context.SchemaMethods.Length; i++)
             {
-                var (methodName, bindingPath, _, _) = Data.SchemaMethods[i];
+                var (methodName, bindingPath, _, _) = Context.SchemaMethods[i];
                 var viewField = MethodAssignments[i];
                 var (_, memberName) = SplitBindingPath(bindingPath);
                 var key = (viewField, memberName);

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using Bindings.GeneratorCore;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
@@ -479,10 +480,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   - Constructor ([Model] fields in declaration order, then publisher)
     ///   - NotifyCompletedBind / OnPostBind / PublishRebindMessage helpers
     /// </summary>
-    private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext data)
+    private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext context)
     {
-        var template = new ViewModelTemplate { Data = data };
-        ctx.AddSource($"{data.ClassName}.g.cs", SourceText.From(template.TransformText(), Encoding.UTF8));
+        var template = new ViewModelTemplate(context);
+        ctx.AddSource($"{context.ClassName}.g.cs", SourceText.From(template.TransformText(), Encoding.UTF8));
     }
 
     // -------------------------------------------------------------------------
@@ -502,27 +503,21 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   - partial void OnPostBind
     ///   - Debug subscriber block (#if UNITY_EDITOR || ... )
     /// </summary>
-    private static void EmitViewSource(SourceProductionContext ctx, GenerationContext data)
+    private static void EmitViewSource(SourceProductionContext ctx, GenerationContext context)
     {
         // BND001 was already reported in RegisterSourceOutput; skip View generation here
-        if (!data.ClassName.Contains("ViewModel"))
+        if (!context.ClassName.Contains("ViewModel"))
             return;
 
         var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) =
-            BuildComponentFieldAssignments(data);
+            BuildComponentFieldAssignments(context);
 
         // BND003: report a warning for each View field that has conflicting tooltip values
         foreach (var fieldName in conflictingTooltipFields)
             ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
 
-        var viewClassName = data.ClassName.Replace("ViewModel", "View");
-        var template = new ViewTemplate
-        {
-            Data = data,
-            FieldAssignments = fieldAssignments,
-            MethodAssignments = methodAssignments,
-            OrderedFields = orderedFields.ToArray(),
-        };
+        var viewClassName = context.ClassName.Replace("ViewModel", "View");
+        var template = new ViewTemplate(context, fieldAssignments, methodAssignments, orderedFields.ToArray());
         ctx.AddSource($"{viewClassName}.g.cs", SourceText.From(template.TransformText(), Encoding.UTF8));
     }
 }

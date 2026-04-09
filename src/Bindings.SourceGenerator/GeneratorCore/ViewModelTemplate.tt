@@ -5,21 +5,21 @@
 <#@ import namespace="System.Collections.Generic" #>
 #nullable enable
 <# if (HasNamespace) { #>
-namespace <#= Data.Namespace #>
+namespace <#= Context.Namespace #>
 {
 <# } #>
-<# if (!Data.AlreadySerializable) { #>
+<# if (!Context.AlreadySerializable) { #>
 <#= I1 #>[global::System.Serializable]
 <# } #>
-<#= I1 #>public partial <#= TypeKeyword #> <#= Data.ClassName #> : global::Bindings.IViewModel
+<#= I1 #>public partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 <#= I1 #>{
 <#= I2 #>private readonly global::Bindings.IMvvmPublisher _publisher;
-<# foreach (var schemaField in Data.SchemaFields) { #>
+<# foreach (var schemaField in Context.SchemaFields) { #>
 
 <#= I2 #>public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
 <#= I2 #>{
 <#= I3 #>get => <#= schemaField.FieldName #>;
-<# if (!Data.IsReadOnly) { #>
+<# if (!Context.IsReadOnly) { #>
 <#= I3 #>set
 <#= I3 #>{
 <#= I4 #><#= schemaField.FieldName #> = value;
@@ -29,9 +29,9 @@ namespace <#= Data.Namespace #>
 <#= I2 #>}
 <# } #>
 
-<#= I2 #>public <#= Data.ClassName #>(<#= ConstructorParamList #>)
+<#= I2 #>public <#= Context.ClassName #>(<#= ConstructorParamList #>)
 <#= I2 #>{
-<# foreach (var model in Data.Models) { #>
+<# foreach (var model in Context.Models) { #>
 <#= I3 #><#= model.FieldName #> = <#= ToParamName(model.FieldName) #>;
 <# } #>
 <#= I3 #>_publisher = publisher;

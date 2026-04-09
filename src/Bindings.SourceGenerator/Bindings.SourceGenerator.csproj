@@ -20,7 +20,7 @@
             <LastGenOutput>ViewModelTemplate.cs</LastGenOutput>
         </None>
         <None Update="GeneratorCore\ViewTemplate.tt">
-            <Generator>TextTemplatingFilePreprocessor</Generator>
+            <Generator>TextTemplatingFileGenerator</Generator>
             <LastGenOutput>ViewTemplate.cs</LastGenOutput>
         </None>
     </ItemGroup>

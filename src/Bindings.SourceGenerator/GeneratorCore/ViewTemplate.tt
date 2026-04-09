@@ -5,7 +5,7 @@
 <#@ import namespace="System.Collections.Generic" #>
 #nullable enable
 <# if (HasNamespace) { #>
-namespace <#= Data.Namespace #>
+namespace <#= Context.Namespace #>
 {
 <# } #>
 <#= I1 #>[global::System.Serializable]
@@ -26,7 +26,7 @@ namespace <#= Data.Namespace #>
 <#= I2 #>{
 <#= I3 #>_viewModel = viewModel;
 <#= I2 #>}
-<# if (!Data.RequireBindImplementation) { #>
+<# if (!Context.RequireBindImplementation) { #>
 
 <#= I2 #>global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global::System.Threading.CancellationToken _)
 <#= I2 #>{
@@ -51,7 +51,7 @@ namespace <#= Data.Namespace #>
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
 <# if (HasNamespace) { #>
-namespace <#= Data.Namespace #>
+namespace <#= Context.Namespace #>
 {
 <# } #>
 <#= I1 #>public sealed partial class <#= ViewClassName #> : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
