@@ -1,0 +1,44 @@
+name: dotnet-test
+on:
+    pull_request:
+        types:
+            - opened
+            - synchronize
+        paths:
+            - 'src/**'
+    push:
+        branches:
+            - main
+            - feature/init-up
+        paths:
+            - 'src/**'
+    workflow_dispatch: {}
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-dotnet@v5
+              with:
+                  dotnet-version: '8.0.x'
+            - run: dotnet restore src/Bindings.Tests/Bindings.Tests.csproj
+            - run: dotnet build src/Bindings.Tests/Bindings.Tests.csproj --configuration Release --no-restore
+            - run: dotnet test src/Bindings.Tests/Bindings.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults
+            - name: Run ReportGenerator
+              run: |
+                  dotnet tool install -g dotnet-reportgenerator-globaltool
+                  reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"report" -reporttypes:"Html;MarkdownSummary"
+                  cat report/Summary.md >> $GITHUB_STEP_SUMMARY
+            - uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: report/

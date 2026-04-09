@@ -1,0 +1,15 @@
+{
+  "name": "jp.andantetribe.bindings",
+  "displayName": "Bindings",
+  "author": {
+    "name": "AndanteTribe",
+    "url": "https://github.com/AndanteTribe"
+  },
+  "version": "0.1.0",
+  "unity": "6000.0",
+  "description": "MVVM-based automated UI binding framework built on uGUI.",
+  "license": "MIT",
+  "dependencies": {
+    "com.unity.ugui": "2.0.0"
+  }
+}

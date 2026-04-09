@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="DllCopy" AfterTargets="AfterBuild" Condition="Exists('$(OutputPath)/Bindings.SourceGenerator.dll')">
+        <Message Text="OutputPath : $(OutputPath)" Importance="high" />
+        <Message Text="MSBuildThisFileDirectory : $(MSBuildThisFileDirectory)" Importance="high" />
+        <Copy SourceFiles="$(OutputPath)/Bindings.SourceGenerator.dll" DestinationFolder="$(MSBuildThisFileDirectory)../Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime" SkipUnchangedFiles="true" />
+    </Target>
+</Project>

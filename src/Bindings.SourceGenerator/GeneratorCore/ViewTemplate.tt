@@ -1,0 +1,67 @@
+<#@ template debug="false" hostspecific="false" linePragmas="false" language="C#" #>
+<#@ import namespace="Bindings.GeneratorCore" #>
+#nullable enable
+<# if (HasNamespace) { #>
+namespace <#= Context.Namespace #>
+{
+<# } #>
+<#= I1 #>[global::System.Serializable]
+<#= I1 #>public sealed partial class <#= ViewClassName #> : global::Bindings.IView<<#= ViewModelFullName #>>
+<#= I1 #>{
+<#= I2 #>[global::System.NonSerialized]
+<#= I2 #>private <#= ViewModelFullName #> _viewModel<#= VmFieldInit #>;
+<# foreach (var field in OrderedFields) { #>
+
+<# if (!string.IsNullOrEmpty(field.Tooltip)) { #>
+<#= I2 #>[global::UnityEngine.Tooltip("<#= field.Tooltip #>")]
+<# } #>
+<#= I2 #>[global::UnityEngine.SerializeField]
+<#= I2 #>private global::<#= field.TypePart #> <#= field.FieldName #> = null!;
+<# } #>
+
+<#= I2 #>void global::Bindings.IView<<#= ViewModelFullName #>>.Initialize(<#= ViewModelFullName #> viewModel)
+<#= I2 #>{
+<#= I3 #>_viewModel = viewModel;
+<#= I2 #>}
+<# if (!Context.RequireBindImplementation) { #>
+
+<#= I2 #>global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global::System.Threading.CancellationToken _)
+<#= I2 #>{
+<#= I3 #>BindAll();
+<#= I3 #>return default;
+<#= I2 #>}
+<# } #>
+
+<#= I2 #>private void BindAll()
+<#= I2 #>{
+<#= WriteFieldBindings(I3) #>
+<#= WriteMethodBindings(I3) #>
+<#= I3 #>OnPostBind();
+<#= I3 #>_viewModel.NotifyCompletedBind();
+<#= I2 #>}
+
+<#= I2 #>partial void OnPostBind();
+<#= I1 #>}
+<# if (HasNamespace) { #>
+}
+<# } #>
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+<# if (HasNamespace) { #>
+namespace <#= Context.Namespace #>
+{
+<# } #>
+<#= I1 #>public sealed partial class <#= ViewClassName #> : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
+<#= I1 #>{
+<#= I2 #>void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
+<#= I2 #>{
+<#= I3 #>message.BindTo(this);
+<#= WriteFieldBindings(I3) #>
+<#= I3 #>OnPostBind();
+<#= I3 #>_viewModel.NotifyCompletedBind();
+<#= I2 #>}
+<#= I1 #>}
+<# if (HasNamespace) { #>
+}
+<# } #>
+#endif

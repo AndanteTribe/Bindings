@@ -1,0 +1,183 @@
+﻿<#@ template language="C#" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#@ import namespace="System.Text" #>
+<#
+    const string obsoleteTemplate = """
+                                    [System.Obsolete("{0}")]
+                                    public const string {1} = {2};
+                                    """;
+    const string imageEventAlphaThresholdObsoleteMessage =
+        "eventAlphaThreshold has been deprecated. Use eventMinimumAlphaThreshold instead (UnityUpgradable) -> alphaHitTestMinimumThreshold";
+    const string inputFieldOnValueChangeObsoleteMessage = "onValueChange has been renamed to onValueChanged";
+    const string textEnableKerningObsoleteMessage =
+        "The \\\"enableKerning\\\" property has been deprecated. Use the \\\"fontFeatures\\\" property to control what features are enabled on the text component.";
+    const string textEnableWordWrappingObsoleteMessage = "The enabledWordWrapping property is now obsolete. Please use the textWrappingMode property instead.";
+
+    // namespace constants
+    const string gUnityEngine = "UnityEngine";
+    const string gTMPro = "TMPro";
+
+    var sb = new StringBuilder(256);
+    var dict = new Dictionary<string, (string[] props, string[] specials, string basePath)>
+    {
+        { $"{gUnityEngine}.Object", ([ "hideFlags", "name" ], [], "") },
+        { $"{gUnityEngine}.Component", ([ "tag" ], [], $"{gUnityEngine}.Object") },
+        { $"{gUnityEngine}.Behaviour", ([ "enabled" ], [], $"{gUnityEngine}.Component") },
+        { $"{gUnityEngine}.MonoBehaviour", ([], [], $"{gUnityEngine}.Behaviour") },
+        { $"{gUnityEngine}.UI.UIBehaviour", ([], [], $"{gUnityEngine}.MonoBehaviour") },
+
+        { $"{gUnityEngine}.Canvas", ([ "additionalShaderChannels", "normalizedSortingGridSize", "overridePixelPerfect", "overrideSorting", "pixelPerfect", "planeDistance", "referencePixelsPerUnit", "renderMode", "scaleFactor", "sortingLayerID", "sortingLayerName", "sortingOrder", "targetDisplay", "updateRectTransformForStandalone", "vertexColorAlwaysGammaSpace", "worldCamera" ], [], $"{gUnityEngine}.Behaviour") },
+        { $"{gUnityEngine}.CanvasGroup", ([ "alpha", "blocksRaycasts", "ignoreParentGroups", "interactable" ], [], $"{gUnityEngine}.Behaviour") },
+        { $"{gUnityEngine}.CanvasRenderer", ([ "clippingSoftness", "cull", "cullTransparentMesh", "hasPopInstruction", "materialCount", "popMaterialCount" ], [], $"{gUnityEngine}.Component") },
+        { $"{gUnityEngine}.Transform", ([ "eulerAngles", "forward", "hasChanged", "hierarchyCapacity", "localEulerAngles", "localPosition", "localRotation", "localScale", "parent", "position", "right", "rotation", "up" ], [], $"{gUnityEngine}.Component") },
+        { $"{gUnityEngine}.RectTransform", ([ "anchoredPosition", "anchoredPosition3D", "anchorMax", "anchorMin", "offsetMax", "offsetMin", "pivot", "sizeDelta" ], [], $"{gUnityEngine}.Transform") },
+
+        { $"{gUnityEngine}.UI.AspectRatioFitter", ([ "aspectMode", "aspectRatio" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.Button", ([ "onClick" ], [], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gUnityEngine}.UI.CanvasScaler", ([ "defaultSpriteDPI", "dynamicPixelsPerUnit", "fallbackScreenDPI", "matchWidthOrHeight", "physicalUnit", "referencePixelsPerUnit", "referenceResolution", "scaleFactor", "screenMatchMode", "uiScaleMode" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.ContentSizeFitter", ([ "horizontalFit", "verticalFit" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.Dropdown", ([ "alphaFadeSpeed", "captionImage", "captionText", "itemImage", "itemText", "onValueChanged", "template", "value" ], [], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gUnityEngine}.UI.Graphic", ([ "color", "material", "raycastPadding", "raycastTarget" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.GraphicRaycaster", ([ "blockingMask", "blockingObjects", "ignoreReversedGraphics" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.GridLayoutGroup", ([ "cellSize", "constraint", "constraintCount", "spacing", "startAxis", "startCorner" ], [], $"{gUnityEngine}.UI.LayoutGroup") },
+        { $"{gUnityEngine}.UI.HorizontalLayoutGroup", ([], [], $"{gUnityEngine}.UI.HorizontalOrVerticalLayoutGroup") },
+        { $"{gUnityEngine}.UI.HorizontalOrVerticalLayoutGroup", ([ "childControlHeight", "childControlWidth", "childForceExpandHeight", "childForceExpandWidth", "childScaleHeight", "childScaleWidth", "reverseArrangement", "spacing" ], [], $"{gUnityEngine}.UI.LayoutGroup") },
+        { $"{gUnityEngine}.UI.Image", ([ "alphaHitTestMinimumThreshold", "fillAmount", "fillCenter", "fillClockwise", "fillMethod", "fillOrigin", "overrideSprite", "pixelsPerUnitMultiplier", "preserveAspect", "sprite", "type", "useSpriteMesh" ], [ string.Format(obsoleteTemplate, imageEventAlphaThresholdObsoleteMessage, "eventAlphaThreshold", BuildNameofPath(sb, $"{gUnityEngine}.UI.Image", "eventAlphaThreshold")) ], $"{gUnityEngine}.UI.MaskableGraphic") },
+        { $"{gUnityEngine}.UI.InputField", ([ "asteriskChar", "caretBlinkRate", "caretColor", "caretPosition", "caretWidth", "characterLimit", "characterValidation", "contentType", "customCaretColor", "inputType", "keyboardType", "lineType", "onEndEdit", "onSubmit", "onValidateInput", "placeholder", "readOnly", "selectionAnchorPosition", "selectionColor", "selectionFocusPosition", "shouldActivateOnSelect", "shouldHideMobileInput", "text", "textComponent" ], [ string.Format(obsoleteTemplate, inputFieldOnValueChangeObsoleteMessage, "onValueChange", BuildNameofPath(sb, $"{gUnityEngine}.UI.InputField", "onValueChange")) ], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gUnityEngine}.UI.LayoutElement", ([ "flexibleHeight", "flexibleWidth", "ignoreLayout", "layoutPriority", "minHeight", "minWidth", "preferredHeight", "preferredWidth" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.LayoutGroup", ([ "childAlignment", "padding" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.Mask", ([ "showMaskGraphic" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.Outline", ([], [], $"{gUnityEngine}.UI.Shadow") },
+        { $"{gUnityEngine}.UI.MaskableGraphic", ([ "isMaskingGraphic", "maskable", "onCullStateChanged" ], [], $"{gUnityEngine}.UI.Graphic") },
+        { $"{gUnityEngine}.UI.RawImage", ([ "texture", "uvRect" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.RectMask2D", ([ "padding", "softness" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.ScrollRect", ([ "content", "decelerationRate", "elasticity", "horizontal", "horizontalNormalizedPosition", "horizontalScrollbar", "horizontalScrollbarSpacing", "horizontalScrollbarVisibility", "inertia", "movementType", "normalizedPosition", "onValueChanged", "scrollSensitivity", "velocity", "vertical", "verticalNormalizedPosition", "verticalScrollbar", "verticalScrollbarSpacing", "verticalScrollbarVisibility", "viewport" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.Scrollbar", ([ "direction", "handleRect", "numberOfSteps", "onValueChanged", "size", "value" ], [], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gUnityEngine}.UI.Selectable", ([ "colors", "interactable" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.Shadow", ([ "effectColor", "effectDistance", "useGraphicAlpha" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.Slider", ([ "direction", "fillRect", "handleRect", "maxValue", "minValue", "normalizedValue", "onValueChanged", "value", "wholeNumbers" ], [], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gUnityEngine}.UI.Text", ([ "alignByGeometry", "alignment", "font", "fontSize", "fontStyle", "horizontalOverflow", "lineSpacing", "resizeTextForBestFit", "resizeTextMaxSize", "resizeTextMinSize", "supportRichText", "text", "verticalOverflow" ], [], $"{gUnityEngine}.UI.MaskableGraphic") },
+        { $"{gUnityEngine}.UI.Toggle", ([ "group", "isOn" ], [], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gUnityEngine}.UI.ToggleGroup", ([ "allowSwitchOff" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
+        { $"{gUnityEngine}.UI.VerticalLayoutGroup", ([], [], $"{gUnityEngine}.UI.HorizontalOrVerticalLayoutGroup") },
+
+        { $"{gTMPro}.TMP_Dropdown", ([ "MultiSelect", "alphaFadeSpeed", "captionImage", "captionText", "itemImage", "itemText", "onValueChanged", "options", "placeholder", "template", "value" ], [], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gTMPro}.TMP_InputField", ([ "asteriskChar", "caretBlinkRate", "caretColor", "caretPosition", "caretWidth", "characterLimit", "characterValidation", "contentType", "customCaretColor", "fontAsset", "inputType", "inputValidator", "isRichTextEditingAllowed", "keepTextSelectionVisible", "keyboardType", "lineLimit", "lineType", "onDeselect", "onEndEdit", "onEndTextSelection", "onFocusSelectAll", "onSelect", "onSubmit", "onTextSelection", "onTouchScreenKeyboardStatusChanged", "onValidateInput", "onValueChanged", "placeholder", "pointSize", "readOnly", "resetOnDeActivation", "restoreOriginalTextOnEscape", "richText", "scrollSensitivity", "selectionAnchorPosition", "selectionColor", "selectionFocusPosition", "selectionStringAnchorPosition", "selectionStringFocusPosition", "shouldActivateOnSelect", "shouldHideMobileInput", "shouldHideSoftKeyboard", "stringPosition", "text", "textComponent", "textViewport", "verticalScrollbar" ], [], $"{gUnityEngine}.UI.Selectable") },
+        { $"{gTMPro}.TMP_Text", ([ "alignment", "alpha", "autoSizeTextContainer", "characterSpacing", "characterWidthAdjustment", "colorGradient", "colorGradientPreset", "emojiFallbackSupport", "enableAutoSizing", "enableCulling", "enableVertexGradient", "extraPadding", "faceColor", "firstVisibleCharacter", "font", "fontFeatures", "fontMaterial", "fontMaterials", "fontSharedMaterial", "fontSharedMaterials", "fontSize", "fontSizeMax", "fontSizeMin", "fontStyle", "fontWeight", "geometrySortingOrder", "havePropertiesChanged", "horizontalAlignment", "horizontalMapping", "ignoreVisibility", "isOrthographic", "isOverlay", "isRightToLeftText", "isTextObjectScaleStatic", "isUsingLegacyAnimationComponent", "isVolumetricText", "lineSpacing", "lineSpacingAdjustment", "linkedTextComponent", "mappingUvLineOffset", "margin", "maxHeight", "maxVisibleCharacters", "maxVisibleLines", "maxVisibleWords", "outlineColor", "outlineWidth", "overflowMode", "overrideColorTags", "pageToDisplay", "paragraphSpacing", "parseCtrlCharacters", "renderMode", "richText", "spriteAsset", "styleSheet", "text", "textPreprocessor", "textStyle", "textWrappingMode", "tintAllSprites", "useMaxVisibleDescender", "vertexBufferAutoSizeReduction", "verticalAlignment", "verticalMapping", "wordSpacing", "wordWrappingRatios" ], [ string.Format(obsoleteTemplate, textEnableKerningObsoleteMessage, "enableKerning", BuildNameofPath(sb, $"{gTMPro}.TMP_Text", "enableKerning")), string.Format(obsoleteTemplate, textEnableWordWrappingObsoleteMessage, "enableWordWrapping", BuildNameofPath(sb, $"{gTMPro}.TMP_Text", "enableWordWrapping")) ], $"{gUnityEngine}.UI.MaskableGraphic") },
+        { $"{gTMPro}.TextMeshProUGUI", ([ "maskOffset" ], [], $"{gTMPro}.TMP_Text") }
+    };
+
+    static string BuildNameofPath(StringBuilder sb, string fullPath, string propName)
+    {
+        sb.Clear();
+
+        var start = 0;
+        var dotIndex = 0;
+
+        do
+        {
+            dotIndex = fullPath.IndexOf('.', start);
+            var end = dotIndex == -1 ? fullPath.Length : dotIndex;
+
+            sb.Append(start != 0 ? " + \".\" + nameof(G_" : "nameof(");
+            sb.Append(fullPath, 0, end);
+            sb.Append(")");
+
+            start = dotIndex + 1;
+
+        } while (dotIndex != -1);
+
+        // プロパティ
+        sb.Append(" + \".\" + nameof(G_");
+        sb.Append(fullPath);
+        sb.Append(".");
+        sb.Append(propName);
+        sb.Append(")");
+        return sb.ToString();
+    }
+#>
+#nullable enable
+#pragma warning disable IDE1006
+
+using System.Diagnostics.CodeAnalysis;
+
+namespace Bindings
+{
+    using G_UnityEngine = global::<#= gUnityEngine #>;
+    using G_TMPro = global::<#= gTMPro #>;
+
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
+    public static class PathResolver
+    {
+<#
+    foreach (var kv in dict)
+    {
+        var path = kv.Key;
+        var (props, specials, basePath) = kv.Value;
+
+        var parts = path.Split('.');
+
+        for (var i = 0; i < parts.Length; i++)
+        {
+            var isLast = i == parts.Length - 1;
+            var indent = new string(' ', (i + 2) * 4);
+            var innerIndent = new string(' ', (i + 3) * 4);
+#>
+<#= indent #>public static <#= isLast ? "" : "partial " #>class <#= parts[i] #>
+<#= indent #>{
+<#
+            if (isLast)
+            {
+                foreach (var prop in props)
+                {
+#>
+<#= innerIndent #>public const string <#= prop #> = <#= BuildNameofPath(sb, path, prop) #>;
+<#
+                }
+
+                foreach (var special in specials)
+                {
+#>
+<#= innerIndent #><#= special.Replace("\n", "\n" + innerIndent) #>
+<#
+                }
+
+                // Trace the inheritance chain
+                var current = basePath;
+                while (!string.IsNullOrEmpty(current) && dict.TryGetValue(current, out var baseData))
+                {
+                    // properties
+                    foreach (var prop in baseData.props)
+                    {
+#>
+<#= innerIndent #>public const string <#= prop #> = <#= BuildNameofPath(sb, current, prop) #>;
+<#
+                    }
+
+                    // specials
+                    foreach (var special in baseData.specials)
+                    {
+#>
+<#= innerIndent #><#= special.Replace("\n", "\n" + innerIndent) #>
+<#
+                    }
+
+                    current = baseData.basePath;
+                }
+            }
+        }
+
+        for (var i = parts.Length - 1; i >= 0; i--)
+        {
+            var indent = new string(' ', (i + 2) * 4);
+#>
+<#= indent #>}
+<#
+        }
+#>
+
+<#
+    }
+#>
+    }
+}
