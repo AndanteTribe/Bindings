@@ -2,15 +2,11 @@
 
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
-        <IsPackable>false</IsPackable>
         <Nullable>enable</Nullable>
-        <LangVersion>latest</LangVersion>
-
+        <LangVersion>14</LangVersion>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IsRoslynComponent>true</IsRoslynComponent>
-
         <RootNamespace>Bindings</RootNamespace>
-        <PackageId>Bindings</PackageId>
     </PropertyGroup>
 
     <ItemGroup>

@@ -24,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Bindings\Bindings.csproj"/>
+        <ProjectReference Include="..\Bindings.SourceGenerator\Bindings.SourceGenerator.csproj"/>
     </ItemGroup>
 
 
