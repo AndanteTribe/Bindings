@@ -51,35 +51,22 @@ namespace Bindings
         /// Normalizes a field identifier following the CommunityToolkit ObservableProperty convention.
         /// Strips leading underscores and m_ prefix.
         /// </summary>
-        private static string NormalizeFieldIdentifier(string fieldName)
-        {
-            var s = fieldName.TrimStart('_');
-            if (s.StartsWith("m_", System.StringComparison.Ordinal))
-                s = s.Substring(2);
-            return s;
-        }
+        private static string NormalizeFieldIdentifier(string fieldName) =>
+            TemplateHelpers.NormalizeFieldIdentifier(fieldName);
 
         /// <summary>
         /// Returns the ViewModel property name derived from a field name (first letter uppercased).
         /// e.g. _count → Count, m_Count → Count
         /// </summary>
-        public static string ToPropertyName(string fieldName)
-        {
-            var s = NormalizeFieldIdentifier(fieldName);
-            if (s.Length == 0) return fieldName;
-            return char.ToUpperInvariant(s[0]) + s.Substring(1);
-        }
+        public static string ToPropertyName(string fieldName) =>
+            TemplateHelpers.ToPropertyName(fieldName);
 
         /// <summary>
         /// Returns the constructor parameter name derived from a field name (first letter lowercased).
         /// e.g. _model → model, m_Model → model
         /// </summary>
-        public static string ToParamName(string fieldName)
-        {
-            var s = NormalizeFieldIdentifier(fieldName);
-            if (s.Length == 0) return fieldName;
-            return char.ToLowerInvariant(s[0]) + s.Substring(1);
-        }
+        public static string ToParamName(string fieldName) =>
+            TemplateHelpers.ToParamName(fieldName);
     }
 
     /// <summary>
@@ -136,14 +123,8 @@ namespace Bindings
         /// <summary>
         /// Returns the ViewModel property name derived from a field name (first letter uppercased).
         /// </summary>
-        public static string ToPropertyName(string fieldName)
-        {
-            var s = fieldName.TrimStart('_');
-            if (s.StartsWith("m_", System.StringComparison.Ordinal))
-                s = s.Substring(2);
-            if (s.Length == 0) return fieldName;
-            return char.ToUpperInvariant(s[0]) + s.Substring(1);
-        }
+        public static string ToPropertyName(string fieldName) =>
+            TemplateHelpers.ToPropertyName(fieldName);
 
         /// <summary>
         /// Splits a binding path at the last '.' and returns (TypePart, MemberName).
