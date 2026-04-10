@@ -1,0 +1,81 @@
+name: release (github-hosted ubuntu-latest)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: string
+        required: true
+        default: "0.0.0"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: create branch
+        run: |
+          BRANCH="feature/v${{ github.event.inputs.version }}"
+          echo "Creating branch: $BRANCH"
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git fetch origin
+          git checkout -b "$BRANCH" origin/main
+      - name: update version (unity package.json)
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "Updating package.json to version $VERSION"
+
+          FILE="src/Bindings.Unity/Packages/jp.andantetribe.bindings/package.json"
+          jq --arg ver "$VERSION" '.version = $ver' "$FILE" > tmp.$$.json && mv tmp.$$.json "$FILE"
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: restore dotnet tools
+        run: dotnet tool restore
+      - name: update T4 templates
+        run: |
+          dotnet tool run t4 -- src/Bindings.SourceGenerator/GeneratorCore/ViewModelTemplate.tt \
+            -c Bindings.GeneratorCore.ViewModelTemplate \
+            -o src/Bindings.SourceGenerator/GeneratorCore/ViewModelTemplate.cs
+          dotnet tool run t4 -- src/Bindings.SourceGenerator/GeneratorCore/ViewTemplate.tt \
+            -c Bindings.GeneratorCore.ViewTemplate \
+            -o src/Bindings.SourceGenerator/GeneratorCore/ViewTemplate.cs
+      - name: build SourceGenerator (release)
+        run: dotnet build src/Bindings.SourceGenerator/Bindings.SourceGenerator.csproj --configuration Release
+      - name: commit and push
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+
+          git add \
+            src/Bindings.SourceGenerator/GeneratorCore/ViewModelTemplate.cs \
+            src/Bindings.SourceGenerator/GeneratorCore/ViewTemplate.cs \
+            src/Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/Bindings.SourceGenerator.dll \
+            src/Bindings.Unity/Packages/jp.andantetribe.bindings/package.json
+          git commit -m "chore: bump version to ${VERSION}"
+          git push origin HEAD
+      - name: create pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          BRANCH="feature/v$VERSION"
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore: bump version to $VERSION" \
+            --fill \
+            --assignee "${{ github.actor }}"
