@@ -54,17 +54,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, byte value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(16);
+            var size = 8;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -75,17 +77,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, sbyte value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(16);
+            var size = 8;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -96,17 +100,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, short value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(16);
+            var size = 8;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -117,17 +123,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, ushort value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(16);
+            var size = 8;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -138,17 +146,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, int value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(32);
+            var size = 16;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -159,17 +169,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, uint value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(32);
+            var size = 16;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -180,17 +192,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, long value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(32);
+            var size = 24;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -201,17 +215,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, ulong value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(32);
+            var size = 24;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -222,17 +238,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, float value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(32);
+            var size = 16;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -243,17 +261,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, double value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(32);
+            var size = 24;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -264,17 +284,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, decimal value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(64);
+            var size = 32;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -285,17 +307,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, DateTime value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(64);
+            var size = 32;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -306,17 +330,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, DateTimeOffset value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(64);
+            var size = 32;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -327,17 +353,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, Guid value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(64);
+            var size = 36;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
@@ -348,17 +376,19 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, TimeSpan value, string format = "")
         {
-            var array = ArrayPool<char>.Shared.Rent(64);
+            var size = 32;
+            var array = ArrayPool<char>.Shared.Rent(size);
             try
             {
-                if (value.TryFormat(array, out var charsWritten, format))
+                int charsWritten;
+                while (!value.TryFormat(array, out charsWritten, format))
                 {
-                    text.SetCharArray(array, 0, charsWritten);
+                    var toReturn = array;
+                    size *= 2;
+                    array = ArrayPool<char>.Shared.Rent(size);
+                    ArrayPool<char>.Shared.Return(toReturn);
                 }
-                else
-                {
-                    text.text = value.ToString(format);
-                }
+                text.SetCharArray(array, 0, charsWritten);
             }
             finally
             {
