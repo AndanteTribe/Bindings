@@ -87,7 +87,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // 5. Walk members to collect [Required] / [Schema] information
         // [Schema] is only valid on fields and methods; properties are excluded.
-        var models = new List<(string TypeFullName, string FieldName)>();
+        var requiredFields = new List<(string TypeFullName, string FieldName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)>();
         var schemaMethods = new List<(string MethodName, string BindingPath, int Id, string Tooltip)>();
 
@@ -104,7 +104,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                         var attrName = attr.AttributeClass?.ToDisplayString();
                         if (attrName == RequiredAttributeFullName)
                         {
-                            models.Add((
+                            requiredFields.Add((
                                 TypeFullName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 FieldName: field.Name));
                         }
@@ -137,7 +137,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     {
                         if (attr.AttributeClass?.ToDisplayString() == RequiredAttributeFullName)
                         {
-                            models.Add((
+                            requiredFields.Add((
                                 TypeFullName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 FieldName: prop.Name));
                         }
@@ -179,7 +179,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             isReadOnly: typeSymbol.IsReadOnly,
             requireBindImplementation: requireBind,
             alreadySerializable: alreadySerializable,
-            models: models.ToArray(),
+            requiredFields: requiredFields.ToArray(),
             schemaFields: schemaFields.ToArray(),
             schemaMethods: schemaMethods.ToArray(),
             diagnostics: diagnostics.ToArray());

@@ -21,7 +21,7 @@
 |---|---|---|
 | `[ViewModel]` | クラス | このクラスを ViewModel として扱う |
 | `[ViewModel(requireBindImplementation: true)]` | クラス | `BindAsync` を自動生成せず、ユーザーが実装する |
-| `[Required]` | フィールド | DI コンストラクタ引数として注入するモデル |
+| `[Required]` | フィールド | 生成されるコンストラクタに引数として追加するフィールド |
 | `[Schema(bindingPath)]` | フィールド・メソッド | UI コンポーネントとのバインド対象を宣言する（`id` のデフォルトは `-1` = 未指定） |
 | `[Schema(bindingPath, id: N)]` | フィールド・メソッド | `N ≥ 0`: 同じ `id` を持つスキーマは View 内で同一コンポーネントにバインド。`N < -1`: `BND002` エラー |
 | `[Schema(bindingPath, format: "N0")]` | フィールド | `TMPro.TMP_Text.text` バインド時の書式指定文字列 |
@@ -104,10 +104,10 @@ count       →（1）変化なし →（2）該当なし → count
 | | | `m_interactable` → `interactable` → `Interactable` |
 | | | `m_Count` → `Count` → `Count`（すでに大文字） |
 | | | `__value` → `value` → `Value` |
-| コンストラクタ引数名（`[Required]`） | 正規化後の先頭を小文字化 | `_model` → `model` → `model` |
-| | | `_model2` → `model2` → `model2` |
-| | | `m_Model` → `Model` → `model` |
-| | | `myModel` → `myModel` → `myModel`（先頭はすでに小文字） |
+| コンストラクタ引数名（`[Required]`） | 正規化後の先頭を小文字化 | `_service` → `service` → `service` |
+| | | `_service2` → `service2` → `service2` |
+| | | `m_Service` → `Service` → `service` |
+| | | `myService` → `myService` → `myService`（先頭はすでに小文字） |
 
 ---
 
@@ -184,8 +184,8 @@ public {FieldType} {PropertyName}
 
 ```csharp
 public {ClassName}(
-    global::{ModelType1} {paramName1},
-    global::{ModelType2} {paramName2},
+    global::{Type1} {paramName1},
+    global::{Type2} {paramName2},
     ...,
     global::Bindings.IMvvmPublisher publisher)
 {
@@ -196,7 +196,7 @@ public {ClassName}(
 }
 ```
 
-`[Required]` フィールドが0個の場合はモデル引数なし（`publisher` のみ）。
+`[Required]` フィールドが0個の場合は `publisher` 引数のみ。
 
 ### 4.5 ヘルパーメソッド
 
@@ -444,8 +444,8 @@ partial void OnPostBind();
 | 1 | simple | 通常 | `[Serializable]` 自動付与 | `BindAsync` 生成あり |
 | 2 | requireBindImplementation | `[ViewModel(requireBindImplementation: true)]` | なし | `BindAsync` 生成なし |
 | 3 | alreadySerializable | ユーザーが `[System.Serializable]` 付与済み | `[Serializable]` 重複付与しない | なし |
-| 4 | non model | `[Required]` なし | コンストラクタ引数は `publisher` のみ | なし |
-| 5 | multi models | 複数 `[Required]` | コンストラクタに複数 Model 引数 | なし |
+| 4 | no required | `[Required]` なし | コンストラクタ引数は `publisher` のみ | なし |
+| 5 | multi required | 複数 `[Required]` | コンストラクタに複数 `[Required]` 引数 | なし |
 | 6 | same id pair | 同一 `id` の `[Schema]` メソッドが複数（ケース B） | なし | 同一コンポーネントフィールドを共有。`RemoveAllListeners` は1回のみ |
 | 7 | format + non-text field | `format` 指定 + `TMPro.TMP_Text.text` 以外のフィールドスキーマ | なし | `SetValue` に `format` 引数追加、その他は直接代入 |
 | 8 | readonly struct | `readonly partial struct` | `[Schema]` フィールドのプロパティは `get` のみ（`set` なし） | 変化なし |

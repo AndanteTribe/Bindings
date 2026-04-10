@@ -28,8 +28,8 @@ namespace <#= Context.Namespace #>
 
 <#= I2 #>public <#= Context.ClassName #>(<#= ConstructorParamList #>)
 <#= I2 #>{
-<# foreach (var model in Context.Models) { #>
-<#= I3 #><#= model.FieldName #> = <#= ToParamName(model.FieldName) #>;
+<# foreach (var field in Context.RequiredFields) { #>
+<#= I3 #><#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
 <# } #>
 <#= I3 #>_publisher = publisher;
 <#= I2 #>}

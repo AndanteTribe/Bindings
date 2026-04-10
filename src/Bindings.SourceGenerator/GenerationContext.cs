@@ -39,7 +39,7 @@ public sealed class GenerationContext
     /// Fully-qualified type name and field name of each field
     /// annotated with RequiredAttribute, in declaration order.
     /// </summary>
-    public readonly (string TypeFullName, string FieldName)[] Models;
+    public readonly (string TypeFullName, string FieldName)[] RequiredFields;
 
     /// <summary>
     /// Attribute arguments for each field annotated with SchemaAttribute, in declaration order.
@@ -67,7 +67,7 @@ public sealed class GenerationContext
         bool isReadOnly,
         bool requireBindImplementation,
         bool alreadySerializable,
-        (string TypeFullName, string FieldName)[] models,
+        (string TypeFullName, string FieldName)[] requiredFields,
         (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] schemaFields,
         (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods,
         (DiagnosticDescriptor Descriptor, Location Location, string[] Args)[] diagnostics)
@@ -78,7 +78,7 @@ public sealed class GenerationContext
         IsReadOnly = isReadOnly;
         RequireBindImplementation = requireBindImplementation;
         AlreadySerializable = alreadySerializable;
-        Models = models;
+        RequiredFields = requiredFields;
         SchemaFields = schemaFields;
         SchemaMethods = schemaMethods;
         Diagnostics = diagnostics;

@@ -28,7 +28,7 @@ https://github.com/AndanteTribe/Bindings.git?path=src/Bindings.Unity/Packages/jp
 
 ### 1. Define a ViewModel
 
-Annotate a `partial` class with `[ViewModel]`. Use `[Required]` to inject dependencies and `[Schema]` to declare UI bindings.
+Annotate a `partial` class with `[ViewModel]`. Use `[Required]` to declare constructor parameters and `[Schema]` to declare UI bindings.
 
 ```csharp
 using Bindings;
@@ -214,7 +214,7 @@ Applied to a `partial` class or struct to mark it as a ViewModel and trigger sou
 
 ### `[Required]`
 
-Applied to a `readonly` field to declare a constructor-injected dependency. The generated constructor will accept a parameter of the field's type and assign it.
+Applied to a field or property to include it as a parameter in the generated constructor. The generated constructor will accept a parameter of the field's type and assign it.
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 

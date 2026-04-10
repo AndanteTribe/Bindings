@@ -75,11 +75,11 @@ namespace Bindings.GeneratorCore {
             this.Write(")\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("{\n");
- foreach (var model in Context.Models) { 
+ foreach (var field in Context.RequiredFields) { 
             this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write(this.ToStringHelper.ToStringWithCulture( model.FieldName ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
             this.Write(" = ");
-            this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(model.FieldName) ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(field.FieldName) ));
             this.Write(";\n");
  } 
             this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));

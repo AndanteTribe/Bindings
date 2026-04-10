@@ -36,7 +36,7 @@ namespace Bindings.GeneratorCore
             get
             {
                 var sb = new StringBuilder();
-                foreach (var (typeFullName, fieldName) in Context.Models.AsSpan())
+                foreach (var (typeFullName, fieldName) in Context.RequiredFields.AsSpan())
                 {
                     sb.Append(typeFullName).Append(' ').Append(ToParamName(fieldName)).Append(", ");
                 }
@@ -61,7 +61,7 @@ namespace Bindings.GeneratorCore
 
         /// <summary>
         /// Returns the constructor parameter name derived from a field name (first letter lowercased).
-        /// e.g. _model → model, m_Model → model
+        /// e.g. _count → count, m_Count → count
         /// </summary>
         public static string ToParamName(string fieldName) =>
             TemplateHelpers.ToParamName(fieldName);

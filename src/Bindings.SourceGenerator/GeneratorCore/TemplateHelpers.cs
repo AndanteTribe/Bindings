@@ -43,7 +43,7 @@ namespace Bindings.GeneratorCore
 
         /// <summary>
         /// Returns the constructor parameter name derived from a field name (first letter lowercased).
-        /// e.g. _model → model, m_Model → model
+        /// e.g. _count → count, m_Count → count
         /// </summary>
         internal static string ToParamName(ReadOnlySpan<char> fieldName)
         {
