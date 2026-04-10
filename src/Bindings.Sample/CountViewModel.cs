@@ -11,7 +11,7 @@ namespace Bindings.Sample
     [ViewModel]
     public partial class CountViewModel1
     {
-        [Model]
+        [Required]
         private readonly CountModel _model;
 
         [SerializeField]
@@ -42,7 +42,7 @@ namespace Bindings.Sample
     [ViewModel(requireBindImplementation: true)]
     public partial class CountViewModel2
     {
-        [Model]
+        [Required]
         private readonly CountModel _model;
 
         [SerializeField]
@@ -74,7 +74,7 @@ namespace Bindings.Sample
     [System.Serializable]
     public partial class CountViewModel3
     {
-        [Model]
+        [Required]
         private readonly CountModel _model;
 
         [SerializeField]
@@ -128,10 +128,10 @@ namespace Bindings.Sample
     [ViewModel]
     public partial class CountViewModel5
     {
-        [Model]
+        [Required]
         private readonly CountModel _model;
 
-        [Model]
+        [Required]
         private readonly CountModel _model2;
 
         [SerializeField]
@@ -163,7 +163,7 @@ namespace Bindings.Sample
     [ViewModel]
     public partial class CountViewModel6
     {
-        [Model]
+        [Required]
         private readonly CountModel _model;
 
         [SerializeField]
@@ -194,7 +194,7 @@ namespace Bindings.Sample
     [ViewModel]
     public partial class CountViewModel7
     {
-        [Model]
+        [Required]
         private readonly CountModel _model;
 
         [SerializeField]

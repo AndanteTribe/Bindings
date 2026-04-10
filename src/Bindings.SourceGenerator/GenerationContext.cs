@@ -37,7 +37,7 @@ public sealed class GenerationContext
 
     /// <summary>
     /// Fully-qualified type name and field name of each field
-    /// annotated with ModelAttribute, in declaration order.
+    /// annotated with RequiredAttribute, in declaration order.
     /// </summary>
     public readonly (string TypeFullName, string FieldName)[] Models;
 

@@ -28,7 +28,7 @@ https://github.com/AndanteTribe/Bindings.git?path=src/Bindings.Unity/Packages/jp
 
 ### 1. Define a ViewModel
 
-Annotate a `partial` class with `[ViewModel]`. Use `[Model]` to inject dependencies and `[Schema]` to declare UI bindings.
+Annotate a `partial` class with `[ViewModel]`. Use `[Required]` to inject dependencies and `[Schema]` to declare UI bindings.
 
 ```csharp
 using Bindings;
@@ -39,7 +39,7 @@ namespace MyApp
     [ViewModel]
     public partial class CounterViewModel
     {
-        [Model]
+        [Required]
         private readonly CounterModel _model;
 
         [SerializeField]
@@ -212,7 +212,7 @@ Applied to a `partial` class or struct to mark it as a ViewModel and trigger sou
 |-----------|------|---------|-------------|
 | `requireBindImplementation` | `bool` | `false` | When `true`, skips auto-generating `BindAsync`. The user must implement it manually on the partial View class. |
 
-### `[Model]`
+### `[Required]`
 
 Applied to a `readonly` field to declare a constructor-injected dependency. The generated constructor will accept a parameter of the field's type and assign it.
 

@@ -29,7 +29,7 @@ namespace Bindings.GeneratorCore
         public string ViewModelFullName => string.IsNullOrEmpty(Context.Namespace) ? "global::" + Context.ClassName : "global::" + Context.Namespace + "." + Context.ClassName;
 
         /// <summary>
-        /// Comma-separated constructor parameter list: [Model] fields first, then publisher.
+        /// Comma-separated constructor parameter list: [Required] fields first, then publisher.
         /// </summary>
         public string ConstructorParamList
         {
