@@ -9,7 +9,7 @@ namespace Bindings.Sample
     [ViewModel]
     public partial class CountViewModel
     {
-        [Model]
+        [Required]
         private readonly CountModel _model;
 
         [SerializeField]

@@ -28,7 +28,7 @@ namespace Bindings
     }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
-    public sealed class ModelAttribute : Attribute { }
+    public sealed class RequiredAttribute : Attribute { }
 
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class SchemaAttribute : Attribute
@@ -134,7 +134,7 @@ namespace Bindings.Sample
     [Bindings.ViewModel]
     public partial class CountViewModel1
     {
-        [Bindings.Model]
+        [Bindings.Required]
         private readonly object _model;
 
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
@@ -178,7 +178,7 @@ namespace Bindings.Sample
     [Bindings.ViewModel]
     public partial class CountViewModel6
     {
-        [Bindings.Model]
+        [Bindings.Required]
         private readonly object _model;
 
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
@@ -681,7 +681,7 @@ public partial class GlobalViewModel
     }
 
     // -------------------------------------------------------------------------
-    // [Model] on property (not field) is collected for the constructor
+    // [Required] on property (not field) is collected for the constructor
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -693,7 +693,7 @@ namespace Bindings.Sample
     [Bindings.ViewModel]
     public partial class CountViewModelPropModel
     {
-        [Bindings.Model]
+        [Bindings.Required]
         public object Model { get; }
 
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
@@ -704,7 +704,7 @@ namespace Bindings.Sample
         var (vmSource, _) = RunGenerator(userCode);
 
         Assert.NotNull(vmSource);
-        // [Model] on property → constructor param named after the property
+        // [Required] on property → constructor param named after the property
         Assert.Contains("model,", vmSource);
     }
 

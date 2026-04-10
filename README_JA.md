@@ -28,7 +28,7 @@ https://github.com/AndanteTribe/Bindings.git?path=src/Bindings.Unity/Packages/jp
 
 ### 1. ViewModel を定義する
 
-`partial` クラスに `[ViewModel]` を付与します。`[Model]` で依存関係を注入し、`[Schema]` で UI バインドを宣言します。
+`partial` クラスに `[ViewModel]` を付与します。`[Required]` でコンストラクタ引数を宣言し、`[Schema]` で UI バインドを宣言します。
 
 ```csharp
 using Bindings;
@@ -39,7 +39,7 @@ namespace MyApp
     [ViewModel]
     public partial class CounterViewModel
     {
-        [Model]
+        [Required]
         private readonly CounterModel _model;
 
         [SerializeField]
@@ -212,9 +212,9 @@ public class GameEntry : MonoBehaviour
 |-----------|-----|-----------|------|
 | `requireBindImplementation` | `bool` | `false` | `true` の場合、`BindAsync` の自動生成をスキップします。ユーザーが partial View クラスに手動で実装する必要があります。 |
 
-### `[Model]`
+### `[Required]`
 
-`readonly` フィールドに付与し、コンストラクタ注入する依存関係を宣言します。生成されるコンストラクタはそのフィールドの型の引数を受け取り、代入します。
+フィールドまたはプロパティに付与し、生成されるコンストラクタの引数として追加します。生成されるコンストラクタはそのフィールドの型の引数を受け取り、代入します。
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 

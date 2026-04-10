@@ -17,7 +17,7 @@ namespace Bindings;
 public sealed class ViewModelGenerator : IIncrementalGenerator
 {
     private const string ViewModelAttributeFullName = nameof(Bindings) + ".ViewModelAttribute";
-    private const string ModelAttributeFullName = nameof(Bindings) + ".ModelAttribute";
+    private const string RequiredAttributeFullName = nameof(Bindings) + ".RequiredAttribute";
     private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
 
@@ -85,9 +85,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, new[] { typeSymbol.Name }));
         }
 
-        // 5. Walk members to collect [Model] / [Schema] information
+        // 5. Walk members to collect [Required] / [Schema] information
         // [Schema] is only valid on fields and methods; properties are excluded.
-        var models = new List<(string TypeFullName, string FieldName)>();
+        var requiredFields = new List<(string TypeFullName, string FieldName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)>();
         var schemaMethods = new List<(string MethodName, string BindingPath, int Id, string Tooltip)>();
 
@@ -102,9 +102,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     foreach (var attr in field.GetAttributes())
                     {
                         var attrName = attr.AttributeClass?.ToDisplayString();
-                        if (attrName == ModelAttributeFullName)
+                        if (attrName == RequiredAttributeFullName)
                         {
-                            models.Add((
+                            requiredFields.Add((
                                 TypeFullName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 FieldName: field.Name));
                         }
@@ -130,14 +130,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     }
                     break;
                 }
-                // [Model] on properties is still supported; [Schema] on properties is excluded.
+                // [Required] on properties is still supported; [Schema] on properties is excluded.
                 case IPropertySymbol prop:
                 {
                     foreach (var attr in prop.GetAttributes())
                     {
-                        if (attr.AttributeClass?.ToDisplayString() == ModelAttributeFullName)
+                        if (attr.AttributeClass?.ToDisplayString() == RequiredAttributeFullName)
                         {
-                            models.Add((
+                            requiredFields.Add((
                                 TypeFullName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                                 FieldName: prop.Name));
                         }
@@ -179,7 +179,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             isReadOnly: typeSymbol.IsReadOnly,
             requireBindImplementation: requireBind,
             alreadySerializable: alreadySerializable,
-            models: models.ToArray(),
+            requiredFields: requiredFields.ToArray(),
             schemaFields: schemaFields.ToArray(),
             schemaMethods: schemaMethods.ToArray(),
             diagnostics: diagnostics.ToArray());
@@ -477,7 +477,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   - IViewModel implementation
     ///   - _publisher field
     ///   - One public property per [Schema] field (in declaration order)
-    ///   - Constructor ([Model] fields in declaration order, then publisher)
+    ///   - Constructor ([Required] fields in declaration order, then publisher)
     ///   - NotifyCompletedBind / OnPostBind / PublishRebindMessage helpers
     /// </summary>
     private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext context)
