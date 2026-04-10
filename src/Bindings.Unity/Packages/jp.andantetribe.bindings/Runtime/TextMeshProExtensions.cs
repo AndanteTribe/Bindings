@@ -62,7 +62,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -85,7 +85,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -108,7 +108,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -131,7 +131,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -154,7 +154,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -177,7 +177,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -200,7 +200,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -223,7 +223,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -246,7 +246,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -269,7 +269,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -292,7 +292,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -315,7 +315,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -338,7 +338,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -361,7 +361,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
@@ -384,7 +384,7 @@ namespace Bindings
                 while (!value.TryFormat(array, out charsWritten, format))
                 {
                     var toReturn = array;
-                    size *= 2;
+                    size = array.Length * 2;
                     array = ArrayPool<char>.Shared.Rent(size);
                     ArrayPool<char>.Shared.Return(toReturn);
                 }
