@@ -69,6 +69,115 @@ The source generator automatically produces:
 - `CounterViewModel.g.cs` — a partial ViewModel class with properties, constructor, and publisher wiring.
 - `CounterView.g.cs` — a sealed partial View class with serialized UI component fields and binding logic.
 
+### Generated Code
+
+**`CounterViewModel.g.cs`**
+
+```csharp
+#nullable enable
+
+namespace MyApp
+{
+    [global::System.Serializable]
+    public partial class CounterViewModel : global::Bindings.IViewModel
+    {
+        private readonly global::Bindings.IMvvmPublisher _publisher;
+
+        public int Count
+        {
+            get => _count;
+            set
+            {
+                _count = value;
+                PublishRebindMessage();
+            }
+        }
+
+        public CounterViewModel(global::MyApp.CounterModel model, global::Bindings.IMvvmPublisher publisher)
+        {
+            _model = model;
+            _publisher = publisher;
+        }
+
+        public void NotifyCompletedBind() => OnPostBind();
+
+        partial void OnPostBind();
+
+        [global::System.Runtime.CompilerServices.MethodImpl(
+            global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        private void PublishRebindMessage()
+        {
+            _publisher.PublishRebindMessage<CounterViewModel>();
+        }
+    }
+}
+```
+
+**`CounterView.g.cs`**
+
+```csharp
+#nullable enable
+
+namespace MyApp
+{
+    [global::System.Serializable]
+    public sealed partial class CounterView : global::Bindings.IView<global::MyApp.CounterViewModel>
+    {
+        [global::System.NonSerialized]
+        private global::MyApp.CounterViewModel _viewModel = null!;
+
+        [global::UnityEngine.SerializeField]
+        private global::TMPro.TMP_Text _text = null!;
+
+        [global::UnityEngine.SerializeField]
+        private global::UnityEngine.UI.Button _button1 = null!;
+
+        [global::UnityEngine.SerializeField]
+        private global::UnityEngine.UI.Button _button2 = null!;
+
+        void global::Bindings.IView<global::MyApp.CounterViewModel>.Initialize(
+            global::MyApp.CounterViewModel viewModel)
+        {
+            _viewModel = viewModel;
+        }
+
+        global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(
+            global::System.Threading.CancellationToken _)
+        {
+            BindAll();
+            return default;
+        }
+
+        private void BindAll()
+        {
+            global::Bindings.TextMeshProExtensions.SetValue(_text, _viewModel.Count);
+            _button1.onClick.RemoveAllListeners();
+            _button1.onClick.AddListener(_viewModel.Increment);
+            _button2.onClick.RemoveAllListeners();
+            _button2.onClick.AddListener(_viewModel.Decrement);
+            OnPostBind();
+            _viewModel.NotifyCompletedBind();
+        }
+
+        partial void OnPostBind();
+    }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+    public sealed partial class CounterView : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
+    {
+        void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(
+            global::Bindings.DebugBindMessage message)
+        {
+            message.BindTo(this);
+            global::Bindings.TextMeshProExtensions.SetValue(_text, _viewModel.Count);
+            OnPostBind();
+            _viewModel.NotifyCompletedBind();
+        }
+    }
+#endif
+}
+```
+
 ### 2. Set up the Binder in the Scene
 
 1. Add a `Binder` component to a GameObject in your scene.
@@ -92,15 +201,69 @@ public class GameEntry : MonoBehaviour
 
 ## Attributes
 
-| Attribute | Target | Description |
-|-----------|--------|-------------|
-| `[ViewModel]` | Class / Struct | Marks the type as a ViewModel and triggers source generation. |
-| `[ViewModel(requireBindImplementation: true)]` | Class / Struct | Skips auto-generating `BindAsync`; the user must implement it manually. |
-| `[Model]` | Field | Declares a constructor-injected model dependency. |
-| `[Schema(bindingPath)]` | Field / Method | Binds the field or method to a UI component member. |
-| `[Schema(bindingPath, id: N)]` | Field / Method | Groups multiple schemas onto the same UI component (id ≥ 0). |
-| `[Schema(bindingPath, format: "N0")]` | Field | Applies a format string when binding to `TMPro.TMP_Text.text`. |
-| `[Schema(bindingPath, tooltip: "text")]` | Field / Method | Sets the Unity Inspector tooltip on the generated View field. |
+### `[ViewModel]`
+
+Applied to a `partial` class or struct to mark it as a ViewModel and trigger source generation.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `requireBindImplementation` | `bool` | `false` | When `true`, skips auto-generating `BindAsync`. The user must implement it manually on the partial View class. |
+
+### `[Model]`
+
+Applied to a `readonly` field to declare a constructor-injected dependency. The generated constructor will accept a parameter of the field's type and assign it.
+
+### `[Schema(bindingPath, id, format, tooltip)]`
+
+Applied to a field or method to bind it to a UI component. Can be applied multiple times to the same member.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `bindingPath` | `string` | required | The UI component member to bind, expressed via `PathResolver` (e.g., `PathResolver.TMPro.TMP_Text.text`). |
+| `id` | `int` | `-1` | Groups multiple `[Schema]` entries onto the **same** View component field. Use `id >= 0` for explicit grouping; `-1` means auto-numbered. Values less than `-1` trigger `BND002`. |
+| `format` | `string` | `""` | Format string applied when binding to `TMPro.TMP_Text.text` (e.g., `"N0"`). Ignored for other binding paths. |
+| `tooltip` | `string` | `""` | Tooltip text shown in the Unity Inspector on the generated View component field. |
+
+## Messaging with `IMvvmSubscriber<T>`
+
+In addition to automatic UI rebinding, a ViewModel can send arbitrary messages to Views that have opted in. This allows the ViewModel to push events (e.g., showing a dialog, playing an animation) without coupling it to the View type.
+
+**How it works:**
+
+1. Define a message type (typically a `readonly struct`).
+2. Call `_publisher.Publish(new MyMessage(...))` from the ViewModel.
+3. Implement `IMvvmSubscriber<MyMessage>` on the partial View class to handle the message.
+
+```csharp
+// 1. Define the message
+public readonly struct ShowDialogMessage
+{
+    public readonly string Text;
+    public ShowDialogMessage(string text) => Text = text;
+}
+
+// 2. Publish from the ViewModel
+[ViewModel]
+public partial class MyViewModel
+{
+    [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
+    public void OnConfirm()
+    {
+        _publisher.Publish(new ShowDialogMessage("Are you sure?"));
+    }
+}
+
+// 3. Receive in the View (partial class alongside generated code)
+public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
+{
+    void IMvvmSubscriber<ShowDialogMessage>.OnReceivedMessage(ShowDialogMessage message)
+    {
+        // show dialog with message.Text
+    }
+}
+```
+
+`Binder` delivers the message to every View in its list that implements `IMvvmSubscriber<T>` for the given `T`.
 
 ## Analyzer Diagnostics
 

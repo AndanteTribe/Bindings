@@ -69,6 +69,115 @@ namespace MyApp
 - `CounterViewModel.g.cs` — プロパティ、コンストラクタ、パブリッシャー配線を含む partial ViewModel クラス。
 - `CounterView.g.cs` — シリアライズされた UI コンポーネントフィールドとバインドロジックを含む sealed partial View クラス。
 
+### 生成されるコード
+
+**`CounterViewModel.g.cs`**
+
+```csharp
+#nullable enable
+
+namespace MyApp
+{
+    [global::System.Serializable]
+    public partial class CounterViewModel : global::Bindings.IViewModel
+    {
+        private readonly global::Bindings.IMvvmPublisher _publisher;
+
+        public int Count
+        {
+            get => _count;
+            set
+            {
+                _count = value;
+                PublishRebindMessage();
+            }
+        }
+
+        public CounterViewModel(global::MyApp.CounterModel model, global::Bindings.IMvvmPublisher publisher)
+        {
+            _model = model;
+            _publisher = publisher;
+        }
+
+        public void NotifyCompletedBind() => OnPostBind();
+
+        partial void OnPostBind();
+
+        [global::System.Runtime.CompilerServices.MethodImpl(
+            global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+        private void PublishRebindMessage()
+        {
+            _publisher.PublishRebindMessage<CounterViewModel>();
+        }
+    }
+}
+```
+
+**`CounterView.g.cs`**
+
+```csharp
+#nullable enable
+
+namespace MyApp
+{
+    [global::System.Serializable]
+    public sealed partial class CounterView : global::Bindings.IView<global::MyApp.CounterViewModel>
+    {
+        [global::System.NonSerialized]
+        private global::MyApp.CounterViewModel _viewModel = null!;
+
+        [global::UnityEngine.SerializeField]
+        private global::TMPro.TMP_Text _text = null!;
+
+        [global::UnityEngine.SerializeField]
+        private global::UnityEngine.UI.Button _button1 = null!;
+
+        [global::UnityEngine.SerializeField]
+        private global::UnityEngine.UI.Button _button2 = null!;
+
+        void global::Bindings.IView<global::MyApp.CounterViewModel>.Initialize(
+            global::MyApp.CounterViewModel viewModel)
+        {
+            _viewModel = viewModel;
+        }
+
+        global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(
+            global::System.Threading.CancellationToken _)
+        {
+            BindAll();
+            return default;
+        }
+
+        private void BindAll()
+        {
+            global::Bindings.TextMeshProExtensions.SetValue(_text, _viewModel.Count);
+            _button1.onClick.RemoveAllListeners();
+            _button1.onClick.AddListener(_viewModel.Increment);
+            _button2.onClick.RemoveAllListeners();
+            _button2.onClick.AddListener(_viewModel.Decrement);
+            OnPostBind();
+            _viewModel.NotifyCompletedBind();
+        }
+
+        partial void OnPostBind();
+    }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+    public sealed partial class CounterView : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
+    {
+        void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(
+            global::Bindings.DebugBindMessage message)
+        {
+            message.BindTo(this);
+            global::Bindings.TextMeshProExtensions.SetValue(_text, _viewModel.Count);
+            OnPostBind();
+            _viewModel.NotifyCompletedBind();
+        }
+    }
+#endif
+}
+```
+
 ### 2. シーンに Binder を設定する
 
 1. シーン内の GameObject に `Binder` コンポーネントを追加します。
@@ -92,15 +201,69 @@ public class GameEntry : MonoBehaviour
 
 ## 属性一覧
 
-| 属性 | 対象 | 説明 |
-|------|------|------|
-| `[ViewModel]` | クラス / 構造体 | ViewModel としてマークし、ソース生成をトリガーします。 |
-| `[ViewModel(requireBindImplementation: true)]` | クラス / 構造体 | `BindAsync` の自動生成をスキップし、ユーザーが手動で実装します。 |
-| `[Model]` | フィールド | コンストラクタ注入するモデル依存関係を宣言します。 |
-| `[Schema(bindingPath)]` | フィールド / メソッド | フィールドまたはメソッドを UI コンポーネントのメンバにバインドします。 |
-| `[Schema(bindingPath, id: N)]` | フィールド / メソッド | 複数のスキーマを同一 UI コンポーネントにグループ化します（id ≥ 0）。 |
-| `[Schema(bindingPath, format: "N0")]` | フィールド | `TMPro.TMP_Text.text` バインド時に書式文字列を適用します。 |
-| `[Schema(bindingPath, tooltip: "text")]` | フィールド / メソッド | 生成された View フィールドに Unity Inspector のツールチップを設定します。 |
+### `[ViewModel]`
+
+`partial` クラスまたは構造体に付与し、ViewModel としてマークしてソース生成をトリガーします。
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `requireBindImplementation` | `bool` | `false` | `true` の場合、`BindAsync` の自動生成をスキップします。ユーザーが partial View クラスに手動で実装する必要があります。 |
+
+### `[Model]`
+
+`readonly` フィールドに付与し、コンストラクタ注入する依存関係を宣言します。生成されるコンストラクタはそのフィールドの型の引数を受け取り、代入します。
+
+### `[Schema(bindingPath, id, format, tooltip)]`
+
+フィールドまたはメソッドに付与し、UI コンポーネントにバインドします。同一メンバに複数回付与できます。
+
+| パラメータ | 型 | デフォルト | 説明 |
+|-----------|-----|-----------|------|
+| `bindingPath` | `string` | 必須 | バインド先の UI コンポーネントメンバを `PathResolver` 経由で指定します（例: `PathResolver.TMPro.TMP_Text.text`）。 |
+| `id` | `int` | `-1` | 複数の `[Schema]` を同一 View コンポーネントフィールドにグループ化します。`id >= 0` で明示的にグループ化し、`-1` は自動採番です。`-1` 未満は `BND002` を発生させます。 |
+| `format` | `string` | `""` | `TMPro.TMP_Text.text` バインド時に適用する書式文字列（例: `"N0"`）。それ以外のバインディングパスでは無視されます。 |
+| `tooltip` | `string` | `""` | 生成された View コンポーネントフィールドに表示する Unity Inspector のツールチップテキスト。 |
+
+## `IMvvmSubscriber<T>` によるメッセージング
+
+自動 UI 再バインドに加え、ViewModel は任意のメッセージを、オプトインした View に送信できます。これにより、ViewModel を View の具体的な型に依存させることなく、ダイアログ表示やアニメーション再生などのイベントをプッシュできます。
+
+**仕組み:**
+
+1. メッセージ型を定義します（通常は `readonly struct`）。
+2. ViewModel から `_publisher.Publish(new MyMessage(...))` を呼び出します。
+3. partial View クラスに `IMvvmSubscriber<MyMessage>` を実装し、`OnReceivedMessage` でメッセージを処理します。
+
+```csharp
+// 1. メッセージを定義する
+public readonly struct ShowDialogMessage
+{
+    public readonly string Text;
+    public ShowDialogMessage(string text) => Text = text;
+}
+
+// 2. ViewModel からパブリッシュする
+[ViewModel]
+public partial class MyViewModel
+{
+    [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
+    public void OnConfirm()
+    {
+        _publisher.Publish(new ShowDialogMessage("よろしいですか？"));
+    }
+}
+
+// 3. View で受信する（生成コードと同じ partial クラスに記述）
+public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
+{
+    void IMvvmSubscriber<ShowDialogMessage>.OnReceivedMessage(ShowDialogMessage message)
+    {
+        // message.Text を使ってダイアログを表示する
+    }
+}
+```
+
+`Binder` は、Views リスト内で該当の `IMvvmSubscriber<T>` を実装しているすべての View にメッセージを配信します。
 
 ## アナライザー診断
 
