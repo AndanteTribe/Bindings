@@ -209,7 +209,7 @@ namespace MyApp
 
 ![UI コンポーネントの割り当て](https://github.com/user-attachments/assets/fff8c683-2c58-47b3-b964-29e040337fc9)
 
-**番外編 — Preview**
+**手順 4 — Preview**
 
 **Add View** ボタンの下にある **Preview** ボタンをクリックすると、登録されている各 View に紐づく ViewModel オブジェクトが表示されます。Inspector から直接値を入力し、**Invoke** ボタンを押すとバインドが適用されるので、UI が想定通りに更新されるか検証できます。
 

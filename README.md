@@ -209,7 +209,7 @@ The selected View is now registered in the **Views** list. Each `[SerializeField
 
 ![Assign UI components](https://github.com/user-attachments/assets/fff8c683-2c58-47b3-b964-29e040337fc9)
 
-**Bonus — Preview**
+**Step 4 — Preview**
 
 Click the **Preview** button below **Add View** to reveal the ViewModel associated with each registered View. Fill in values directly in the Inspector and click **Invoke** to apply the bindings and verify that the UI updates as expected.
 
