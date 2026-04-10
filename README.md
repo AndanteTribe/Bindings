@@ -187,6 +187,34 @@ namespace MyApp
 2. In the Inspector, assign the generated `CounterView` instance to the **Views** list.
 3. Call `binder.Initialize(viewModel)` to associate the ViewModel, then call `binder.Run()` (or enable **Run On Start**) to bind the UI.
 
+#### Using the Binder Inspector
+
+The `Binder` component comes with a custom Unity Inspector that makes it easy to register Views without writing any setup code.
+
+**Step 1 — Add a View: namespace selection**
+
+Click the **Add View** button. A dropdown will appear — select the namespace that contains the View you want to register.
+
+![Add View – namespace selection](https://github.com/user-attachments/assets/a9c4f6a7-9c4e-44b9-af94-5e830600e57e)
+
+**Step 2 — Add a View: View selection**
+
+After choosing a namespace, a list of all View types in that namespace is shown. Click the View you want to add.
+
+![Add View – View selection](https://github.com/user-attachments/assets/f79c5a2b-2cac-46b2-889f-0cd3cd05f283)
+
+**Step 3 — Assign UI components**
+
+The selected View is now registered in the **Views** list. Each `[SerializeField]` declared in the View is shown as a slot in the Inspector — drag the corresponding UI GameObject onto each slot. To remove a View, click the **−** button in the top-right corner of its entry.
+
+![Assign UI components](https://github.com/user-attachments/assets/fff8c683-2c58-47b3-b964-29e040337fc9)
+
+**Bonus — Preview**
+
+Click the **Preview** button below **Add View** to reveal the ViewModel associated with each registered View. Fill in values directly in the Inspector and click **Invoke** to apply the bindings and verify that the UI updates as expected.
+
+![Preview and Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
+
 ```csharp
 public class GameEntry : MonoBehaviour
 {
