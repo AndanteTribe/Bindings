@@ -1,6 +1,7 @@
 # Bindings
 [![dotnet-test](https://github.com/AndanteTribe/Bindings/actions/workflows/dotnet-test.yml/badge.svg)](https://github.com/AndanteTribe/Bindings/actions/workflows/dotnet-test.yml)
 [![Releases](https://img.shields.io/github/release/AndanteTribe/Bindings.svg)](https://github.com/AndanteTribe/Bindings/releases)
+[![openupm](https://img.shields.io/npm/v/jp.andantetribe.bindings?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/jp.andantetribe.bindings/)
 [![GitHub license](https://img.shields.io/github/license/AndanteTribe/Bindings.svg)](./LICENSE)
 
 English | [日本語](README_JA.md)
@@ -9,6 +10,8 @@ English | [日本語](README_JA.md)
 **Bindings** is an MVVM-based automated UI binding framework for Unity built on uGUI.
 
 It provides a Roslyn Source Generator that automatically generates ViewModel and View partial classes from annotated C# code, eliminating boilerplate and keeping UI bindings in sync with your data models.
+
+Bind requests triggered by `PublishRebindMessage()` are **batched** internally and executed all at once just before the Canvas renders (`Canvas.preWillRenderCanvases`), avoiding redundant updates within a single frame.
 
 ## Requirements
 - Unity 6000.0 or later

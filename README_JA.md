@@ -1,6 +1,7 @@
 # Bindings
 [![dotnet-test](https://github.com/AndanteTribe/Bindings/actions/workflows/dotnet-test.yml/badge.svg)](https://github.com/AndanteTribe/Bindings/actions/workflows/dotnet-test.yml)
 [![Releases](https://img.shields.io/github/release/AndanteTribe/Bindings.svg)](https://github.com/AndanteTribe/Bindings/releases)
+[![openupm](https://img.shields.io/npm/v/jp.andantetribe.bindings?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/jp.andantetribe.bindings/)
 [![GitHub license](https://img.shields.io/github/license/AndanteTribe/Bindings.svg)](./LICENSE)
 
 [English](README.md) | 日本語
@@ -9,6 +10,8 @@
 **Bindings** は、uGUI をベースにした Unity 向け MVVM 自動 UI バインディングフレームワークです。
 
 Roslyn ソースジェネレーターを利用し、アノテーションを付与した C# コードから ViewModel と View の partial クラスを自動生成することで、ボイラープレートを排除し、UI とデータモデルを常に同期させます。
+
+`PublishRebindMessage()` によって発行されたバインド要求は内部でキューに積まれ、Canvas レンダリング直前（`Canvas.preWillRenderCanvases`）に一括実行されます。これにより、1フレーム内での無駄な更新が回避されます。
 
 ## 要件
 - Unity 6000.0 以上
