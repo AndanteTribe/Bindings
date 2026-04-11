@@ -187,6 +187,34 @@ namespace MyApp
 2. Inspector で、生成された `CounterView` インスタンスを **Views** リストに割り当てます。
 3. `binder.Initialize(viewModel)` で ViewModel を関連付け、`binder.Run()` を呼び出す（または **Run On Start** を有効にする）と UI がバインドされます。
 
+#### Binder Inspector の使い方
+
+`Binder` コンポーネントにはカスタム Unity Inspector が付属しており、コードを書かずに View を登録できます。
+
+**手順 1 — View の追加：名前空間の選択**
+
+**Add View** ボタンをクリックすると、ドロップダウンが表示されます。登録したい View が属する名前空間を選択します。
+
+![Add View – 名前空間の選択](https://github.com/user-attachments/assets/a9c4f6a7-9c4e-44b9-af94-5e830600e57e)
+
+**手順 2 — View の追加：View の選択**
+
+名前空間を選択すると、その名前空間に含まれるすべての View 型の一覧が表示されます。追加したい View をクリックします。
+
+![Add View – View の選択](https://github.com/user-attachments/assets/f79c5a2b-2cac-46b2-889f-0cd3cd05f283)
+
+**手順 3 — UI コンポーネントの割り当て**
+
+選択した View が **Views** リストに登録されます。View に宣言された各 `[SerializeField]` が Inspector にスロットとして表示されるので、対応する UI GameObject をそれぞれのスロットにドラッグして割り当てます。View を削除するには、エントリ右上の **−** ボタンをクリックします。
+
+![UI コンポーネントの割り当て](https://github.com/user-attachments/assets/fff8c683-2c58-47b3-b964-29e040337fc9)
+
+**手順 4 — Preview**
+
+**Add View** ボタンの下にある **Preview** ボタンをクリックすると、登録されている各 View に紐づく ViewModel オブジェクトが表示されます。Inspector から直接値を入力し、**Invoke** ボタンを押すとバインドが適用されるので、UI が想定通りに更新されるか検証できます。
+
+![Preview と Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
+
 ```csharp
 public class GameEntry : MonoBehaviour
 {
@@ -198,6 +226,27 @@ public class GameEntry : MonoBehaviour
         var publisher = _binder; // Binder は IMvvmPublisher を実装しています
         var viewModel = new CounterViewModel(model, publisher);
         _binder.Initialize(viewModel);
+    }
+}
+```
+
+#### VContainer サポート
+
+[VContainer](https://github.com/hadashiA/VContainer) がインストールされている環境では、`Binder` は自動的に DI インジェクションをサポートします。追加の設定は不要です。コンテナに ViewModel と `Binder` を登録するだけで、VContainer が `Initialize(IReadOnlyList<IViewModel>)` を自動的に呼び出すため、手動での `Initialize` 呼び出しは不要です。
+
+```csharp
+public class GameLifetimeScope : LifetimeScope
+{
+    [SerializeField] private Binder _binder;
+
+    protected override void Configure(IContainerBuilder builder)
+    {
+        var model = new CounterModel();
+        builder.RegisterInstance(model);
+        builder.Register<CounterViewModel>(Lifetime.Scoped)
+               .AsImplementedInterfaces()
+               .AsSelf();
+        builder.RegisterComponent(_binder);
     }
 }
 ```
