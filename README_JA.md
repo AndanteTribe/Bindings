@@ -232,9 +232,7 @@ public class GameEntry : MonoBehaviour
 
 #### VContainer サポート
 
-DI コンテナとして [VContainer](https://github.com/hadashiA/VContainer) を使用している場合、`Binder` は ViewModel をインジェクション経由で自動的に受け取ることができます。
-
-**Edit > Project Settings > Player > Scripting Define Symbols** に `ENABLE_VCONTAINER` を追加し、コンテナに ViewModel と `Binder` を登録します。VContainer が `Initialize(IReadOnlyList<IViewModel>)` を自動的に呼び出すため、手動での `Initialize` 呼び出しは不要です。
+[VContainer](https://github.com/hadashiA/VContainer) がインストールされている環境では、`Binder` は自動的に DI インジェクションをサポートします。追加の設定は不要です。コンテナに ViewModel と `Binder` を登録するだけで、VContainer が `Initialize(IReadOnlyList<IViewModel>)` を自動的に呼び出すため、手動での `Initialize` 呼び出しは不要です。
 
 ```csharp
 public class GameLifetimeScope : LifetimeScope
