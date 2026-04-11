@@ -243,9 +243,7 @@ public class GameLifetimeScope : LifetimeScope
     {
         var model = new CounterModel();
         builder.RegisterInstance(model);
-        builder.Register<CounterViewModel>(Lifetime.Scoped)
-               .AsImplementedInterfaces()
-               .AsSelf();
+        builder.RegisterViewModel<CounterViewModel>(_binder);
         builder.RegisterComponent(_binder);
     }
 }

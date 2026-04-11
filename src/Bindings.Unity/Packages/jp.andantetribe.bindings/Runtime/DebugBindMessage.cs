@@ -15,9 +15,9 @@ namespace Bindings
 
         public void BindTo<T>(IView<T> view) where T : IViewModel
         {
-            if (_viewModel is T)
+            if (_viewModel is T typedViewModel)
             {
-                view.Initialize(_viewModel);
+                view.Initialize(typedViewModel);
             }
         }
     }

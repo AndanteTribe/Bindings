@@ -59,7 +59,6 @@ namespace Bindings
                 if (view.CanBind(viewModel))
                 {
                     view.Initialize(viewModel);
-                    break;
                 }
             }
             throw new InvalidOperationException("No view found for view model of type " + viewModel.GetType().FullName + ".");
