@@ -22,89 +22,94 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
  } 
+ foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { 
+            this.Write("public partial ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
+            this.Write("\n{\n");
+ } 
  if (!Context.AlreadySerializable) { 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("[global::System.Serializable]\n");
  } 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("public partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( TypeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
-            this.Write(" : global::Bindings.IViewModel\n");
+            this.Write(" : global::Bindings.IViewModel\n{\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
-            this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("private readonly global::Bindings.IMvvmPublisher _publisher;\n");
  foreach (var schemaField in Context.SchemaFields) { 
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("public ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldTypeName ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ToPropertyName(schemaField.FieldName) ));
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("get => ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
             this.Write(";\n");
  if (!Context.IsReadOnly) { 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("set\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I4 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
             this.Write(" = value;\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I4 ));
-            this.Write("PublishRebindMessage();\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
+            this.Write("PublishRebindMessage();\n");
+            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("}\n");
  } 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("}\n");
  } 
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("public ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write("(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ConstructorParamList ));
             this.Write(")\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("{\n");
  foreach (var field in Context.RequiredFields) { 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
             this.Write(" = ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(field.FieldName) ));
             this.Write(";\n");
  } 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("_publisher = publisher;\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("}\n\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("public void NotifyCompletedBind() => OnPostBind();\n\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("partial void OnPostBind();\n\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.Compil" +
                     "erServices.MethodImplOptions.AggressiveInlining)]\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("private void PublishRebindMessage()\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
             this.Write("_publisher.PublishRebindMessage<");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
             this.Write(">();\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("}\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("}\n");
+            this.Write("}\n");
+ foreach (var _ in Context.ContainingTypes) { 
+            this.Write("}\n");
+ } 
  if (HasNamespace) { 
             this.Write("}\n");
  } 

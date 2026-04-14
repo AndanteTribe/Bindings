@@ -76,6 +76,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             ? string.Empty
             : typeSymbol.ContainingNamespace.ToDisplayString();
 
+        // 3b. Containing types: collect the chain of enclosing types (outermost first)
+        var containingTypesList = new List<(string TypeKeyword, string TypeName)>();
+        var enclosing = typeSymbol.ContainingType;
+        while (enclosing != null)
+        {
+            var keyword = enclosing.TypeKind == TypeKind.Struct ? "struct" : "class";
+            containingTypesList.Insert(0, (keyword, enclosing.Name));
+            enclosing = enclosing.ContainingType;
+        }
+        var containingTypes = containingTypesList.ToArray();
+
         // 4. Collect early diagnostics
         var diagnostics = new List<(DiagnosticDescriptor, Location, string[])>();
 
@@ -175,6 +186,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         return new GenerationContext(
             className: typeSymbol.Name,
             @namespace: ns,
+            containingTypes: containingTypes,
             isStruct: isStruct,
             isReadOnly: typeSymbol.IsReadOnly,
             requireBindImplementation: requireBind,

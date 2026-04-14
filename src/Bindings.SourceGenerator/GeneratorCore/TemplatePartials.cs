@@ -17,16 +17,33 @@ namespace Bindings.GeneratorCore
         public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
         public string TypeKeyword => Context.IsStruct ? "struct" : "class";
 
-        // Indentation helpers (one extra level when inside a namespace block)
-        public string I1 => HasNamespace ? "    " : "";
-        public string I2 => I1 + "    ";
-        public string I3 => I2 + "    ";
-        public string I4 => I3 + "    ";
+        // Fixed indentation: 4 spaces per level, regardless of namespace or nesting depth.
+        public string I1 => "    ";
+        public string I2 => "        ";
+        public string I3 => "            ";
+        public string I4 => "                ";
 
         /// <summary>
-        /// The fully-qualified type name of the ViewModel with the global:: prefix.
+        /// The fully-qualified type name of the ViewModel with the global:: prefix,
+        /// including any containing type names for nested types.
         /// </summary>
-        public string ViewModelFullName => string.IsNullOrEmpty(Context.Namespace) ? "global::" + Context.ClassName : "global::" + Context.Namespace + "." + Context.ClassName;
+        public string ViewModelFullName
+        {
+            get
+            {
+                var sb = new StringBuilder("global::");
+                if (!string.IsNullOrEmpty(Context.Namespace))
+                {
+                    sb.Append(Context.Namespace).Append('.');
+                }
+                foreach (var (_, typeName) in Context.ContainingTypes)
+                {
+                    sb.Append(typeName).Append('.');
+                }
+                sb.Append(Context.ClassName);
+                return sb.ToString();
+            }
+        }
 
         /// <summary>
         /// Comma-separated constructor parameter list: [Required] fields first, then publisher.
@@ -98,15 +115,32 @@ namespace Bindings.GeneratorCore
 
         public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
 
-        // Indentation helpers (one extra level when inside a namespace block)
-        public string I1 => HasNamespace ? "    " : "";
-        public string I2 => I1 + "    ";
-        public string I3 => I2 + "    ";
+        // Fixed indentation: 4 spaces per level, regardless of namespace or nesting depth.
+        public string I1 => "    ";
+        public string I2 => "        ";
+        public string I3 => "            ";
 
         /// <summary>
-        /// The fully-qualified type name of the ViewModel with the global:: prefix.
+        /// The fully-qualified type name of the ViewModel with the global:: prefix,
+        /// including any containing type names for nested types.
         /// </summary>
-        public string ViewModelFullName => string.IsNullOrEmpty(Context.Namespace) ? "global::" + Context.ClassName : "global::" + Context.Namespace + "." + Context.ClassName;
+        public string ViewModelFullName
+        {
+            get
+            {
+                var sb = new StringBuilder("global::");
+                if (!string.IsNullOrEmpty(Context.Namespace))
+                {
+                    sb.Append(Context.Namespace).Append('.');
+                }
+                foreach (var (_, typeName) in Context.ContainingTypes)
+                {
+                    sb.Append(typeName).Append('.');
+                }
+                sb.Append(Context.ClassName);
+                return sb.ToString();
+            }
+        }
 
         /// <summary>
         /// The View class name derived from the ViewModel class name.
