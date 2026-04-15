@@ -17,12 +17,6 @@ namespace Bindings.GeneratorCore
         public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
         public string TypeKeyword => Context.IsStruct ? "struct" : "class";
 
-        // Fixed indentation: 4 spaces per level, regardless of namespace or nesting depth.
-        public string I1 => "    ";
-        public string I2 => "        ";
-        public string I3 => "            ";
-        public string I4 => "                ";
-
         /// <summary>
         /// The fully-qualified type name of the ViewModel with the global:: prefix,
         /// including any containing type names for nested types.
@@ -114,11 +108,6 @@ namespace Bindings.GeneratorCore
         public readonly (string TypePart, string FieldName, string Tooltip)[] OrderedFields = orderedFields;
 
         public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
-
-        // Fixed indentation: 4 spaces per level, regardless of namespace or nesting depth.
-        public string I1 => "    ";
-        public string I2 => "        ";
-        public string I3 => "            ";
 
         /// <summary>
         /// The fully-qualified type name of the ViewModel with the global:: prefix,

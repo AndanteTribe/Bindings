@@ -14,39 +14,39 @@ public partial <#= typeKeyword #> <#= typeName #>
 <# } #>
 public partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
-<#= I1 #>private readonly global::Bindings.IMvvmPublisher _publisher;
+    private readonly global::Bindings.IMvvmPublisher _publisher;
 <# foreach (var schemaField in Context.SchemaFields) { #>
 
-<#= I1 #>public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
-<#= I1 #>{
-<#= I2 #>get => <#= schemaField.FieldName #>;
+    public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
+    {
+        get => <#= schemaField.FieldName #>;
 <# if (!Context.IsReadOnly) { #>
-<#= I2 #>set
-<#= I2 #>{
-<#= I3 #><#= schemaField.FieldName #> = value;
-<#= I3 #>PublishRebindMessage();
-<#= I2 #>}
+        set
+        {
+            <#= schemaField.FieldName #> = value;
+            PublishRebindMessage();
+        }
 <# } #>
-<#= I1 #>}
+    }
 <# } #>
 
-<#= I1 #>public <#= Context.ClassName #>(<#= ConstructorParamList #>)
-<#= I1 #>{
+    public <#= Context.ClassName #>(<#= ConstructorParamList #>)
+    {
 <# foreach (var field in Context.RequiredFields) { #>
-<#= I2 #><#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
+        <#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
 <# } #>
-<#= I2 #>_publisher = publisher;
-<#= I1 #>}
+        _publisher = publisher;
+    }
 
-<#= I1 #>public void NotifyCompletedBind() => OnPostBind();
+    public void NotifyCompletedBind() => OnPostBind();
 
-<#= I1 #>partial void OnPostBind();
+    partial void OnPostBind();
 
-<#= I1 #>[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-<#= I1 #>private void PublishRebindMessage()
-<#= I1 #>{
-<#= I2 #>_publisher.PublishRebindMessage<<#= ViewModelFullName #>>();
-<#= I1 #>}
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void PublishRebindMessage()
+    {
+        _publisher.PublishRebindMessage<<#= ViewModelFullName #>>();
+    }
 }
 <# foreach (var _ in Context.ContainingTypes) { #>
 }

@@ -12,39 +12,39 @@ public partial <#= typeKeyword #> <#= typeName #>
 [global::System.Serializable]
 public sealed partial class <#= ViewClassName #> : global::Bindings.IView<<#= ViewModelFullName #>>
 {
-<#= I1 #>[global::System.NonSerialized]
-<#= I1 #>private <#= ViewModelFullName #> _viewModel<#= VmFieldInit #>;
+    [global::System.NonSerialized]
+    private <#= ViewModelFullName #> _viewModel<#= VmFieldInit #>;
 <# foreach (var field in OrderedFields) { #>
 
 <# if (!string.IsNullOrEmpty(field.Tooltip)) { #>
-<#= I1 #>[global::UnityEngine.Tooltip("<#= field.Tooltip #>")]
+    [global::UnityEngine.Tooltip("<#= field.Tooltip #>")]
 <# } #>
-<#= I1 #>[global::UnityEngine.SerializeField]
-<#= I1 #>private global::<#= field.TypePart #> <#= field.FieldName #> = null!;
+    [global::UnityEngine.SerializeField]
+    private global::<#= field.TypePart #> <#= field.FieldName #> = null!;
 <# } #>
 
-<#= I1 #>void global::Bindings.IView<<#= ViewModelFullName #>>.Initialize(<#= ViewModelFullName #> viewModel)
-<#= I1 #>{
-<#= I2 #>_viewModel = viewModel;
-<#= I1 #>}
+    void global::Bindings.IView<<#= ViewModelFullName #>>.Initialize(<#= ViewModelFullName #> viewModel)
+    {
+        _viewModel = viewModel;
+    }
 <# if (!Context.RequireBindImplementation) { #>
 
-<#= I1 #>global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global::System.Threading.CancellationToken _)
-<#= I1 #>{
-<#= I2 #>BindAll();
-<#= I2 #>return default;
-<#= I1 #>}
+    global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global::System.Threading.CancellationToken _)
+    {
+        BindAll();
+        return default;
+    }
 <# } #>
 
-<#= I1 #>private void BindAll()
-<#= I1 #>{
-<#= WriteFieldBindings(I2) #>
-<#= WriteMethodBindings(I2) #>
-<#= I2 #>OnPostBind();
-<#= I2 #>_viewModel.NotifyCompletedBind();
-<#= I1 #>}
+    private void BindAll()
+    {
+<#= WriteFieldBindings("        ") #>
+<#= WriteMethodBindings("        ") #>
+        OnPostBind();
+        _viewModel.NotifyCompletedBind();
+    }
 
-<#= I1 #>partial void OnPostBind();
+    partial void OnPostBind();
 }
 <# foreach (var _ in Context.ContainingTypes) { #>
 }
@@ -64,13 +64,13 @@ public partial <#= typeKeyword #> <#= typeName #>
 <# } #>
 public sealed partial class <#= ViewClassName #> : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
 {
-<#= I1 #>void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
-<#= I1 #>{
-<#= I2 #>message.BindTo(this);
-<#= WriteFieldBindings(I2) #>
-<#= I2 #>OnPostBind();
-<#= I2 #>_viewModel.NotifyCompletedBind();
-<#= I1 #>}
+    void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
+    {
+        message.BindTo(this);
+<#= WriteFieldBindings("        ") #>
+        OnPostBind();
+        _viewModel.NotifyCompletedBind();
+    }
 }
 <# foreach (var _ in Context.ContainingTypes) { #>
 }
