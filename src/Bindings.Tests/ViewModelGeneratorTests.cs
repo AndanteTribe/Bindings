@@ -57,11 +57,14 @@ namespace Bindings
 
     public interface IViewModel { }
 
-    public interface IView<T> { }
-
     public interface IView
     {
         System.Threading.Tasks.ValueTask BindAsync(System.Threading.CancellationToken cancellationToken);
+    }
+
+    public interface IView<in T> : IView where T : IViewModel
+    {
+        void Initialize(T viewModel);
     }
 
     public interface IMvvmPublisher
@@ -69,9 +72,12 @@ namespace Bindings
         void PublishRebindMessage<T>() where T : IViewModel;
     }
 
-    public interface IMvvmSubscriber<T> { }
+    public interface IMvvmSubscriber<in T>
+    {
+        void OnReceivedMessage(T message);
+    }
 
-    public sealed class DebugBindMessage { }
+    public sealed class DebugBindMessage { public void BindTo(object view) { } }
 }
 
 namespace Bindings
@@ -81,6 +87,30 @@ namespace Bindings
         public static void SetValue(object text, object value) { }
         public static void SetValue(object text, object value, string format) { }
     }
+}
+";
+
+    // Stubs for Unity and third-party types referenced in the generated View code.
+    private const string RuntimeStubs = @"
+namespace UnityEngine
+{
+    public sealed class SerializeField : System.Attribute { }
+    public sealed class NonSerialized : System.Attribute { }
+    public sealed class Tooltip : System.Attribute { public Tooltip(string tip) { } }
+}
+namespace TMPro
+{
+    public class TMP_Text { public string text { get; set; } = string.Empty; }
+}
+namespace UnityEngine.UI
+{
+    public class Button { public ButtonClickedEvent onClick { get; } = new(); }
+    public class ButtonClickedEvent
+    {
+        public void RemoveAllListeners() { }
+        public void AddListener(System.Action call) { }
+    }
+    public class Image { public float fillAmount { get; set; } }
 }
 ";
 
@@ -119,6 +149,58 @@ namespace Bindings
             ?.GetText().ToString();
 
         return (vmSource, viewSource);
+    }
+
+    /// <summary>
+    /// Runs the generator on <paramref name="userCode"/> and then compiles the user code +
+    /// all generated files together. Returns any error-level diagnostics from the final
+    /// compilation so tests can assert there are no compiler errors.
+    /// </summary>
+    private static Diagnostic[] RunGeneratorAndCompile(string userCode)
+    {
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+
+        var seedCompilation = CSharpCompilation.Create(
+            "SeedAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(RuntimeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(seedCompilation).GetRunResult();
+
+        // Compile user code + generated code together
+        var allTrees = new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(RuntimeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            }
+            .Concat(runResult.GeneratedTrees)
+            .ToArray();
+
+        var finalCompilation = CSharpCompilation.Create(
+            "FinalAssembly",
+            allTrees,
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        return finalCompilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToArray();
     }
 
     // -------------------------------------------------------------------------
@@ -778,5 +860,310 @@ namespace Bindings.Sample
         Assert.Contains("_button1", viewSource);
         Assert.DoesNotContain("_button2", viewSource);
         Assert.Contains("_button1.onClick.AddListener(_viewModel.OnClick)", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Inner class: [ViewModel] nested in one outer class
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InnerViewModelWrapsInContainingClass()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        [Bindings.ViewModel]
+        public partial class CountViewModel1
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        // ViewModel: wrapped in namespace + outer class + ViewModel class (all unindented)
+        Assert.Contains("namespace Bindings.Sample", vmSource);
+        Assert.Contains("public partial class Outer", vmSource);
+        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+
+        // ViewModel body uses fixed 4-space indent
+        Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSource);
+        Assert.Contains("    public int Count", vmSource);
+
+        // Fully-qualified name includes the containing type
+        Assert.Contains("global::Bindings.Sample.Outer.CountViewModel1", vmSource);
+
+        // View: also wrapped in outer class
+        Assert.Contains("public partial class Outer", viewSource);
+        Assert.Contains("public sealed partial class CountView1", viewSource);
+        Assert.Contains("global::Bindings.Sample.Outer.CountViewModel1", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Inner class: [ViewModel] nested in two outer classes
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void DoublyNestedViewModelWrapsInBothContainingClasses()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        public partial class Middle
+        {
+            [Bindings.ViewModel]
+            public partial class CountViewModel1
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        // Both containing classes are present (unindented)
+        Assert.Contains("public partial class Outer", vmSource);
+        Assert.Contains("public partial class Middle", vmSource);
+        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+
+        // Fully-qualified name includes both containing types
+        Assert.Contains("global::Bindings.Sample.Outer.Middle.CountViewModel1", vmSource);
+
+        // View also wraps both containing classes
+        Assert.Contains("public partial class Outer", viewSource);
+        Assert.Contains("public partial class Middle", viewSource);
+        Assert.Contains("global::Bindings.Sample.Outer.Middle.CountViewModel1", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Inner class without namespace
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InnerViewModelInGlobalNamespaceWrapsInContainingClass()
+    {
+        const string userCode = @"
+public partial class Outer
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModel1
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        // No namespace block
+        Assert.DoesNotContain("namespace", vmSource);
+
+        // Outer class wrapping present
+        Assert.Contains("public partial class Outer", vmSource);
+        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+
+        // Fully-qualified name with global:: but no namespace
+        Assert.Contains("global::Outer.CountViewModel1", vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Fixed indentation: namespace-present types use the same indent as no-namespace types
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void FixedIndentationClassBodyAlwaysUsesFourSpaces()
+    {
+        // With namespace
+        const string withNs = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelIndent
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        // Without namespace
+        const string withoutNs = @"
+[Bindings.ViewModel]
+public partial class CountViewModelIndentGlobal
+{
+    [Bindings.Schema(""TMPro.TMP_Text.text"")]
+    private int _count;
+}";
+
+        var (vmSourceWithNs, _) = RunGenerator(withNs);
+        var (vmSourceNoNs, _) = RunGenerator(withoutNs);
+
+        Assert.NotNull(vmSourceWithNs);
+        Assert.NotNull(vmSourceNoNs);
+
+        // With namespace: class at column 0 (no leading spaces)
+        Assert.Contains("public partial class CountViewModelIndent : global::Bindings.IViewModel", vmSourceWithNs);
+        Assert.DoesNotContain("    public partial class CountViewModelIndent", vmSourceWithNs);
+
+        // Without namespace: class also at column 0
+        Assert.Contains("public partial class CountViewModelIndentGlobal : global::Bindings.IViewModel", vmSourceNoNs);
+
+        // Both have 4-space indented members
+        Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSourceWithNs);
+        Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSourceNoNs);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: inner class ViewModel generates compilable code
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InnerViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        [Bindings.ViewModel]
+        public partial class CountViewModel1
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: doubly-nested inner class ViewModel
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void DoublyNestedViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        public partial class Middle
+        {
+            [Bindings.ViewModel]
+            public partial class CountViewModel1
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: top-level (non-nested) ViewModel still compiles
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void TopLevelViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModel1
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // GetBindingPath: object overload — expression contains "Resolver." prefix
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void GetBindingPath_ObjectOverloadWithResolverPrefix_ExtractsPath()
+    {
+        // Using a static readonly (non-const) field forces the object overload.
+        // CallerArgumentExpression captures "Resolver.TMPro_TMP_Text_text", so
+        // GetBindingPath strips the "Resolver." prefix and returns "TMPro_TMP_Text_text".
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public static class Resolver
+    {
+        public static readonly int TMPro_TMP_Text_text = 0;
+    }
+
+    [Bindings.ViewModel]
+    public partial class CountViewModelObjectPath1
+    {
+        [Bindings.Schema(Resolver.TMPro_TMP_Text_text)]
+        private int _count;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        // Binding path is extracted as "TMPro_TMP_Text_text" → type part "TMPro_TMP_Text", member "text"
+        Assert.Contains("_text", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // GetBindingPath: object overload — expression has no "Resolver." prefix
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void GetBindingPath_ObjectOverloadWithoutResolverPrefix_UsesExpressionAsPath()
+    {
+        // A static readonly field whose name has no "Resolver." → path = rawExpr directly.
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public static class MyPaths
+    {
+        public static readonly int SomeValue = 0;
+    }
+
+    [Bindings.ViewModel]
+    public partial class CountViewModelObjectRaw1
+    {
+        [Bindings.Schema(MyPaths.SomeValue)]
+        private int _count;
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        // Generator runs without crashing; ViewModel source is produced
+        Assert.NotNull(vmSource);
     }
 }

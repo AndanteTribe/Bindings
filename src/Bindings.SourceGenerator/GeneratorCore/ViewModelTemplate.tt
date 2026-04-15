@@ -5,45 +5,52 @@
 namespace <#= Context.Namespace #>
 {
 <# } #>
-<# if (!Context.AlreadySerializable) { #>
-<#= I1 #>[global::System.Serializable]
+<# foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { #>
+public partial <#= typeKeyword #> <#= typeName #>
+{
 <# } #>
-<#= I1 #>public partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
-<#= I1 #>{
-<#= I2 #>private readonly global::Bindings.IMvvmPublisher _publisher;
+<# if (!Context.AlreadySerializable) { #>
+[global::System.Serializable]
+<# } #>
+public partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
+{
+    private readonly global::Bindings.IMvvmPublisher _publisher;
 <# foreach (var schemaField in Context.SchemaFields) { #>
 
-<#= I2 #>public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
-<#= I2 #>{
-<#= I3 #>get => <#= schemaField.FieldName #>;
+    public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
+    {
+        get => <#= schemaField.FieldName #>;
 <# if (!Context.IsReadOnly) { #>
-<#= I3 #>set
-<#= I3 #>{
-<#= I4 #><#= schemaField.FieldName #> = value;
-<#= I4 #>PublishRebindMessage();
-<#= I3 #>}
+        set
+        {
+            <#= schemaField.FieldName #> = value;
+            PublishRebindMessage();
+        }
 <# } #>
-<#= I2 #>}
+    }
 <# } #>
 
-<#= I2 #>public <#= Context.ClassName #>(<#= ConstructorParamList #>)
-<#= I2 #>{
+    public <#= Context.ClassName #>(<#= ConstructorParamList #>)
+    {
 <# foreach (var field in Context.RequiredFields) { #>
-<#= I3 #><#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
+        <#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
 <# } #>
-<#= I3 #>_publisher = publisher;
-<#= I2 #>}
+        _publisher = publisher;
+    }
 
-<#= I2 #>public void NotifyCompletedBind() => OnPostBind();
+    public void NotifyCompletedBind() => OnPostBind();
 
-<#= I2 #>partial void OnPostBind();
+    partial void OnPostBind();
 
-<#= I2 #>[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-<#= I2 #>private void PublishRebindMessage()
-<#= I2 #>{
-<#= I3 #>_publisher.PublishRebindMessage<<#= ViewModelFullName #>>();
-<#= I2 #>}
-<#= I1 #>}
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void PublishRebindMessage()
+    {
+        _publisher.PublishRebindMessage<<#= ViewModelFullName #>>();
+    }
+}
+<# foreach (var _ in Context.ContainingTypes) { #>
+}
+<# } #>
 <# if (HasNamespace) { #>
 }
 <# } #>

@@ -22,20 +22,21 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
  } 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
+ foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { 
+            this.Write("public partial ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
+            this.Write("\n{\n");
+ } 
             this.Write("[global::System.Serializable]\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
             this.Write("public sealed partial class ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewClassName ));
             this.Write(" : global::Bindings.IView<");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
-            this.Write(">\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
-            this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("[global::System.NonSerialized]\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("private ");
+            this.Write(">\n{\n");
+            this.Write("    [global::System.NonSerialized]\n");
+            this.Write("    private ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
             this.Write(" _viewModel");
             this.Write(this.ToStringHelper.ToStringWithCulture( VmFieldInit ));
@@ -43,66 +44,50 @@ namespace Bindings.GeneratorCore {
  foreach (var field in OrderedFields) { 
             this.Write("\n");
  if (!string.IsNullOrEmpty(field.Tooltip)) { 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("[global::UnityEngine.Tooltip(\"");
+            this.Write("    [global::UnityEngine.Tooltip(\"");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.Tooltip ));
             this.Write("\")]\n");
  } 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("[global::UnityEngine.SerializeField]\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("private global::");
+            this.Write("    [global::UnityEngine.SerializeField]\n");
+            this.Write("    private global::");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.TypePart ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
             this.Write(" = null!;\n");
  } 
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("void global::Bindings.IView<");
+            this.Write("    void global::Bindings.IView<");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
             this.Write(">.Initialize(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
             this.Write(" viewModel)\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("_viewModel = viewModel;\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("}\n");
+            this.Write("    {\n");
+            this.Write("        _viewModel = viewModel;\n");
+            this.Write("    }\n");
  if (!Context.RequireBindImplementation) { 
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global:" +
+            this.Write("    global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global:" +
                     ":System.Threading.CancellationToken _)\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("BindAll();\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("return default;\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("}\n");
+            this.Write("    {\n");
+            this.Write("        BindAll();\n");
+            this.Write("        return default;\n");
+            this.Write("    }\n");
  } 
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("private void BindAll()\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings(I3) ));
+            this.Write("    private void BindAll()\n");
+            this.Write("    {\n");
+            this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings("        ") ));
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( WriteMethodBindings(I3) ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( WriteMethodBindings("        ") ));
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("OnPostBind();\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("_viewModel.NotifyCompletedBind();\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("}\n\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("partial void OnPostBind();\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
+            this.Write("        OnPostBind();\n");
+            this.Write("        _viewModel.NotifyCompletedBind();\n");
+            this.Write("    }\n\n");
+            this.Write("    partial void OnPostBind();\n");
             this.Write("}\n");
+ foreach (var _ in Context.ContainingTypes) { 
+            this.Write("}\n");
+ } 
  if (HasNamespace) { 
             this.Write("}\n");
  } 
@@ -112,29 +97,29 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
  } 
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
+ foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { 
+            this.Write("public partial ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
+            this.Write("\n{\n");
+ } 
             this.Write("public sealed partial class ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewClassName ));
-            this.Write(" : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
-            this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceiv" +
+            this.Write(" : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>\n{\n");
+            this.Write("    void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceiv" +
                     "edMessage(global::Bindings.DebugBindMessage message)\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
-            this.Write("{\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("message.BindTo(this);\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings(I3) ));
+            this.Write("    {\n");
+            this.Write("        message.BindTo(this);\n");
+            this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings("        ") ));
             this.Write("\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("OnPostBind();\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I3 ));
-            this.Write("_viewModel.NotifyCompletedBind();\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I2 ));
+            this.Write("        OnPostBind();\n");
+            this.Write("        _viewModel.NotifyCompletedBind();\n");
+            this.Write("    }\n");
             this.Write("}\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( I1 ));
+ foreach (var _ in Context.ContainingTypes) { 
             this.Write("}\n");
+ } 
  if (HasNamespace) { 
             this.Write("}\n");
  } 

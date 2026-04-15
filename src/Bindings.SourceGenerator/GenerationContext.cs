@@ -15,6 +15,13 @@ public sealed class GenerationContext
     public readonly string Namespace;
 
     /// <summary>
+    /// Chain of containing types (from outermost to innermost) when the ViewModel is a nested type.
+    /// Empty when the ViewModel is a top-level type.
+    /// Each entry holds the type keyword ("class" or "struct") and the simple type name.
+    /// </summary>
+    public readonly (string TypeKeyword, string TypeName)[] ContainingTypes;
+
+    /// <summary>
     /// Whether the target is a struct. When false, the target is a class.
     /// </summary>
     public readonly bool IsStruct;
@@ -63,6 +70,7 @@ public sealed class GenerationContext
     public GenerationContext(
         string className,
         string @namespace,
+        (string TypeKeyword, string TypeName)[] containingTypes,
         bool isStruct,
         bool isReadOnly,
         bool requireBindImplementation,
@@ -74,6 +82,7 @@ public sealed class GenerationContext
     {
         ClassName = className;
         Namespace = @namespace;
+        ContainingTypes = containingTypes;
         IsStruct = isStruct;
         IsReadOnly = isReadOnly;
         RequireBindImplementation = requireBindImplementation;
