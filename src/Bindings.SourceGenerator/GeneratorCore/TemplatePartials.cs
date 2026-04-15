@@ -57,13 +57,6 @@ namespace Bindings.GeneratorCore
         }
 
         /// <summary>
-        /// Normalizes a field identifier following the CommunityToolkit ObservableProperty convention.
-        /// Strips leading underscores and m_ prefix.
-        /// </summary>
-        private static string NormalizeFieldIdentifier(string fieldName) =>
-            TemplateHelpers.NormalizeFieldIdentifier(fieldName).ToString();
-
-        /// <summary>
         /// Returns the ViewModel property name derived from a field name (first letter uppercased).
         /// e.g. _count → Count, m_Count → Count
         /// </summary>

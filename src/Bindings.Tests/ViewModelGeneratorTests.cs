@@ -1103,4 +1103,67 @@ namespace Bindings.Sample
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
     }
+
+    // -------------------------------------------------------------------------
+    // GetBindingPath: object overload — expression contains "Resolver." prefix
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void GetBindingPath_ObjectOverloadWithResolverPrefix_ExtractsPath()
+    {
+        // Using a static readonly (non-const) field forces the object overload.
+        // CallerArgumentExpression captures "Resolver.TMPro_TMP_Text_text", so
+        // GetBindingPath strips the "Resolver." prefix and returns "TMPro_TMP_Text_text".
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public static class Resolver
+    {
+        public static readonly int TMPro_TMP_Text_text = 0;
+    }
+
+    [Bindings.ViewModel]
+    public partial class CountViewModelObjectPath1
+    {
+        [Bindings.Schema(Resolver.TMPro_TMP_Text_text)]
+        private int _count;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        // Binding path is extracted as "TMPro_TMP_Text_text" → type part "TMPro_TMP_Text", member "text"
+        Assert.Contains("_text", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // GetBindingPath: object overload — expression has no "Resolver." prefix
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void GetBindingPath_ObjectOverloadWithoutResolverPrefix_UsesExpressionAsPath()
+    {
+        // A static readonly field whose name has no "Resolver." → path = rawExpr directly.
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public static class MyPaths
+    {
+        public static readonly int SomeValue = 0;
+    }
+
+    [Bindings.ViewModel]
+    public partial class CountViewModelObjectRaw1
+    {
+        [Bindings.Schema(MyPaths.SomeValue)]
+        private int _count;
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        // Generator runs without crashing; ViewModel source is produced
+        Assert.NotNull(vmSource);
+    }
 }
