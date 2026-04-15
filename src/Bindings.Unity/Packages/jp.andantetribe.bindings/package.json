@@ -5,7 +5,7 @@
     "name": "AndanteTribe",
     "url": "https://github.com/AndanteTribe"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "unity": "6000.0",
   "description": "MVVM-based automated UI binding framework built on uGUI.",
   "license": "MIT",
