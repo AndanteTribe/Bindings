@@ -36,37 +36,28 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( TypeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
-            this.Write(" : global::Bindings.IViewModel\n{\n");
-            this.Write("    private readonly global::Bindings.IMvvmPublisher _publisher;\n");
+            this.Write(" : global::Bindings.IViewModel\n{\n    private readonly global::Bindings.IMvvmPubli" +
+                    "sher _publisher;\n");
  foreach (var schemaField in Context.SchemaFields) { 
-            this.Write("\n");
-            this.Write("    public ");
+            this.Write("\n    public ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldTypeName ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ToPropertyName(schemaField.FieldName) ));
-            this.Write("\n");
-            this.Write("    {\n");
-            this.Write("        get => ");
+            this.Write("\n    {\n        get => ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
             this.Write(";\n");
  if (!Context.IsReadOnly) { 
-            this.Write("        set\n");
-            this.Write("        {\n");
-            this.Write("            ");
+            this.Write("        set\n        {\n            ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
-            this.Write(" = value;\n");
-            this.Write("            PublishRebindMessage();\n");
-            this.Write("        }\n");
+            this.Write(" = value;\n            PublishRebindMessage();\n        }\n");
  } 
             this.Write("    }\n");
  } 
-            this.Write("\n");
-            this.Write("    public ");
+            this.Write("\n    public ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write("(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ConstructorParamList ));
-            this.Write(")\n");
-            this.Write("    {\n");
+            this.Write(")\n    {\n");
  foreach (var field in Context.RequiredFields) { 
             this.Write("        ");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
@@ -74,19 +65,19 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(field.FieldName) ));
             this.Write(";\n");
  } 
-            this.Write("        _publisher = publisher;\n");
-            this.Write("    }\n\n");
-            this.Write("    public void NotifyCompletedBind() => OnPostBind();\n\n");
-            this.Write("    partial void OnPostBind();\n\n");
-            this.Write("    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.Compil" +
-                    "erServices.MethodImplOptions.AggressiveInlining)]\n");
-            this.Write("    private void PublishRebindMessage()\n");
-            this.Write("    {\n");
-            this.Write("        _publisher.PublishRebindMessage<");
+            this.Write(@"        _publisher = publisher;
+    }
+
+    public void NotifyCompletedBind() => OnPostBind();
+
+    partial void OnPostBind();
+
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
+    private void PublishRebindMessage()
+    {
+        _publisher.PublishRebindMessage<");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
-            this.Write(">();\n");
-            this.Write("    }\n");
-            this.Write("}\n");
+            this.Write(">();\n    }\n}\n");
  foreach (var _ in Context.ContainingTypes) { 
             this.Write("}\n");
  } 
