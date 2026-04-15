@@ -208,7 +208,7 @@ public class TemplateBaseTests
         Assert.Throws<ArgumentNullException>(() => tmpl.ToStringHelper.ToStringWithCulture(null!));
     }
 
-    private sealed class NonConvertible
+    private sealed class NonConvertibleTestObject
     {
         public override string ToString() => "custom-str";
     }
@@ -217,7 +217,7 @@ public class TemplateBaseTests
     public void ViewModelTemplate_ToStringWithCulture_NonIConvertibleObject_FallsBackToToString()
     {
         var tmpl = new ViewModelTemplate(MinimalContext());
-        var result = tmpl.ToStringHelper.ToStringWithCulture(new NonConvertible());
+        var result = tmpl.ToStringHelper.ToStringWithCulture(new NonConvertibleTestObject());
         Assert.Equal("custom-str", result);
     }
 
@@ -236,7 +236,7 @@ public class TemplateBaseTests
     public void ViewTemplate_Session_SetAndGet()
     {
         var tmpl = MinimalViewTemplate();
-        var dict = new Dictionary<string, object> { ["k"] = 42 };
+        var dict = new Dictionary<string, object> { ["testKey"] = 42 };
         tmpl.Session = dict;
         Assert.Equal(dict, tmpl.Session);
     }
@@ -355,7 +355,7 @@ public class TemplateBaseTests
     public void ViewTemplate_ToStringWithCulture_NonIConvertibleObject_FallsBackToToString()
     {
         var tmpl = MinimalViewTemplate();
-        var result = tmpl.ToStringHelper.ToStringWithCulture(new NonConvertible());
+        var result = tmpl.ToStringHelper.ToStringWithCulture(new NonConvertibleTestObject());
         Assert.Equal("custom-str", result);
     }
 
