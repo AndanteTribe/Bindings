@@ -57,11 +57,14 @@ namespace Bindings
 
     public interface IViewModel { }
 
-    public interface IView<T> { }
-
     public interface IView
     {
         System.Threading.Tasks.ValueTask BindAsync(System.Threading.CancellationToken cancellationToken);
+    }
+
+    public interface IView<in T> : IView where T : IViewModel
+    {
+        void Initialize(T viewModel);
     }
 
     public interface IMvvmPublisher
@@ -69,9 +72,12 @@ namespace Bindings
         void PublishRebindMessage<T>() where T : IViewModel;
     }
 
-    public interface IMvvmSubscriber<T> { }
+    public interface IMvvmSubscriber<in T>
+    {
+        void OnReceivedMessage(T message);
+    }
 
-    public sealed class DebugBindMessage { }
+    public sealed class DebugBindMessage { public void BindTo(object view) { } }
 }
 
 namespace Bindings
@@ -81,6 +87,30 @@ namespace Bindings
         public static void SetValue(object text, object value) { }
         public static void SetValue(object text, object value, string format) { }
     }
+}
+";
+
+    // Stubs for Unity and third-party types referenced in the generated View code.
+    private const string RuntimeStubs = @"
+namespace UnityEngine
+{
+    public sealed class SerializeField : System.Attribute { }
+    public sealed class NonSerialized : System.Attribute { }
+    public sealed class Tooltip : System.Attribute { public Tooltip(string tip) { } }
+}
+namespace TMPro
+{
+    public class TMP_Text { public string text { get; set; } = string.Empty; }
+}
+namespace UnityEngine.UI
+{
+    public class Button { public ButtonClickedEvent onClick { get; } = new(); }
+    public class ButtonClickedEvent
+    {
+        public void RemoveAllListeners() { }
+        public void AddListener(System.Action call) { }
+    }
+    public class Image { public float fillAmount { get; set; } }
 }
 ";
 
@@ -119,6 +149,58 @@ namespace Bindings
             ?.GetText().ToString();
 
         return (vmSource, viewSource);
+    }
+
+    /// <summary>
+    /// Runs the generator on <paramref name="userCode"/> and then compiles the user code +
+    /// all generated files together. Returns any error-level diagnostics from the final
+    /// compilation so tests can assert there are no compiler errors.
+    /// </summary>
+    private static Diagnostic[] RunGeneratorAndCompile(string userCode)
+    {
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+
+        var seedCompilation = CSharpCompilation.Create(
+            "SeedAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(RuntimeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(seedCompilation).GetRunResult();
+
+        // Compile user code + generated code together
+        var allTrees = new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(RuntimeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            }
+            .Concat(runResult.GeneratedTrees)
+            .ToArray();
+
+        var finalCompilation = CSharpCompilation.Create(
+            "FinalAssembly",
+            allTrees,
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        return finalCompilation.GetDiagnostics()
+            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .ToArray();
     }
 
     // -------------------------------------------------------------------------
@@ -945,5 +1027,80 @@ public partial class CountViewModelIndentGlobal
         // Both have 4-space indented members
         Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSourceWithNs);
         Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSourceNoNs);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: inner class ViewModel generates compilable code
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InnerViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        [Bindings.ViewModel]
+        public partial class CountViewModel1
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: doubly-nested inner class ViewModel
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void DoublyNestedViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        public partial class Middle
+        {
+            [Bindings.ViewModel]
+            public partial class CountViewModel1
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: top-level (non-nested) ViewModel still compiles
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void TopLevelViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModel1
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
     }
 }
