@@ -77,12 +77,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             : typeSymbol.ContainingNamespace.ToDisplayString();
 
         // 3b. Containing types: collect the chain of enclosing types (outermost first)
-        var containingTypesList = new List<(string TypeKeyword, string TypeName)>();
+        var containingTypesList = new List<(string Accessibility, string TypeKeyword, string TypeName)>();
         var enclosing = typeSymbol.ContainingType;
         while (enclosing != null)
         {
             var keyword = enclosing.TypeKind == TypeKind.Struct ? "struct" : "class";
-            containingTypesList.Insert(0, (keyword, enclosing.Name));
+            var accessMod = GetAccessibilityString(enclosing.DeclaredAccessibility);
+            containingTypesList.Insert(0, (accessMod, keyword, enclosing.Name));
             enclosing = enclosing.ContainingType;
         }
         var containingTypes = containingTypesList.ToArray();
@@ -186,6 +187,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         return new GenerationContext(
             className: typeSymbol.Name,
             @namespace: ns,
+            accessibility: GetAccessibilityString(typeSymbol.DeclaredAccessibility),
             containingTypes: containingTypes,
             isStruct: isStruct,
             isReadOnly: typeSymbol.IsReadOnly,
@@ -476,6 +478,22 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         if (entry.IsMethod) methodAssignments[entry.Index] = fieldName;
         else fieldAssignments[entry.Index] = fieldName;
     }
+
+    /// <summary>
+    /// Converts a Roslyn <see cref="Microsoft.CodeAnalysis.Accessibility"/> value to the
+    /// corresponding C# keyword string used in generated code.
+    /// </summary>
+    private static string GetAccessibilityString(Microsoft.CodeAnalysis.Accessibility accessibility) =>
+        accessibility switch
+        {
+            Microsoft.CodeAnalysis.Accessibility.Public            => "public",
+            Microsoft.CodeAnalysis.Accessibility.Internal          => "internal",
+            Microsoft.CodeAnalysis.Accessibility.Private           => "private",
+            Microsoft.CodeAnalysis.Accessibility.Protected         => "protected",
+            Microsoft.CodeAnalysis.Accessibility.ProtectedOrInternal  => "protected internal",
+            Microsoft.CodeAnalysis.Accessibility.ProtectedAndInternal => "private protected",
+            _                                                       => "public",
+        };
 
     // -------------------------------------------------------------------------
     // ViewModel partial generation → {ClassName}.g.cs

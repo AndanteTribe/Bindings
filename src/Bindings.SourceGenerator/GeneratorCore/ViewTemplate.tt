@@ -5,12 +5,12 @@
 namespace <#= Context.Namespace #>
 {
 <# } #>
-<# foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { #>
-public partial <#= typeKeyword #> <#= typeName #>
+<# foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) { #>
+<#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
 <# } #>
 [global::System.Serializable]
-public sealed partial class <#= ViewClassName #> : global::Bindings.IView<<#= ViewModelFullName #>>
+<#= Context.Accessibility #> sealed partial class <#= ViewClassName #> : global::Bindings.IView<<#= ViewModelFullName #>>
 {
     [global::System.NonSerialized]
     private <#= ViewModelFullName #> _viewModel<#= VmFieldInit #>;
@@ -58,11 +58,11 @@ public sealed partial class <#= ViewClassName #> : global::Bindings.IView<<#= Vi
 namespace <#= Context.Namespace #>
 {
 <# } #>
-<# foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { #>
-public partial <#= typeKeyword #> <#= typeName #>
+<# foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) { #>
+<#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
 <# } #>
-public sealed partial class <#= ViewClassName #> : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
+<#= Context.Accessibility #> sealed partial class <#= ViewClassName #> : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
 {
     void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
     {
