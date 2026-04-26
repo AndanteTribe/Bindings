@@ -5,14 +5,14 @@
 namespace <#= Context.Namespace #>
 {
 <# } #>
-<# foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { #>
-public partial <#= typeKeyword #> <#= typeName #>
+<# foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) { #>
+<#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
 <# } #>
 <# if (!Context.AlreadySerializable) { #>
 [global::System.Serializable]
 <# } #>
-public partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
+<#= Context.Accessibility #> partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
     private readonly global::Bindings.IMvvmPublisher _publisher;
 <# foreach (var schemaField in Context.SchemaFields) { #>

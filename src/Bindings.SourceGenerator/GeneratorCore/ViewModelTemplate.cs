@@ -22,8 +22,9 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
  } 
- foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { 
-            this.Write("public partial ");
+ foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) { 
+            this.Write(this.ToStringHelper.ToStringWithCulture( accessibility ));
+            this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
@@ -32,7 +33,8 @@ namespace Bindings.GeneratorCore {
  if (!Context.AlreadySerializable) { 
             this.Write("[global::System.Serializable]\n");
  } 
-            this.Write("public partial ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
+            this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( TypeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));

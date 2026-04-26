@@ -22,14 +22,17 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
  } 
- foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { 
-            this.Write("public partial ");
+ foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) { 
+            this.Write(this.ToStringHelper.ToStringWithCulture( accessibility ));
+            this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
             this.Write("\n{\n");
  } 
-            this.Write("[global::System.Serializable]\npublic sealed partial class ");
+            this.Write("[global::System.Serializable]\n");
+            this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
+            this.Write(" sealed partial class ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewClassName ));
             this.Write(" : global::Bindings.IView<");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
@@ -79,14 +82,16 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
  } 
- foreach (var (typeKeyword, typeName) in Context.ContainingTypes) { 
-            this.Write("public partial ");
+ foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) { 
+            this.Write(this.ToStringHelper.ToStringWithCulture( accessibility ));
+            this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
             this.Write("\n{\n");
  } 
-            this.Write("public sealed partial class ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
+            this.Write(" sealed partial class ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewClassName ));
             this.Write(" : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>\n{\n    void" +
                     " global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedM" +

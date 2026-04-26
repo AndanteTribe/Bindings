@@ -1166,4 +1166,241 @@ namespace Bindings.Sample
         // Generator runs without crashing; ViewModel source is produced
         Assert.NotNull(vmSource);
     }
+
+    // -------------------------------------------------------------------------
+    // internal [ViewModel] class: emits internal accessibility
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalViewModelEmitsInternalAccessibility()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    internal partial class CountViewModel1
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        // ViewModel class declaration uses internal
+        Assert.Contains("internal partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+
+        // View class declaration also uses internal
+        Assert.Contains("internal sealed partial class CountView1", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // internal [ViewModel] class: generated code compiles
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    internal partial class CountViewModel1
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // internal containing class wrapping a [ViewModel]
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalOuterClassEmitsInternalContainingType()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    internal partial class Outer
+    {
+        [Bindings.ViewModel]
+        public partial class CountViewModel1
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        // Containing class uses internal
+        Assert.Contains("internal partial class Outer", vmSource);
+        Assert.Contains("internal partial class Outer", viewSource);
+
+        // ViewModel itself still public
+        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // internal containing class wrapping a [ViewModel]: generated code compiles
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalOuterClassGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    internal partial class Outer
+    {
+        [Bindings.ViewModel]
+        public partial class CountViewModel1
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // Mixed: internal ViewModel inside internal containing class
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalViewModelInsideInternalOuterClassEmitsCorrectAccessibility()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    internal partial class Outer
+    {
+        [Bindings.ViewModel]
+        internal partial class CountViewModel1
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        // Both containing class and ViewModel class use internal
+        Assert.Contains("internal partial class Outer", vmSource);
+        Assert.Contains("internal partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+
+        // View also uses internal for both containing class and View class
+        Assert.Contains("internal partial class Outer", viewSource);
+        Assert.Contains("internal sealed partial class CountView1", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Mixed: internal ViewModel inside internal containing class: compiles
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalViewModelInsideInternalOuterClassGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    internal partial class Outer
+    {
+        [Bindings.ViewModel]
+        internal partial class CountViewModel1
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // Deeply nested: internal middle class among public outer and public ViewModel
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalMiddleClassInDoublyNestedViewModelEmitsInternalMiddle()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        internal partial class Middle
+        {
+            [Bindings.ViewModel]
+            public partial class CountViewModel1
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        // Outer stays public, Middle becomes internal
+        Assert.Contains("public partial class Outer", vmSource);
+        Assert.Contains("internal partial class Middle", vmSource);
+        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+
+        Assert.Contains("public partial class Outer", viewSource);
+        Assert.Contains("internal partial class Middle", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // Deeply nested: internal at various levels: compiles
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalMiddleClassInDoublyNestedViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        internal partial class Middle
+        {
+            [Bindings.ViewModel]
+            public partial class CountViewModel1
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+}";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
 }

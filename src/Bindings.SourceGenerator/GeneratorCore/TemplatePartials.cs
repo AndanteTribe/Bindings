@@ -30,7 +30,7 @@ namespace Bindings.GeneratorCore
                 {
                     sb.Append(Context.Namespace).Append('.');
                 }
-                foreach (var (_, typeName) in Context.ContainingTypes)
+                foreach (var (_, __, typeName) in Context.ContainingTypes)
                 {
                     sb.Append(typeName).Append('.');
                 }
@@ -115,7 +115,7 @@ namespace Bindings.GeneratorCore
                 {
                     sb.Append(Context.Namespace).Append('.');
                 }
-                foreach (var (_, typeName) in Context.ContainingTypes)
+                foreach (var (_, __, typeName) in Context.ContainingTypes)
                 {
                     sb.Append(typeName).Append('.');
                 }
