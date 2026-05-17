@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 namespace Bindings.Sample
 {
@@ -7,7 +7,7 @@ namespace Bindings.Sample
         public int Count { get; set; }
     }
 
-// simple
+    // simple
     [ViewModel]
     public partial class CountViewModel1
     {
@@ -38,7 +38,7 @@ namespace Bindings.Sample
         }
     }
 
-// requireBindImplementation
+    // requireBindImplementation
     [ViewModel(requireBindImplementation: true)]
     public partial class CountViewModel2
     {
@@ -69,7 +69,7 @@ namespace Bindings.Sample
         }
     }
 
-// already SerializableAttribute
+    // already SerializableAttribute
     [ViewModel]
     [System.Serializable]
     public partial class CountViewModel3
@@ -101,7 +101,7 @@ namespace Bindings.Sample
         }
     }
 
-// non model
+    // non model
     [ViewModel]
     public partial class CountViewModel4
     {
@@ -124,7 +124,7 @@ namespace Bindings.Sample
         }
     }
 
-// multi models
+    // multi models
     [ViewModel]
     public partial class CountViewModel5
     {
@@ -159,7 +159,7 @@ namespace Bindings.Sample
         }
     }
 
-// same id pair
+    // same id pair
     [ViewModel]
     public partial class CountViewModel6
     {
@@ -190,7 +190,7 @@ namespace Bindings.Sample
         }
     }
 
-// use format and use non text field
+    // use format and use non text field
     [ViewModel]
     public partial class CountViewModel7
     {
