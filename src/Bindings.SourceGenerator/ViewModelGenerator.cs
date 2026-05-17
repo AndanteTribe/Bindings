@@ -211,7 +211,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// </summary>
     private static string GetBindingPath(AttributeData attr)
     {
-        if (attr.ConstructorArguments.Length == 0) return string.Empty;
+        if (attr.ConstructorArguments.Length == 0)
+            return string.Empty;
 
         // String overload: first argument is the binding path string
         var firstArg = attr.ConstructorArguments[0];
@@ -271,7 +272,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private static (string TypePart, string MemberName) SplitBindingPath(string path)
     {
         var lastDot = path.LastIndexOf('.');
-        if (lastDot < 0) return (path, string.Empty);
+        if (lastDot < 0)
+            return (path, string.Empty);
         return (path.Substring(0, lastDot), path.Substring(lastDot + 1));
     }
 
@@ -288,7 +290,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var className = lastDot >= 0 ? typePart.Substring(lastDot + 1) : typePart;
         var lastUnderscore = className.LastIndexOf('_');
         var baseName = lastUnderscore >= 0 ? className.Substring(lastUnderscore + 1) : className;
-        if (baseName.Length == 0) baseName = className;
+        if (baseName.Length == 0)
+            baseName = className;
         return char.ToLowerInvariant(baseName[0]) + baseName.Substring(1);
     }
 
@@ -344,9 +347,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var typePartSet = new HashSet<string>();
         var typePartOrder = new List<string>();
         for (var i = 0; i < fieldCount; i++)
-            if (typePartSet.Add(fieldTypeParts[i])) typePartOrder.Add(fieldTypeParts[i]);
+            if (typePartSet.Add(fieldTypeParts[i]))
+                typePartOrder.Add(fieldTypeParts[i]);
         for (var i = 0; i < methodCount; i++)
-            if (typePartSet.Add(methodTypeParts[i])) typePartOrder.Add(methodTypeParts[i]);
+            if (typePartSet.Add(methodTypeParts[i]))
+                typePartOrder.Add(methodTypeParts[i]);
 
         // Track tooltip per assigned View field name (first non-empty value wins)
         var fieldTooltips = new Dictionary<string, string>();
@@ -372,8 +377,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             var hasUnset = false;
             foreach (var (_, _, id, _) in entries)
             {
-                if (id >= 0) hasExplicit = true;
-                else hasUnset = true;
+                if (id >= 0)
+                    hasExplicit = true;
+                else
+                    hasUnset = true;
             }
 
             if (!hasExplicit)
@@ -402,7 +409,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 // Case C: mixed — first assign explicit ids, then assign available numbers to unset ids
                 var usedIds = new HashSet<int>();
                 foreach (var (_, _, id, _) in entries)
-                    if (id >= 0) usedIds.Add(id);
+                    if (id >= 0)
+                        usedIds.Add(id);
 
                 foreach (var entry in entries)
                     if (entry.Id >= 0)
@@ -413,7 +421,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 {
                     if (entry.Id == -1)
                     {
-                        while (usedIds.Contains(nextNum)) nextNum++;
+                        while (usedIds.Contains(nextNum))
+                            nextNum++;
                         usedIds.Add(nextNum);
                         Assign(entry, $"_{fieldBase}{nextNum}", fieldAssignments, methodAssignments);
                         nextNum++;
@@ -428,7 +437,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     ? methodAssignments[entry.Index]
                     : fieldAssignments[entry.Index];
                 var tooltip = entry.Tooltip;
-                if (string.IsNullOrEmpty(tooltip)) continue;
+                if (string.IsNullOrEmpty(tooltip))
+                    continue;
 
                 if (!fieldTooltips.ContainsKey(assignedField))
                 {
@@ -473,8 +483,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         string[] fieldAssignments,
         string[] methodAssignments)
     {
-        if (entry.IsMethod) methodAssignments[entry.Index] = fieldName;
-        else fieldAssignments[entry.Index] = fieldName;
+        if (entry.IsMethod)
+            methodAssignments[entry.Index] = fieldName;
+        else
+            fieldAssignments[entry.Index] = fieldName;
     }
 
     // -------------------------------------------------------------------------
