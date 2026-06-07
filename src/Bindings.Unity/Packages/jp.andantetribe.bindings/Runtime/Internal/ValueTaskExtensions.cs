@@ -67,6 +67,10 @@ namespace Bindings.Internal
                 {
                     _awaiter.GetResult();
                 }
+                catch (OperationCanceledException)
+                {
+                    // ignore
+                }
                 catch (Exception ex)
                 {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
