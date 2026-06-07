@@ -15,7 +15,7 @@ namespace Bindings.Editor.Internal
             _inis = inis;
 
             var minSize = minimumSize;
-            minSize.x = 200;
+            minSize.y = 200;
             minimumSize = minSize;
         }
 
