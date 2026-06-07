@@ -40,6 +40,8 @@ ScaffoldingReadMe.txt
 # Others
 ~$*
 *~
+!src/Bindings.Unity/Packages/jp.andantetribe.bindings/Samples~/
+!src/Bindings.Unity/Packages/jp.andantetribe.bindings/Samples~/**
 CodeCoverage/
 
 # MSBuild Binary and Structured Log
