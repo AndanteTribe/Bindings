@@ -114,9 +114,14 @@ namespace Bindings
         {
             foreach (var view in _views.AsSpan())
             {
-                if (view is IMvvmSubscriber<T> subscriber)
+                switch (view)
                 {
-                    subscriber.OnReceivedMessage(message);
+                    case IMvvmSubscriber<T> subscriber:
+                        subscriber.OnReceivedMessage(message);
+                        break;
+                    case IAsyncMvvmSubscriber<T> subscriber:
+                        subscriber.OnReceivedMessageAsync(message, destroyCancellationToken).Forget();
+                        break;
                 }
             }
         }
