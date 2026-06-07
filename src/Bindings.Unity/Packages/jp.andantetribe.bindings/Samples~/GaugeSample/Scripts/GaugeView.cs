@@ -2,7 +2,7 @@
 
 using System.Threading;
 using System.Threading.Tasks;
-using Binder;
+using Bindings;
 using UnityEngine;
 using LitMotion;
 
@@ -35,7 +35,7 @@ namespace Bindings.Sample
             _valueChangeSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cancellationToken = _valueChangeSource.Token;
 
-            // offsetMax.x ≒ -right なので _maxRight = 200 ならoffsetMax.xは -200 ~ 0 で推移.
+            // offsetMax.x ≒ -right なので _maxRight = -200 ならoffsetMax.xは -200 ~ 0 で推移.
             if (message.Increase)
             {
                 // エフェクトは使わないので非表示.
