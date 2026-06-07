@@ -54,14 +54,20 @@ namespace Bindings
         /// <param name="viewModel">The view model to bind to the view.</param>
         public void Initialize(IViewModel viewModel)
         {
+            var found = false;
             foreach (var view in _views.AsSpan())
             {
                 if (view.CanBind(viewModel))
                 {
                     view.Initialize(viewModel);
+                    found = true;
                 }
             }
-            throw new InvalidOperationException("No view found for view model of type " + viewModel.GetType().FullName + ".");
+
+            if (!found)
+            {
+                throw new InvalidOperationException("No view found for view model of type " + viewModel.GetType().FullName + ".");
+            }
         }
 
         /// <summary>
@@ -114,9 +120,14 @@ namespace Bindings
         {
             foreach (var view in _views.AsSpan())
             {
-                if (view is IMvvmSubscriber<T> subscriber)
+                switch (view)
                 {
-                    subscriber.OnReceivedMessage(message);
+                    case IMvvmSubscriber<T> subscriber:
+                        subscriber.OnReceivedMessage(message);
+                        break;
+                    case IAsyncMvvmSubscriber<T> subscriber:
+                        subscriber.OnReceivedMessageAsync(message, destroyCancellationToken).Forget();
+                        break;
                 }
             }
         }
