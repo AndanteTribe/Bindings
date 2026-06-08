@@ -23,10 +23,12 @@ jobs:
     test:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v6
+            # ghasec-ignore: unpinned-action
+            - uses: AndanteTribe/Actions/actions/checkout@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
               with:
                   fetch-depth: 0
-            - uses: actions/setup-dotnet@v5
+            # ghasec-ignore: unpinned-action
+            - uses: AndanteTribe/Actions/actions/setup-dotnet@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
               with:
                   dotnet-version: '8.0.x'
             - run: dotnet restore src/Bindings.Tests/Bindings.Tests.csproj
@@ -37,7 +39,8 @@ jobs:
                   dotnet tool install -g dotnet-reportgenerator-globaltool
                   reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"report" -reporttypes:"Html;MarkdownSummary"
                   cat report/Summary.md >> $GITHUB_STEP_SUMMARY
-            - uses: actions/upload-artifact@v7
+            # ghasec-ignore: unpinned-action
+            - uses: AndanteTribe/Actions/actions/upload-artifact@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
               with:
                   name: coverage-report
                   path: report/
