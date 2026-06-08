@@ -8,22 +8,37 @@ using LitMotion;
 
 namespace Bindings.Sample
 {
-    public partial class GaugeView : IAsyncMvvmSubscriber<GaugeValueChangedMessage>
+    public partial class GaugeView : IAsyncMvvmSubscriber<GaugeAnimationMessage>
     {
-        private CancellationTokenSource? _valueChangeSource;
+        [SerializeField]
+        private RectTransform _gaugeRoot = null!;
+        [SerializeField]
+        private RectTransform _fillTransform = null!;
+        [SerializeField]
+        private RectTransform _effectTransform = null!;
 
         [SerializeField, Min(0.1f)]
         private float _gaugeAnimDuration = 1f;
         [SerializeField, Min(0.1f)]
         private float _decreaseAnimWaitDuration = 2f;
 
+        private CancellationTokenSource? _valueChangeSource;
+        private float _maxRight;
+
         partial void OnPostBind()
         {
+            if (_maxRight == 0)
+            {
+                _maxRight = -_gaugeRoot.rect.width;
+            }
+
+            _fillTransform.offsetMax = CalculateOffsetMax();
+
             // エフェクトは使うときまで非表示.
-            _rectTransform2.gameObject.SetActive(false);
+            _effectTransform.gameObject.SetActive(false);
         }
 
-        public async ValueTask OnReceivedMessageAsync(GaugeValueChangedMessage message, CancellationToken cancellationToken)
+        public async ValueTask OnReceivedMessageAsync(GaugeAnimationMessage message, CancellationToken cancellationToken)
         {
             // 前の演出が終わってないときはキャンセルで停止.
             _valueChangeSource?.Cancel();
@@ -36,37 +51,44 @@ namespace Bindings.Sample
             cancellationToken = _valueChangeSource.Token;
 
             // offsetMax.x ≒ -right なので _maxRight = -200 ならoffsetMax.xは -200 ~ 0 で推移.
-            if (message.Increase)
+            if (message.Previous < _viewModel.Current) // e.g. heal...etc
             {
                 // エフェクトは使わないので非表示.
-                _rectTransform2.gameObject.SetActive(false);
-                await LMotion.Create(_rectTransform1.offsetMax.x, _viewModel.FillOffsetMax.x, _gaugeAnimDuration)
-                    .Bind(_rectTransform1, static (value, gauge) => gauge.offsetMax = new Vector2(value, 0))
+                _effectTransform.gameObject.SetActive(false);
+                await LMotion.Create(_fillTransform.offsetMax, CalculateOffsetMax(), _gaugeAnimDuration)
+                    .Bind(_fillTransform, static (value, gauge) => gauge.offsetMax = value)
                     .ToValueTask(CancelBehavior.Complete, cancellationToken);
             }
             else
             {
                 // ゲージのほうは即更新.
-                _rectTransform1.offsetMax = new Vector2(_viewModel.FillOffsetMax.x, 0);
+                var previousFullOffsetMax = _fillTransform.offsetMax;
+                var fullOffsetMax = _fillTransform.offsetMax = CalculateOffsetMax();
+
                 // エフェクトは使うので初期化して表示.
-                var effectObj = _rectTransform2.gameObject;
+                var effectObj = _effectTransform.gameObject;
                 if (!effectObj.activeSelf)
                 {
-                    _rectTransform2.offsetMax = new Vector2(message.PreFillOffsetMaxX, 0);
+                    _effectTransform.offsetMax = previousFullOffsetMax;
                     effectObj.SetActive(true);
                 }
-                // 若干待つ.
+
+                // 若干待機してからエフェクトを再生.
                 await Awaitable.WaitForSecondsAsync(_decreaseAnimWaitDuration, cancellationToken);
-                await LMotion.Create(_rectTransform2.offsetMax.x, _viewModel.FillOffsetMax.x, _gaugeAnimDuration)
-                    .Bind(_viewModel, _rectTransform2, static (value, vm, effect) =>
-                    {
-                        vm.UpdateEffectOffsetMaxX(value);
-                        effect.offsetMax = new Vector2(value, 0);
-                    })
+                await LMotion.Create(_effectTransform.offsetMax, fullOffsetMax, _gaugeAnimDuration)
+                    .Bind(_effectTransform, static (value, effect) => effect.offsetMax = value)
                     .ToValueTask(CancelBehavior.Cancel, cancellationToken);
+
                 // エフェクトは非表示に戻す.
                 effectObj.SetActive(false);
             }
+        }
+
+        private Vector2 CalculateOffsetMax()
+        {
+            var x = _maxRight * (1 - (float)_viewModel.Current / _viewModel.Max);
+            // x : -right, y : -top で yは変えない.
+            return new Vector2(x, 0);
         }
     }
 }

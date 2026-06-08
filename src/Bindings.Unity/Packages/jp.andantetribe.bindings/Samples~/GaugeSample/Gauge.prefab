@@ -274,12 +274,13 @@ MonoBehaviour:
     - rid: 4980252382293917933
       type: {class: GaugeView, ns: Bindings.Sample, asm: Assembly-CSharp}
       data:
+        _gaugeRoot: {fileID: 5426587759238972050}
+        _fillTransform: {fileID: 8780518985152761455}
+        _effectTransform: {fileID: 2099606363784212471}
         _gaugeAnimDuration: 1
         _decreaseAnimWaitDuration: 2
         _text1: {fileID: 5994350644666961948}
         _text2: {fileID: 4679664868209317112}
-        _rectTransform1: {fileID: 8780518985152761455}
-        _rectTransform2: {fileID: 2099606363784212471}
 --- !u!1 &4562308911133348145
 GameObject:
   m_ObjectHideFlags: 0

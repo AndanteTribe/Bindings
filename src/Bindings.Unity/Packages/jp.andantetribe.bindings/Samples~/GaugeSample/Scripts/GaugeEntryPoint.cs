@@ -14,29 +14,29 @@ namespace Bindings.Sample
 
         private void Awake()
         {
-            var maxRight = ((RectTransform)_binder.transform).rect.width * -1;
-            _gaugeViewModel = new GaugeViewModel(maxRight, 1000, 1000, _binder);
+            _gaugeViewModel = new GaugeViewModel(_binder);
             _binder.Initialize(_gaugeViewModel);
+            _gaugeViewModel.Max = _gaugeViewModel.Current = 1000;
         }
 
         private async void Start()
         {
             await Awaitable.WaitForSecondsAsync(3f, destroyCancellationToken);
-            _gaugeViewModel!.SetValue(500);
+            _gaugeViewModel!.AnimateTo(500);
             await Awaitable.WaitForSecondsAsync(0.5f, destroyCancellationToken);
-            _gaugeViewModel.SetValue(300);
+            _gaugeViewModel.AnimateTo(300);
             await Awaitable.WaitForSecondsAsync(0.5f, destroyCancellationToken);
-            _gaugeViewModel.SetValue(450);
+            _gaugeViewModel.AnimateTo(450);
             await Awaitable.WaitForSecondsAsync(0.5f, destroyCancellationToken);
-            _gaugeViewModel.SetValue(600);
+            _gaugeViewModel.AnimateTo(600);
             await Awaitable.WaitForSecondsAsync(0.5f, destroyCancellationToken);
-            _gaugeViewModel.SetValue(500);
+            _gaugeViewModel.AnimateTo(500);
             await Awaitable.WaitForSecondsAsync(0.5f, destroyCancellationToken);
-            _gaugeViewModel.SetValue(700);
+            _gaugeViewModel.AnimateTo(700);
             await Awaitable.WaitForSecondsAsync(3f, destroyCancellationToken);
-            _gaugeViewModel.SetValue(900);
+            _gaugeViewModel.AnimateTo(900);
             await Awaitable.WaitForSecondsAsync(3f, destroyCancellationToken);
-            _gaugeViewModel.SetValue(500);
+            _gaugeViewModel.AnimateTo(500);
         }
     }
 }
