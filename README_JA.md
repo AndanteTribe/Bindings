@@ -81,7 +81,9 @@ namespace MyApp
 
 namespace MyApp
 {
+#if UNITY_EDITOR
     [global::System.Serializable]
+#endif
     public partial class CounterViewModel : global::Bindings.IViewModel
     {
         private readonly global::Bindings.IMvvmPublisher _publisher;
