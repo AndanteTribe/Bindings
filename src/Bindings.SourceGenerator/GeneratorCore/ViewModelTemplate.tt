@@ -10,7 +10,9 @@ public partial <#= typeKeyword #> <#= typeName #>
 {
 <# } #>
 <# if (!Context.AlreadySerializable) { #>
+#if UNITY_EDITOR
 [global::System.Serializable]
+#endif
 <# } #>
 public partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
