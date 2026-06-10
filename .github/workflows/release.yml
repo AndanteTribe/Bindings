@@ -20,7 +20,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      # ghasec-ignore: unpinned-action
+      - uses: AndanteTribe/Actions/actions/checkout@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
         with:
           fetch-depth: 0
       - name: create branch
@@ -40,7 +41,8 @@ jobs:
 
           FILE="src/Bindings.Unity/Packages/jp.andantetribe.bindings/package.json"
           jq --arg ver "$VERSION" '.version = $ver' "$FILE" > tmp.$$.json && mv tmp.$$.json "$FILE"
-      - uses: actions/setup-dotnet@v5
+      # ghasec-ignore: unpinned-action
+      - uses: AndanteTribe/Actions/actions/setup-dotnet@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
         with:
           dotnet-version: '10.0.x'
       - name: restore dotnet tools
