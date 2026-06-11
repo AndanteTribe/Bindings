@@ -58,8 +58,12 @@ jobs:
       - name: build SourceGenerator (release)
         run: dotnet build src/Bindings.SourceGenerator/Bindings.SourceGenerator.csproj --configuration Release
       - name: commit and push
+        env:
+            GITHUB_TOKEN: ${{ github.token }}
         run: |
           VERSION="${{ github.event.inputs.version }}"
+          BRANCH="feature/v${VERSION}"
+          AUTH_REMOTE="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
           git add \
             src/Bindings.SourceGenerator/GeneratorCore/ViewModelTemplate.cs \
@@ -67,7 +71,7 @@ jobs:
             src/Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/Bindings.SourceGenerator.dll \
             src/Bindings.Unity/Packages/jp.andantetribe.bindings/package.json
           git commit -m "chore: bump version to ${VERSION}"
-          git push origin HEAD
+          git push "$AUTH_REMOTE" "HEAD:${BRANCH}"
       - name: create pull request
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
