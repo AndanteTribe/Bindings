@@ -276,6 +276,19 @@ Applied to a field or method to bind it to a UI component. Can be applied multip
 | `format` | `string` | `""` | Format string applied when binding to `TMPro.TMP_Text.text` (e.g., `"N0"`). Ignored for other binding paths. |
 | `tooltip` | `string` | `""` | Tooltip text shown in the Unity Inspector on the generated View component field. |
 
+#### GameObject active state binding
+
+If you specify `UnityEngine.GameObject.activeSelf` (or `PathResolver.UnityEngine.GameObject.activeSelf`) as the `bindingPath`, the generated View code will call `GameObject.SetActive(bool)` to update the GameObject active state. The generator maps the `activeSelf` binding to the proper runtime API because `activeSelf` is a read-only property — using `SetActive` ensures the active state is changed correctly.
+
+Example:
+
+```csharp
+[Schema(PathResolver.UnityEngine.GameObject.activeSelf)]
+private bool _isVisible;
+```
+
+The generated binding will call `_gameObject.SetActive(_viewModel.IsVisible);` (or the equivalent generated helper) when applying the binding.
+
 ## Messaging with `IMvvmSubscriber<T>`
 
 In addition to automatic UI rebinding, a ViewModel can send arbitrary messages to Views that have opted in. This allows the ViewModel to push events (e.g., showing a dialog, playing an animation) without coupling it to the View type.

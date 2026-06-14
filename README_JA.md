@@ -276,6 +276,19 @@ public class GameLifetimeScope : LifetimeScope
 | `format` | `string` | `""` | `TMPro.TMP_Text.text` バインド時に適用する書式文字列（例: `"N0"`）。それ以外のバインディングパスでは無視されます。 |
 | `tooltip` | `string` | `""` | 生成された View コンポーネントフィールドに表示する Unity Inspector のツールチップテキスト。 |
 
+#### GameObject のアクティブ状態バインド
+
+`bindingPath` に `UnityEngine.GameObject.activeSelf`（または `PathResolver.UnityEngine.GameObject.activeSelf`）を指定した場合、生成される View コードでは `GameObject.SetActive(bool)` を呼び出して GameObject のアクティブ状態を切り替えます。`activeSelf` は読み取り専用のプロパティであるため、内部的に `SetActive` にマッピングして正しく状態を変更します。
+
+例:
+
+```csharp
+[Schema(PathResolver.UnityEngine.GameObject.activeSelf)]
+private bool _isVisible;
+```
+
+生成されるバインディングでは `_gameObject.SetActive(_viewModel.IsVisible);`（または相当する生成ヘルパー）が呼ばれ、アクティブ状態が反映されます。
+
 ## `IMvvmSubscriber<T>` によるメッセージング
 
 自動 UI 再バインドに加え、ViewModel は任意のメッセージを、オプトインした View に送信できます。これにより、ViewModel を View の具体的な型に依存させることなく、ダイアログ表示やアニメーション再生などのイベントをプッシュできます。

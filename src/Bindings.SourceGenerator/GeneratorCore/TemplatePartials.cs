@@ -169,23 +169,25 @@ namespace Bindings.GeneratorCore
                 var viewField = FieldAssignments[i];
                 var propName = ToPropertyName(fieldName);
 
-                if (bindingPath == "TMPro.TMP_Text.text")
+                switch (bindingPath)
                 {
-                    sb.Append(indent);
-                    sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
-                    if (string.IsNullOrEmpty(format))
-                    {
+                    case "TMPro.TMP_Text.text":
+                        sb.Append(indent);
+                        sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
+                        if (!string.IsNullOrEmpty(format))
+                        {
+                            sb.Append(", \"").Append(format).Append('"');
+                        }
                         sb.Append(");");
-                    }
-                    else
-                    {
-                        sb.Append(", \"").Append(format).Append("\");");
-                    }
-                }
-                else
-                {
-                    var (_, memberName) = SplitBindingPath(bindingPath);
-                    sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(" = _viewModel.").Append(propName).Append(";");
+                        break;
+                    case "UnityEngine.GameObject.activeSelf":
+                        sb.Append(indent);
+                        sb.Append(viewField).Append(".SetActive(_viewModel.").Append(propName).Append(");");
+                        break;
+                    default:
+                        var (_, memberName) = SplitBindingPath(bindingPath);
+                        sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(" = _viewModel.").Append(propName).Append(";");
+                        break;
                 }
                 sb.AppendLine();
             }
