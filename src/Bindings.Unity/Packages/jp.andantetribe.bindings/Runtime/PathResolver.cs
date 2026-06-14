@@ -32,6 +32,19 @@ namespace Bindings
 
         public static partial class UnityEngine
         {
+            public static class GameObject
+            {
+                public const string activeSelf = nameof(UnityEngine) + "." + nameof(G_UnityEngine.GameObject) + "." + nameof(G_UnityEngine.GameObject.activeSelf);
+                public const string isStatic = nameof(UnityEngine) + "." + nameof(G_UnityEngine.GameObject) + "." + nameof(G_UnityEngine.GameObject.isStatic);
+                public const string layer = nameof(UnityEngine) + "." + nameof(G_UnityEngine.GameObject) + "." + nameof(G_UnityEngine.GameObject.layer);
+                public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.GameObject) + "." + nameof(G_UnityEngine.GameObject.tag);
+                public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
+                public const string name = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.name);
+            }
+        }
+
+        public static partial class UnityEngine
+        {
             public static class Behaviour
             {
                 public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);

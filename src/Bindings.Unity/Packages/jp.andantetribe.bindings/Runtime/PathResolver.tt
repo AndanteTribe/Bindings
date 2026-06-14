@@ -22,6 +22,7 @@
     {
         { $"{gUnityEngine}.Object", ([ "hideFlags", "name" ], [], "") },
         { $"{gUnityEngine}.Component", ([ "tag" ], [], $"{gUnityEngine}.Object") },
+        { $"{gUnityEngine}.GameObject", ([ "activeSelf", "isStatic", "layer", "tag" ], [], $"{gUnityEngine}.Object") },
         { $"{gUnityEngine}.Behaviour", ([ "enabled" ], [], $"{gUnityEngine}.Component") },
         { $"{gUnityEngine}.MonoBehaviour", ([], [], $"{gUnityEngine}.Behaviour") },
         { $"{gUnityEngine}.UI.UIBehaviour", ([], [], $"{gUnityEngine}.MonoBehaviour") },
