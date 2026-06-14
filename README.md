@@ -278,12 +278,12 @@ Applied to a field or method to bind it to a UI component. Can be applied multip
 
 #### GameObject active state binding
 
-If you specify `UnityEngine.GameObject.activeself` (or `PathResolver.UnityEngine.GameObject.activeself`) as the `bindingPath`, the generated View code will call `GameObject.SetActive(bool)` to update the GameObject active state. The generator maps the `activeself` binding to the proper runtime API because `activeself` is a read-only property — using `SetActive` ensures the active state is changed correctly.
+If you specify `UnityEngine.GameObject.activeSelf` (or `PathResolver.UnityEngine.GameObject.activeSelf`) as the `bindingPath`, the generated View code will call `GameObject.SetActive(bool)` to update the GameObject active state. The generator maps the `activeSelf` binding to the proper runtime API because `activeSelf` is a read-only property — using `SetActive` ensures the active state is changed correctly.
 
 Example:
 
 ```csharp
-[Schema(PathResolver.UnityEngine.GameObject.activeself)]
+[Schema(PathResolver.UnityEngine.GameObject.activeSelf)]
 private bool _isVisible;
 ```
 

@@ -278,12 +278,12 @@ public class GameLifetimeScope : LifetimeScope
 
 #### GameObject のアクティブ状態バインド
 
-`bindingPath` に `UnityEngine.GameObject.activeself`（または `PathResolver.UnityEngine.GameObject.activeself`）を指定した場合、生成される View コードでは `GameObject.SetActive(bool)` を呼び出して GameObject のアクティブ状態を切り替えます。`activeself` は読み取り専用のプロパティであるため、内部的に `SetActive` にマッピングして正しく状態を変更します。
+`bindingPath` に `UnityEngine.GameObject.activeSelf`（または `PathResolver.UnityEngine.GameObject.activeSelf`）を指定した場合、生成される View コードでは `GameObject.SetActive(bool)` を呼び出して GameObject のアクティブ状態を切り替えます。`activeSelf` は読み取り専用のプロパティであるため、内部的に `SetActive` にマッピングして正しく状態を変更します。
 
 例:
 
 ```csharp
-[Schema(PathResolver.UnityEngine.GameObject.activeself)]
+[Schema(PathResolver.UnityEngine.GameObject.activeSelf)]
 private bool _isVisible;
 ```
 
