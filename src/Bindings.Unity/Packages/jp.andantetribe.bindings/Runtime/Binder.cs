@@ -109,7 +109,7 @@ namespace Bindings
                     }
 
                     _nextChangedViews.Add(view);
-                    RunAsync(view, _cancellationTokenSource.Token).Forget();
+                    RunAsync(view, _nextChangedViews, _cancellationTokenSource.Token).Forget();
                     return;
                 }
             }
@@ -134,10 +134,11 @@ namespace Bindings
         }
 
         [System.Diagnostics.DebuggerNonUserCode]
-        private static async ValueTask RunAsync(IView view, CancellationToken cancellationToken)
+        private static async ValueTask RunAsync(IView view, IList<IView> nextChangedViews, CancellationToken cancellationToken)
         {
             await BindingScheduler.EnqueueAsync(cancellationToken);
             await view.BindAsync(cancellationToken);
+            nextChangedViews.Remove(view);
         }
     }
 }
