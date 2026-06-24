@@ -9,6 +9,7 @@ using UnityEngine;
 
 namespace Bindings
 {
+    [DefaultExecutionOrder(-1000)]
     public sealed class Binder : MonoBehaviour, IMvvmPublisher
     {
         [SerializeField]
