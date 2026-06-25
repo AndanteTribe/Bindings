@@ -137,8 +137,8 @@ namespace Bindings
         private static async ValueTask RunAsync(IView view, IList<IView> nextChangedViews, CancellationToken cancellationToken)
         {
             await BindingScheduler.EnqueueAsync(cancellationToken);
-            await view.BindAsync(cancellationToken);
             nextChangedViews.Remove(view);
+            await view.BindAsync(cancellationToken);
         }
     }
 }
