@@ -20,6 +20,18 @@ namespace Bindings.Internal
         {
             Canvas.preWillRenderCanvases -= Run;
             Canvas.preWillRenderCanvases += Run;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+
+            static void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange state)
+            {
+                if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+                {
+                    Canvas.preWillRenderCanvases -= Run;
+                }
+            }
+#endif
         }
 
         private static void Run()
