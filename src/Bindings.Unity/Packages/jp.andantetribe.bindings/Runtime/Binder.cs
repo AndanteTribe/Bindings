@@ -13,7 +13,7 @@ namespace Bindings
     public sealed class Binder : MonoBehaviour, IMvvmPublisher
     {
         [SerializeField]
-        private bool _runOnStart = true;
+        private bool _runOnStart = false;
 
         [SerializeReference]
         private IView[] _views = Array.Empty<IView>();
