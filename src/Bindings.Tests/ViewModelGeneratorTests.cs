@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
 namespace Bindings.Tests;
@@ -201,6 +204,45 @@ namespace UnityEngine.UI
         return finalCompilation.GetDiagnostics()
             .Where(d => d.Severity == DiagnosticSeverity.Error)
             .ToArray();
+    }
+
+    [Fact]
+    public void BND004UnsupportedAccessibilityProducesDiagnosticData()
+    {
+        const string source = "class Container { MissingType Value; }";
+        var syntaxTree = CSharpSyntaxTree.ParseText(source);
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[] { syntaxTree },
+            new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var missingTypeSyntax = syntaxTree.GetRoot().DescendantNodes().OfType<FieldDeclarationSyntax>().Single().Declaration.Type;
+        var missingType = Assert.IsAssignableFrom<INamedTypeSymbol>(compilation.GetSemanticModel(syntaxTree).GetTypeInfo(missingTypeSyntax).Type);
+        Assert.Equal(TypeKind.Error, missingType.TypeKind);
+        Assert.Equal(Accessibility.NotApplicable, missingType.DeclaredAccessibility);
+
+        // Valid C# type declarations cannot have NotApplicable accessibility, so use an error
+        // type symbol to exercise the generator's defensive diagnostic path directly.
+        var method = typeof(ViewModelGenerator)
+            .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
+            .Single(candidate =>
+                candidate.Name == "GetAccessibilityKeyword"
+                && candidate.GetParameters().Length == 4
+                && candidate.GetParameters()[0].ParameterType == typeof(INamedTypeSymbol));
+        var diagnostics = new List<(DiagnosticDescriptor Descriptor, Location Location, string[] Args)>();
+        var result = Assert.IsType<(string Keyword, bool IsSupported)>(method.Invoke(
+            null,
+            new object[] { missingType, missingTypeSyntax.GetLocation(), "MissingViewModel", diagnostics }));
+
+        Assert.Equal(string.Empty, result.Keyword);
+        Assert.False(result.IsSupported);
+
+        var diagnosticData = Assert.Single(diagnostics);
+        var diagnostic = Diagnostic.Create(diagnosticData.Descriptor, diagnosticData.Location, diagnosticData.Args);
+        Assert.Equal("BND004", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Contains("NotApplicable", diagnostic.GetMessage());
+        Assert.Contains("MissingViewModel", diagnostic.GetMessage());
     }
 
     // -------------------------------------------------------------------------
@@ -705,6 +747,39 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
+    // Type-part field naming: a trailing underscore falls back to the class name
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void TypePartEndingWithUnderscoreGeneratesStableFieldName()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public sealed class Widget_
+    {
+        public int value { get; set; }
+    }
+
+    [Bindings.ViewModel]
+    public partial class CountViewModelTrailingUnderscore
+    {
+        [Bindings.Schema(""Bindings.Sample.Widget_.value"")]
+        private int _count;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.Contains("private global::Bindings.Sample.Widget_ _widget_", viewSource);
+        Assert.Contains("_widget_.value = _viewModel.Count;", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
     // Case C: mixed id=-1 and id≥0 entries for the same type part
     // -------------------------------------------------------------------------
 
@@ -734,6 +809,34 @@ namespace Bindings.Sample
         // id=-1 unset → first available integer not taken by explicit ids (1)
         Assert.Contains("_button1", viewSource);
         Assert.DoesNotContain("_button3", viewSource);
+    }
+
+    [Fact]
+    public void CaseCMixedIdSkipsOccupiedFirstFieldNumber()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelCaseCOccupiedFirst
+    {
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
+        public void Submit() { }
+
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
+        public void Cancel() { }
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.Contains("_button1.onClick.AddListener(_viewModel.Submit)", viewSource);
+        Assert.Contains("_button2.onClick.AddListener(_viewModel.Cancel)", viewSource);
+        Assert.DoesNotContain("_button3", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
     }
 
     // -------------------------------------------------------------------------
@@ -1049,6 +1152,34 @@ namespace Bindings.Sample
         }
     }
 }";
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void ViewModelNestedInStructGeneratesStructContainingDeclaration()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial struct Outer
+    {
+        [Bindings.ViewModel]
+        public partial class CountViewModelInStruct
+        {
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+        Assert.Contains("public partial struct Outer", vmSource);
+        Assert.Contains("public partial struct Outer", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
