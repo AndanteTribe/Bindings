@@ -27,7 +27,9 @@ public class TemplateBaseTests
         new GenerationContext(
             className: className,
             @namespace: ns,
-            containingTypes: Array.Empty<(string, string)>(),
+            canGenerate: true,
+            accessibility: "public",
+            containingTypes: Array.Empty<(string, string, string)>(),
             isStruct: isStruct,
             isReadOnly: isReadOnly,
             requireBindImplementation: false,

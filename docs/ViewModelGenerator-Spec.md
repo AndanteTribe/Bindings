@@ -2,7 +2,7 @@
 
 ## 概要 (Overview)
 
-`[ViewModel]` アノテーションが付与されたクラスを解析し、以下の2ファイルを自動生成する Roslyn `IIncrementalGenerator`。
+`[ViewModel]` アノテーションが付与されたクラスまたは構造体を解析し、以下の2ファイルを自動生成する Roslyn `IIncrementalGenerator`。
 
 | 生成ファイル | 内容 |
 |---|---|
@@ -19,13 +19,13 @@
 
 | 属性 | 対象 | 意味 |
 |---|---|---|
-| `[ViewModel]` | クラス | このクラスを ViewModel として扱う |
-| `[ViewModel(requireBindImplementation: true)]` | クラス | `BindAsync` を自動生成せず、ユーザーが実装する |
+| `[ViewModel]` | クラス・構造体 | この型を ViewModel として扱う |
+| `[ViewModel(requireBindImplementation: true)]` | クラス・構造体 | `BindAsync` を自動生成せず、ユーザーが実装する |
 | `[Required]` | フィールド | 生成されるコンストラクタに引数として追加するフィールド |
 | `[Schema(bindingPath)]` | フィールド・メソッド | UI コンポーネントとのバインド対象を宣言する（`id` のデフォルトは `-1` = 未指定） |
 | `[Schema(bindingPath, id: N)]` | フィールド・メソッド | `N ≥ 0`: 同じ `id` を持つスキーマは View 内で同一コンポーネントにバインド。`N < -1`: `BND002` エラー |
 | `[Schema(bindingPath, format: "N0")]` | フィールド | `TMPro.TMP_Text.text` バインド時の書式指定文字列 |
-| `[Schema(bindingPath, tooltip: "text")]` | フィールド・メソッド | Unity Inspector に表示するツールチップ文字列。View コンポーネントフィールドに `[global::UnityEngine.Tooltip("text")]` が付与される。同一 View フィールドに対して異なる tooltip が指定された場合は `BND003` 警告 |
+| `[Schema(bindingPath, tooltip: "text")]` | フィールド・メソッド | Unity Inspector に表示するツールチップ文字列。View コンポーネントフィールドに `[global::UnityEngine.Tooltip("text")]` が付与される。同一 View フィールドに対して異なる tooltip が指定された場合は `BND003` エラー |
 
 ### 1.2 バインディングパス (`bindingPath`) の解析
 
@@ -117,11 +117,14 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 | 診断 ID | レベル | 条件 | メッセージ（案） |
 |---|---|---|---|
-| `BND001` | Error | `[ViewModel]` が付与されたクラス名に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No View will be generated.` |
+| `BND001` | Error | `[ViewModel]` が付与された型名に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No View will be generated.` |
 | `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `[Schema] id value {id} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.` |
-| `BND003` | Warning | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
+| `BND003` | Error | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
+| `BND004` | Error | `[ViewModel]` 型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
+
+`BND004` が発生した ViewModel については、Generator 全体を例外で停止させず、その ViewModel の ViewModel ソースと View ソースの両方を生成しない。
 
 ---
 
@@ -129,16 +132,33 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 ### 4.1 クラス/構造体宣言
 
+対象型の宣言済みアクセシビリティを、生成する ViewModel の partial 宣言へそのまま反映する。ViewModel がネスト型の場合は、外側から内側までのすべての親型についても型種別、単純名、宣言済みアクセシビリティを再現する。親型は生成側でも partial 宣言するため、ユーザー側の対応する親型も partial でなければならない。
+
+| `Microsoft.CodeAnalysis.Accessibility` | 生成する C# キーワード |
+|---|---|
+| `NotApplicable` | 対応外。`BND004` を報告し、この ViewModel の生成を中止 |
+| `Private` | `private` |
+| `ProtectedAndInternal` | `private protected` |
+| `Protected` | `protected` |
+| `Internal` | `internal` |
+| `ProtectedOrInternal` | `protected internal` |
+| `Public` | `public` |
+
+上表にない未知の値も `BND004` の対象とする。トップレベル型でC#として使用できないアクセシビリティが記述された場合は入力コード自体のコンパイル診断に委ね、Generator はRoslynから得た値を上表どおり処理する。
+
 ```csharp
 #nullable enable
 
 namespace {Namespace}
 {
-    [global::System.Serializable]          // ※ユーザーが既に [System.Serializable] を付与している場合は省略
-    public partial class {ClassName} : global::Bindings.IViewModel    // クラスの場合
-    // public partial struct {ClassName} : global::Bindings.IViewModel  // 通常 struct の場合
-    // public partial struct {ClassName} : global::Bindings.IViewModel  // readonly struct の場合
+    // ネスト型の場合、外側から内側まで親型ごとに繰り返す
+    {ContainingTypeAccessibility} partial {ContainingTypeKeyword} {ContainingTypeName}
     {
+        [global::System.Serializable]          // ※ユーザーが既に [System.Serializable] を付与している場合は省略
+        {Accessibility} partial class {ClassName} : global::Bindings.IViewModel    // クラスの場合
+        // {Accessibility} partial struct {ClassName} : global::Bindings.IViewModel  // 通常 struct の場合
+        // {Accessibility} partial struct {ClassName} : global::Bindings.IViewModel  // readonly struct の場合
+        {
 ```
 
 > **注意:** 対象が `readonly struct` の場合でも `struct` キーワードのみを使用する（`readonly` は不要）。ユーザーが記述した `readonly` 修飾子は partial 側で保持される。
@@ -227,7 +247,7 @@ ViewModel クラス名中の `"ViewModel"` を `"View"` に置換する。
 | `CountViewModel6` | `CountView6` |
 | `MyFeatureViewModel` | `MyFeatureView` |
 
-クラス名に `"ViewModel"` が含まれない場合はアナライザー診断 `BND001` を出力し、生成を中断する（セクション3参照）。
+クラス名に `"ViewModel"` が含まれない場合はアナライザー診断 `BND001` を出力する。ViewModel の partial ソースは生成するが、View クラス名を導出できないため View ソースは生成しない（セクション3参照）。
 
 ### 5.2 生成ファイル名
 
@@ -236,23 +256,26 @@ ViewModel クラス名中の `"ViewModel"` を `"View"` に置換する。
 
 ### 5.3 クラス宣言
 
-View クラスには常に `[global::System.Serializable]` を付与する（Unity の `Binder` コンポーネントが `[SerializeReference]` でシリアライズするため）。
+View クラスには常に `[global::System.Serializable]` を付与する（Unity の `Binder` コンポーネントが `[SerializeReference]` でシリアライズするため）。View のアクセシビリティには対象 ViewModel と同じキーワードを使用し、ネスト型の場合は ViewModel ソースと同じ親型チェーンを再現する。以下の `{ViewModelFullName}` は、名前空間とすべての親型を含む `global::` 付きの完全修飾名を表す。
 
 ```csharp
 #nullable enable
 
 namespace {Namespace}
 {
-    [global::System.Serializable]
-    public sealed partial class {ViewClassName} : global::Bindings.IView<global::{Namespace}.{ClassName}>
+    // ネスト型の場合、外側から内側まで親型ごとに繰り返す
+    {ContainingTypeAccessibility} partial {ContainingTypeKeyword} {ContainingTypeName}
     {
+        [global::System.Serializable]
+        {Accessibility} sealed partial class {ViewClassName} : global::Bindings.IView<{ViewModelFullName}>
+        {
 ```
 
 ### 5.4 _viewModel フィールド
 
 ```csharp
 [global::System.NonSerialized]
-private global::{Namespace}.{ClassName} _viewModel = null!;
+private {ViewModelFullName} _viewModel = null!;
 ```
 
 ### 5.5 UI コンポーネントフィールド
@@ -346,7 +369,7 @@ private global::{TypePart} {_fieldName} = null!;
 #### 5.5.4 tooltip の決定規則
 
 - 同一 View コンポーネントフィールドに紐付く複数の `[Schema]` エントリのうち、**最初に現れる非空 tooltip 値** を採用する。
-- 異なる非空 tooltip 値が複数存在する場合は `BND003` 警告を出力する（最初の値を使用し続ける）。
+- 異なる非空 tooltip 値が複数存在する場合は `BND003` エラーを出力する（最初の値を使用し続ける）。
 - id=-1 のエントリはそれぞれ独立したフィールドになるため、tooltip の競合は発生しない。
 
 ### 5.6 Initialize メソッド（インタフェース明示実装）
@@ -420,7 +443,7 @@ partial void OnPostBind();
 
 ```csharp
 #if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
-    public sealed partial class {ViewClassName} : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
+    {Accessibility} sealed partial class {ViewClassName} : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
     {
         void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(
             global::Bindings.DebugBindMessage message)
@@ -449,6 +472,7 @@ partial void OnPostBind();
 | 6 | same id pair | 同一 `id` の `[Schema]` メソッドが複数（ケース B） | なし | 同一コンポーネントフィールドを共有。`RemoveAllListeners` は1回のみ |
 | 7 | format + non-text field | `format` 指定 + `TMPro.TMP_Text.text` 以外のフィールドスキーマ | なし | `SetValue` に `format` 引数追加、その他は直接代入 |
 | 8 | readonly struct | `readonly partial struct` | `[Schema]` フィールドのプロパティは `get` のみ（`set` なし） | 変化なし |
+| 9 | accessibility | `public`、`internal`、または各種アクセシビリティのネスト型 | 対象型と全親型のアクセシビリティ・型種別を維持 | ViewModel と同じアクセシビリティ・親型チェーンを維持 |
 
 ---
 

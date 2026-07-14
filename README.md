@@ -336,7 +336,8 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 |----|-------|-----------|
 | `BND001` | Error | `[ViewModel]` class name does not contain `"ViewModel"`. |
 | `BND002` | Error | `[Schema]` `id` is less than `-1`. |
-| `BND003` | Warning | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
+| `BND003` | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
+| `BND004` | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
 
 ## License
 This library is released under the MIT license.
