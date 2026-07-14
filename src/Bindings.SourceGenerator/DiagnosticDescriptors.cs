@@ -43,4 +43,16 @@ internal static class DiagnosticDescriptors
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// BND004: emitted when a ViewModel or one of its containing types has an accessibility
+    /// that cannot be represented in generated source. No source is generated for that ViewModel.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bnd004 = new(
+        id: "BND004",
+        title: "Unsupported type accessibility",
+        messageFormat: "Type '{0}' has unsupported accessibility '{1}'. No source will be generated for ViewModel '{2}'.",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }

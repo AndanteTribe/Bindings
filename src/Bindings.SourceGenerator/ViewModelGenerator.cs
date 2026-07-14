@@ -35,9 +35,16 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             viewModelTypes,
             static (ctx, data) =>
             {
-                // Report all diagnostics collected during the transform phase (BND001, BND002)
+                // Report all diagnostics collected during the transform phase.
                 foreach (var (descriptor, location, args) in data.Diagnostics)
+                {
                     ctx.ReportDiagnostic(Diagnostic.Create(descriptor, location, args));
+                }
+
+                if (!data.CanGenerate)
+                {
+                    return;
+                }
 
                 EmitViewModelSource(ctx, data);
                 EmitViewSource(ctx, data);
@@ -57,8 +64,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // 1. Extract [ViewModel] attribute argument (requireBindImplementation)
         var viewModelAttr = ctx.Attributes[0];
-        var requireBind = viewModelAttr.ConstructorArguments.Length > 0
-                          && viewModelAttr.ConstructorArguments[0].Value is true;
+        var requireBind = viewModelAttr.ConstructorArguments.Length > 0 && viewModelAttr.ConstructorArguments[0].Value is true;
 
         // 2. Check whether [System.Serializable] is already applied to the type
         var alreadySerializable = false;
@@ -72,31 +78,32 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         }
 
         // 3. Namespace (empty string when the type is in the global namespace)
-        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
-            ? string.Empty
-            : typeSymbol.ContainingNamespace.ToDisplayString();
+        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : typeSymbol.ContainingNamespace.ToDisplayString();
 
-        // 3b. Containing types: collect the chain of enclosing types (outermost first)
-        var containingTypesList = new List<(string TypeKeyword, string TypeName)>();
+        // 4. Validate accessibility
+        var diagnostics = new List<(DiagnosticDescriptor, Location, string[])>();
+        var (accessibility, canGenerate) = GetAccessibilityKeyword(typeSymbol, typeLocation, typeSymbol.Name, diagnostics);
+
+        // 5. Collect containing types (outermost first)
+        var containingTypesList = new List<(string Accessibility, string TypeKeyword, string TypeName)>();
         var enclosing = typeSymbol.ContainingType;
         while (enclosing != null)
         {
             var keyword = enclosing.TypeKind == TypeKind.Struct ? "struct" : "class";
-            containingTypesList.Insert(0, (keyword, enclosing.Name));
+            var (enclosingAccessibility, isSupported) = GetAccessibilityKeyword(enclosing, typeLocation, typeSymbol.Name, diagnostics);
+            canGenerate = canGenerate && isSupported;
+            containingTypesList.Insert(0, (enclosingAccessibility, keyword, enclosing.Name));
             enclosing = enclosing.ContainingType;
         }
         var containingTypes = containingTypesList.ToArray();
 
-        // 4. Collect early diagnostics
-        var diagnostics = new List<(DiagnosticDescriptor, Location, string[])>();
-
-        // BND001: class name must contain "ViewModel"
+        // 6. Validate the ViewModel class name
         if (!typeSymbol.Name.Contains("ViewModel"))
         {
             diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, new[] { typeSymbol.Name }));
         }
 
-        // 5. Walk members to collect [Required] / [Schema] information
+        // 7. Walk members to collect [Required] / [Schema] information
         // [Schema] is only valid on fields and methods; properties are excluded.
         var requiredFields = new List<(string TypeFullName, string FieldName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)>();
@@ -125,8 +132,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             // BND002: id < -1 is invalid
                             if (id < -1)
                             {
-                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
-                                              ?? typeLocation;
+                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
                                 diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
                                 id = -1; // treat as unset to avoid further errors
                             }
@@ -166,8 +172,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             // BND002: id < -1 is invalid
                             if (id < -1)
                             {
-                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
-                                              ?? typeLocation;
+                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
                                 diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
                                 id = -1; // treat as unset to avoid further errors
                             }
@@ -186,6 +191,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         return new GenerationContext(
             className: typeSymbol.Name,
             @namespace: ns,
+            canGenerate: canGenerate,
+            accessibility: accessibility,
             containingTypes: containingTypes,
             isStruct: isStruct,
             isReadOnly: typeSymbol.IsReadOnly,
@@ -195,6 +202,61 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             schemaFields: schemaFields.ToArray(),
             schemaMethods: schemaMethods.ToArray(),
             diagnostics: diagnostics.ToArray());
+    }
+
+    /// <summary>
+    /// Returns the C# keyword for a type accessibility and reports a diagnostic when the
+    /// accessibility cannot be represented in generated source.
+    /// </summary>
+    private static (string Keyword, bool IsSupported) GetAccessibilityKeyword(
+        INamedTypeSymbol typeSymbol,
+        Location fallbackLocation,
+        string viewModelName,
+        List<(DiagnosticDescriptor, Location, string[])> diagnostics)
+    {
+        var keyword = GetAccessibilityKeyword(typeSymbol.DeclaredAccessibility);
+        if (keyword != null)
+        {
+            return (keyword, true);
+        }
+
+        var location = typeSymbol.Locations.Length > 0 ? typeSymbol.Locations[0] : fallbackLocation;
+        diagnostics.Add((
+            DiagnosticDescriptors.Bnd004,
+            location,
+            new[]
+            {
+                typeSymbol.ToDisplayString(),
+                typeSymbol.DeclaredAccessibility.ToString(),
+                viewModelName,
+            }));
+        return (string.Empty, false);
+    }
+
+    /// <summary>
+    /// Returns the C# keyword for a supported Roslyn accessibility value.
+    /// </summary>
+    private static string? GetAccessibilityKeyword(Accessibility accessibility)
+    {
+        switch (accessibility)
+        {
+            case Accessibility.NotApplicable:
+                return null;
+            case Accessibility.Private:
+                return "private";
+            case Accessibility.ProtectedAndInternal:
+                return "private protected";
+            case Accessibility.Protected:
+                return "protected";
+            case Accessibility.Internal:
+                return "internal";
+            case Accessibility.ProtectedOrInternal:
+                return "protected internal";
+            case Accessibility.Public:
+                return "public";
+            default:
+                return null;
+        }
     }
 
     /// <summary>
@@ -212,12 +274,16 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private static string GetBindingPath(AttributeData attr)
     {
         if (attr.ConstructorArguments.Length == 0)
+        {
             return string.Empty;
+        }
 
         // String overload: first argument is the binding path string
         var firstArg = attr.ConstructorArguments[0];
         if (firstArg.Kind == TypedConstantKind.Primitive && firstArg.Value is string path)
+        {
             return path;
+        }
 
         // Object overload: CallerArgumentExpression places the raw expression in the fifth parameter (index 4)
         // Signature: (object bindingPath, int id, string format, string tooltip, [CallerArgumentExpression] string path)
@@ -235,19 +301,15 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// Retrieves the id value from SchemaAttribute's ConstructorArguments.
     /// Returns -1 (unset sentinel) when no id is specified.
     /// </summary>
-    private static int GetSchemaId(AttributeData attr)
-        => attr.ConstructorArguments.Length > 1 && attr.ConstructorArguments[1].Value is int id
-            ? id
-            : -1;
+    private static int GetSchemaId(AttributeData attr) =>
+        attr.ConstructorArguments.Length > 1 && attr.ConstructorArguments[1].Value is int id ? id : -1;
 
     /// <summary>
     /// Retrieves the format string from SchemaAttribute's ConstructorArguments.
     /// Returns an empty string when no format is specified.
     /// </summary>
-    private static string GetSchemaFormat(AttributeData attr)
-        => attr.ConstructorArguments.Length > 2 && attr.ConstructorArguments[2].Value is string fmt
-            ? fmt
-            : string.Empty;
+    private static string GetSchemaFormat(AttributeData attr) =>
+        attr.ConstructorArguments.Length > 2 && attr.ConstructorArguments[2].Value is string fmt ? fmt : string.Empty;
 
     /// <summary>
     /// Retrieves the tooltip string from SchemaAttribute's ConstructorArguments.
@@ -256,10 +318,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   Object overload: (bindingPath=0, id=1, format=2, tooltip=3, path=4)
     /// Returns an empty string when no tooltip is specified.
     /// </summary>
-    private static string GetSchemaTooltip(AttributeData attr)
-        => attr.ConstructorArguments.Length > 3 && attr.ConstructorArguments[3].Value is string tooltip
-            ? tooltip
-            : string.Empty;
+    private static string GetSchemaTooltip(AttributeData attr) =>
+        attr.ConstructorArguments.Length > 3 && attr.ConstructorArguments[3].Value is string tooltip ? tooltip : string.Empty;
 
     // -------------------------------------------------------------------------
     // Identifier conversion helpers
@@ -273,7 +333,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     {
         var lastDot = path.LastIndexOf('.');
         if (lastDot < 0)
+        {
             return (path, string.Empty);
+        }
+
         return (path.Substring(0, lastDot), path.Substring(lastDot + 1));
     }
 
@@ -291,7 +354,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var lastUnderscore = className.LastIndexOf('_');
         var baseName = lastUnderscore >= 0 ? className.Substring(lastUnderscore + 1) : className;
         if (baseName.Length == 0)
+        {
             baseName = className;
+        }
+
         return char.ToLowerInvariant(baseName[0]) + baseName.Substring(1);
     }
 
@@ -339,19 +405,33 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var fieldTypeParts = new string[fieldCount];
         var methodTypeParts = new string[methodCount];
         for (var i = 0; i < fieldCount; i++)
+        {
             (fieldTypeParts[i], _) = SplitBindingPath(data.SchemaFields[i].BindingPath);
+        }
+
         for (var i = 0; i < methodCount; i++)
+        {
             (methodTypeParts[i], _) = SplitBindingPath(data.SchemaMethods[i].BindingPath);
+        }
 
         // Build an ordered list of unique type parts (fields first, then methods)
         var typePartSet = new HashSet<string>();
         var typePartOrder = new List<string>();
         for (var i = 0; i < fieldCount; i++)
+        {
             if (typePartSet.Add(fieldTypeParts[i]))
+            {
                 typePartOrder.Add(fieldTypeParts[i]);
+            }
+        }
+
         for (var i = 0; i < methodCount; i++)
+        {
             if (typePartSet.Add(methodTypeParts[i]))
+            {
                 typePartOrder.Add(methodTypeParts[i]);
+            }
+        }
 
         // Track tooltip per assigned View field name (first non-empty value wins)
         var fieldTooltips = new Dictionary<string, string>();
@@ -366,11 +446,20 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             // Collect entries belonging to this type part (fields first, then methods, in appearance order)
             var entries = new List<(bool IsMethod, int Index, int Id, string Tooltip)>();
             for (var i = 0; i < fieldCount; i++)
+            {
                 if (fieldTypeParts[i] == typePart)
+                {
                     entries.Add((false, i, data.SchemaFields[i].Id, data.SchemaFields[i].Tooltip));
+                }
+            }
+
             for (var i = 0; i < methodCount; i++)
+            {
                 if (methodTypeParts[i] == typePart)
+                {
                     entries.Add((true, i, data.SchemaMethods[i].Id, data.SchemaMethods[i].Tooltip));
+                }
+            }
 
             // Determine which cases apply
             var hasExplicit = false;
@@ -378,9 +467,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             foreach (var (_, _, id, _) in entries)
             {
                 if (id >= 0)
+                {
                     hasExplicit = true;
+                }
                 else
+                {
                     hasUnset = true;
+                }
             }
 
             if (!hasExplicit)
@@ -395,26 +488,38 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 {
                     // Multiple entries: number from 1
                     for (var i = 0; i < entries.Count; i++)
+                    {
                         Assign(entries[i], $"_{fieldBase}{i + 1}", fieldAssignments, methodAssignments);
+                    }
                 }
             }
             else if (!hasUnset)
             {
                 // Case B: all id>=0 → _{base}{id} (entries with the same id share one field)
                 foreach (var entry in entries)
+                {
                     Assign(entry, $"_{fieldBase}{entry.Id}", fieldAssignments, methodAssignments);
+                }
             }
             else
             {
                 // Case C: mixed — first assign explicit ids, then assign available numbers to unset ids
                 var usedIds = new HashSet<int>();
                 foreach (var (_, _, id, _) in entries)
+                {
                     if (id >= 0)
+                    {
                         usedIds.Add(id);
+                    }
+                }
 
                 foreach (var entry in entries)
+                {
                     if (entry.Id >= 0)
+                    {
                         Assign(entry, $"_{fieldBase}{entry.Id}", fieldAssignments, methodAssignments);
+                    }
+                }
 
                 var nextNum = 1;
                 foreach (var entry in entries)
@@ -422,7 +527,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     if (entry.Id == -1)
                     {
                         while (usedIds.Contains(nextNum))
+                        {
                             nextNum++;
+                        }
+
                         usedIds.Add(nextNum);
                         Assign(entry, $"_{fieldBase}{nextNum}", fieldAssignments, methodAssignments);
                         nextNum++;
@@ -433,12 +541,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             // BND003: detect conflicting tooltip values among entries that share the same View field
             foreach (var entry in entries)
             {
-                var assignedField = entry.IsMethod
-                    ? methodAssignments[entry.Index]
-                    : fieldAssignments[entry.Index];
+                var assignedField = entry.IsMethod ? methodAssignments[entry.Index] : fieldAssignments[entry.Index];
                 var tooltip = entry.Tooltip;
                 if (string.IsNullOrEmpty(tooltip))
+                {
                     continue;
+                }
 
                 if (!fieldTooltips.ContainsKey(assignedField))
                 {
@@ -484,9 +592,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         string[] methodAssignments)
     {
         if (entry.IsMethod)
+        {
             methodAssignments[entry.Index] = fieldName;
+        }
         else
+        {
             fieldAssignments[entry.Index] = fieldName;
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -531,14 +643,18 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     {
         // BND001 was already reported in RegisterSourceOutput; skip View generation here
         if (!context.ClassName.Contains("ViewModel"))
+        {
             return;
+        }
 
         var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) =
             BuildComponentFieldAssignments(context);
 
         // BND003: report a warning for each View field that has conflicting tooltip values
         foreach (var fieldName in conflictingTooltipFields)
+        {
             ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
+        }
 
         var viewClassName = context.ClassName.Replace("ViewModel", "View");
         var template = new ViewTemplate(context, fieldAssignments, methodAssignments, orderedFields.ToArray());

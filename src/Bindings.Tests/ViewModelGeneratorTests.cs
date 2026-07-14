@@ -1083,6 +1083,220 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
+    // End-to-end compilation: internal top-level ViewModel
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalTopLevelViewModelGeneratedCodeCompiles()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    internal partial class CountViewModelInternal
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+        Assert.Contains("internal partial class CountViewModelInternal : global::Bindings.IViewModel", vmSource);
+        Assert.Contains("internal sealed partial class CountViewInternal", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: internal accessibility at mixed nesting levels
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InternalTypesAtMixedNestingLevelsGenerateCompilableCode()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    internal partial class InternalOuter
+    {
+        public partial class PublicMiddle
+        {
+            [Bindings.ViewModel]
+            internal partial class CountViewModelInternal
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+
+    public partial class PublicOuter
+    {
+        internal partial class InternalMiddle
+        {
+            [Bindings.ViewModel]
+            public partial class CountViewModelPublic
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+}";
+
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var generatedSources = driver.RunGenerators(compilation).GetRunResult().GeneratedTrees
+            .Select(tree => tree.GetText().ToString())
+            .ToArray();
+
+        Assert.Contains(generatedSources, source =>
+            source.Contains("internal partial class InternalOuter")
+            && source.Contains("public partial class PublicMiddle")
+            && source.Contains("internal partial class CountViewModelInternal : global::Bindings.IViewModel"));
+        Assert.Contains(generatedSources, source =>
+            source.Contains("public partial class PublicOuter")
+            && source.Contains("internal partial class InternalMiddle")
+            && source.Contains("public partial class CountViewModelPublic : global::Bindings.IViewModel"));
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: all supported target accessibility values
+    // -------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("private")]
+    [InlineData("private protected")]
+    [InlineData("protected")]
+    [InlineData("internal")]
+    [InlineData("protected internal")]
+    [InlineData("public")]
+    public void NestedViewModelPreservesDeclaredAccessibility(string accessibility)
+    {
+        var userCode = $@"
+namespace Bindings.Sample
+{{
+    public partial class Outer
+    {{
+        [Bindings.ViewModel]
+        {accessibility} partial class CountViewModelAccessibility
+        {{
+            [Bindings.Schema(""TMPro.TMP_Text.text"")]
+            private int _count;
+        }}
+    }}
+}}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+        Assert.Contains($"{accessibility} partial class CountViewModelAccessibility : global::Bindings.IViewModel", vmSource);
+        Assert.Contains($"{accessibility} sealed partial class CountViewAccessibility", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: all supported containing-type accessibility values
+    // -------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("private")]
+    [InlineData("private protected")]
+    [InlineData("protected")]
+    [InlineData("internal")]
+    [InlineData("protected internal")]
+    [InlineData("public")]
+    public void ContainingTypePreservesDeclaredAccessibility(string accessibility)
+    {
+        var userCode = $@"
+namespace Bindings.Sample
+{{
+    public partial class Outer
+    {{
+        {accessibility} partial class Middle
+        {{
+            [Bindings.ViewModel]
+            public partial class CountViewModelAccessibility
+            {{
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }}
+        }}
+    }}
+}}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+        Assert.Contains($"{accessibility} partial class Middle", vmSource);
+        Assert.Contains($"{accessibility} partial class Middle", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
+    // End-to-end compilation: omitted nested accessibility is implicitly private
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void ImplicitlyPrivateNestedTypesGeneratePrivateDeclarations()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public partial class Outer
+    {
+        partial class Middle
+        {
+            [Bindings.ViewModel]
+            partial class CountViewModelImplicitPrivate
+            {
+                [Bindings.Schema(""TMPro.TMP_Text.text"")]
+                private int _count;
+            }
+        }
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+        Assert.Contains("private partial class Middle", vmSource);
+        Assert.Contains("private partial class CountViewModelImplicitPrivate : global::Bindings.IViewModel", vmSource);
+        Assert.Contains("private partial class Middle", viewSource);
+        Assert.Contains("private sealed partial class CountViewImplicitPrivate", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    // -------------------------------------------------------------------------
     // End-to-end compilation: top-level (non-nested) ViewModel still compiles
     // -------------------------------------------------------------------------
 
