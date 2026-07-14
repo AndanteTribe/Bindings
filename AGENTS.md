@@ -39,6 +39,19 @@ dotnet tool run t4 -- src/Bindings.SourceGenerator/GeneratorCore/ViewTemplate.tt
 
 T4 ツールは `.config/dotnet-tools.json` で固定されている。再生成後は、対応する `.tt` と `.cs` の差分を確認し、意図しない生成差分がないことを確認する。
 
+## 診断ルールの追加・変更
+
+Source Generator の診断を追加または変更するときは、実装だけで完了とせず、次の項目を同じ変更に含める。
+
+- `src/Bindings.SourceGenerator/DiagnosticDescriptors.cs` に英語のタイトルとメッセージを定義し、ID、Category、Severity が既存ルールと整合することを確認する。
+- 想定外の入力で例外を投げて Generator 全体を失敗させず、診断を報告する。生成を継続できない場合は、該当する ViewModel の生成だけを安全に中止する。
+- `src/Bindings.SourceGenerator/AnalyzerReleases.Shipped.md` の既存リリース表へルールを追加する。リリース追跡警告を無視しない。
+- `README.md` と `README_JA.md` の診断一覧へ同じIDと実装どおりのSeverityを追記する。
+- `docs/ViewModelGenerator-Spec.md` の診断条件、Severity、診断後に生成を継続するか中止するかを更新する。診断に関連する生成仕様が変わる場合は、その節も更新する。
+- 診断のID、Severity、主要なメッセージ内容、生成継続または中止の挙動を自動テストで検証する。通常のC#コードから到達しない防御分岐も、Roslynのエラーシンボルなどを使って可能な限り検証する。
+- `DiagnosticDocumentationTests` が全 `DiagnosticDescriptor` と英語・日本語READMEの記載を照合するため、READMEを更新せずにテスト側の期待値を弱めない。
+- Releaseビルドで analyzer release tracking を含む警告が0件であることと、Release構成の全テストが成功することを確認する。
+
 ## Source Generator の Release ビルドと Unity への DLL 配置
 
 Source Generator は次のコマンドで Release ビルドする。
