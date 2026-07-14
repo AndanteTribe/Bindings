@@ -512,11 +512,83 @@ namespace Bindings.Sample
     }
 }";
 
-        var (vmSource, _) = RunGenerator(userCode);
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+        Assert.DoesNotContain(runResult.Diagnostics, diagnostic => diagnostic.Id == "BND005");
+        var vmSource = runResult.GeneratedTrees
+            .FirstOrDefault(t => System.IO.Path.GetFileName(t.FilePath).Contains("CountViewModelSerializable") && t.FilePath.EndsWith(".g.cs"))
+            ?.GetText().ToString();
 
         Assert.NotNull(vmSource);
         // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // BND005: [SerializeField] applied to a [ViewModel] field produces a warning
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void BND005SerializeFieldOnViewModelFieldReportsWarning()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModel
+    {
+    }
+
+    public sealed class ViewModelConsumer
+    {
+        [UnityEngine.SerializeField]
+        private CountViewModel _viewModel;
+
+        [UnityEngine.SerializeField]
+        private int _count;
+    }
+}";
+
+        var generator = new ViewModelGenerator();
+        var driver = CSharpGeneratorDriver.Create(generator);
+        var compilation = CSharpCompilation.Create(
+            "TestAssembly",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(RuntimeStubs),
+                CSharpSyntaxTree.ParseText(userCode),
+            },
+            new[]
+            {
+                MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+            },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        var runResult = driver.RunGenerators(compilation).GetRunResult();
+        var bnd005 = Assert.Single(runResult.Diagnostics, diagnostic => diagnostic.Id == "BND005");
+        Assert.Equal(DiagnosticSeverity.Warning, bnd005.Severity);
+        Assert.Contains("_viewModel", bnd005.GetMessage());
+        Assert.Contains("CountViewModel", bnd005.GetMessage());
+        Assert.Contains("reserved for Bindings debugging", bnd005.GetMessage());
+        Assert.Equal("UnityEngine.SerializeField", bnd005.Location.SourceTree?.GetText().ToString(bnd005.Location.SourceSpan));
+        Assert.Contains(
+            runResult.GeneratedTrees,
+            tree => System.IO.Path.GetFileName(tree.FilePath) == "CountViewModel.g.cs");
     }
 
     // -------------------------------------------------------------------------

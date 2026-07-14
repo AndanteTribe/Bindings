@@ -338,6 +338,7 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 | `BND002` | Error | `[Schema]` `id` is less than `-1`. |
 | `BND003` | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
 | `BND004` | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
+| `BND005` | Warning | A field whose type is annotated with `[ViewModel]` also has `[SerializeField]`; ViewModel serialization is reserved for Bindings debugging and is not supported for application use. |
 
 ## License
 This library is released under the MIT license.

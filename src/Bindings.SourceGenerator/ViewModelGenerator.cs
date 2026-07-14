@@ -20,6 +20,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string RequiredAttributeFullName = nameof(Bindings) + ".RequiredAttribute";
     private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
+    private const string SerializeFieldAttributeFullName = "UnityEngine.SerializeField";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -29,6 +30,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 ViewModelAttributeFullName,
                 predicate: static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax,
                 transform: static (ctx, ct) => CollectGenerationContext(ctx, ct));
+
+        var serializedViewModelFields = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                SerializeFieldAttributeFullName,
+                predicate: static (node, _) => node is VariableDeclaratorSyntax,
+                transform: static (ctx, ct) => GetSerializedViewModelFieldDiagnostic(ctx, ct))
+            .Where(static diagnostic => diagnostic != null);
 
         // Generate partial ViewModel type and sealed partial View type for each annotated type
         context.RegisterSourceOutput(
@@ -49,14 +57,16 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 EmitViewModelSource(ctx, data);
                 EmitViewSource(ctx, data);
             });
+
+        context.RegisterSourceOutput(
+            serializedViewModelFields,
+            static (ctx, diagnostic) => ctx.ReportDiagnostic(diagnostic!));
     }
 
     /// <summary>
     /// Collects all required metadata from the symbol of a [ViewModel] class or struct.
     /// </summary>
-    private static GenerationContext CollectGenerationContext(
-        GeneratorAttributeSyntaxContext ctx,
-        CancellationToken ct)
+    private static GenerationContext CollectGenerationContext(GeneratorAttributeSyntaxContext ctx, CancellationToken cancellationToken)
     {
         var typeSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
         var isStruct = typeSymbol.TypeKind == TypeKind.Struct;
@@ -111,7 +121,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         foreach (var member in typeSymbol.GetMembers())
         {
-            ct.ThrowIfCancellationRequested();
+            cancellationToken.ThrowIfCancellationRequested();
 
             switch (member)
             {
@@ -132,7 +142,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             // BND002: id < -1 is invalid
                             if (id < -1)
                             {
-                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
+                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation() ?? typeLocation;
                                 diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
                                 id = -1; // treat as unset to avoid further errors
                             }
@@ -172,7 +182,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             // BND002: id < -1 is invalid
                             if (id < -1)
                             {
-                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
+                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation() ?? typeLocation;
                                 diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
                                 id = -1; // treat as unset to avoid further errors
                             }
@@ -202,6 +212,40 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             schemaFields: schemaFields.ToArray(),
             schemaMethods: schemaMethods.ToArray(),
             diagnostics: diagnostics.ToArray());
+    }
+
+    /// <summary>
+    /// Creates BND005 when a field marked with [SerializeField] directly stores a [ViewModel] type.
+    /// </summary>
+    private static Diagnostic? GetSerializedViewModelFieldDiagnostic(GeneratorAttributeSyntaxContext ctx, CancellationToken cancellationToken)
+    {
+        if (ctx.TargetSymbol is not IFieldSymbol field)
+        {
+            return null;
+        }
+
+        var isViewModel = false;
+        foreach (var attribute in field.Type.GetAttributes())
+        {
+            if (attribute.AttributeClass?.ToDisplayString() == ViewModelAttributeFullName)
+            {
+                isViewModel = true;
+                break;
+            }
+        }
+
+        if (!isViewModel)
+        {
+            return null;
+        }
+
+        var location = ctx.Attributes[0].ApplicationSyntaxReference?.GetSyntax(cancellationToken).GetLocation()
+            ?? ctx.TargetNode.GetLocation();
+        return Diagnostic.Create(
+            DiagnosticDescriptors.Bnd005,
+            location,
+            field.Name,
+            field.Type.ToDisplayString());
     }
 
     /// <summary>

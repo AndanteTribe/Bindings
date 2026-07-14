@@ -55,4 +55,16 @@ internal static class DiagnosticDescriptors
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// BND005: emitted when [SerializeField] is applied to a field whose type is annotated with [ViewModel].
+    /// ViewModel serialization is generated only for Bindings debugging and is not a supported application feature.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bnd005 = new(
+        id: "BND005",
+        title: "ViewModel fields must not be serialized",
+        messageFormat: "Field '{0}' serializes ViewModel type '{1}' with [SerializeField]. ViewModel serialization is reserved for Bindings debugging and is not supported for application use.",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 }

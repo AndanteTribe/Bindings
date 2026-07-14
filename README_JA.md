@@ -334,10 +334,11 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 | ID | レベル | 条件 |
 |----|--------|------|
-| `BND001` | エラー | `[ViewModel]` を付与したクラス名に `"ViewModel"` が含まれていない。 |
+| `BND001` | エラー | `ViewModelAttribute` が付与された型の名前に `"ViewModel"` が含まれていない。 |
 | `BND002` | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
 | `BND003` | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
-| `BND004` | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
+| `BND004` | エラー | `ViewModelAttribute` が付与された型またはその親型のアクセシビリティを生成コードで表現できない。 |
+| `BND005` | 警告 | フィールドの型に `ViewModelAttribute` が付与され、かつフィールドに `[SerializeField]` が付与されている。ViewModel のシリアライズは Bindings のデバッグ機能専用であり、アプリケーションからの利用はサポートされない。 |
 
 ## ライセンス
 このライブラリは MIT ライセンスで公開しています。

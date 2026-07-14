@@ -2,7 +2,7 @@
 
 ## 概要 (Overview)
 
-`[ViewModel]` アノテーションが付与されたクラスまたは構造体を解析し、以下の2ファイルを自動生成する Roslyn `IIncrementalGenerator`。
+`ViewModelAttribute` が付与されたクラスまたは構造体を解析し、以下の2ファイルを自動生成する Roslyn `IIncrementalGenerator`。
 
 | 生成ファイル | 内容 |
 |---|---|
@@ -117,14 +117,17 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 | 診断 ID | レベル | 条件 | メッセージ（案） |
 |---|---|---|---|
-| `BND001` | Error | `[ViewModel]` が付与された型名に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No View will be generated.` |
+| `BND001` | Error | `ViewModelAttribute` が付与された型の名前に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No View will be generated.` |
 | `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `[Schema] id value {id} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.` |
 | `BND003` | Error | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
-| `BND004` | Error | `[ViewModel]` 型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
+| `BND004` | Error | `ViewModelAttribute` が付与された型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
+| `BND005` | Warning | フィールドの型に `ViewModelAttribute` が付与され、かつフィールドに `[UnityEngine.SerializeField]` が付与されている | `Field '{FieldName}' serializes ViewModel type '{TypeName}' with [SerializeField]. ViewModel serialization is reserved for Bindings debugging and is not supported for application use.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
 `BND004` が発生した ViewModel については、Generator 全体を例外で停止させず、その ViewModel の ViewModel ソースと View ソースの両方を生成しない。
+
+`BND005` が発生しても生成は継続する。診断位置は `[UnityEngine.SerializeField]` 属性とする。ViewModel に `[System.Serializable]` が自動付与または明示されていること自体は診断条件に含めない。
 
 ---
 
