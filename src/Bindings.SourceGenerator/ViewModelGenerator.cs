@@ -20,6 +20,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string RequiredAttributeFullName = nameof(Bindings) + ".RequiredAttribute";
     private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
+    private const string SerializeFieldAttributeFullName = "UnityEngine.SerializeField";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -29,6 +30,15 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 ViewModelAttributeFullName,
                 predicate: static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax,
                 transform: static (ctx, ct) => CollectGenerationContext(ctx, ct));
+
+        // Find fields that attempt to serialize a [ViewModel] type through Unity's value
+        // serialization. These fields are analyzed separately because they can be declared
+        // anywhere in the user's compilation, not only inside a ViewModel.
+        var serializedViewModelFields = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                SerializeFieldAttributeFullName,
+                predicate: static (_, _) => true,
+                transform: static (ctx, ct) => CollectSerializeFieldDiagnostic(ctx, ct));
 
         // Generate partial ViewModel type and sealed partial View type for each annotated type
         context.RegisterSourceOutput(
@@ -49,6 +59,48 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 EmitViewModelSource(ctx, data);
                 EmitViewSource(ctx, data);
             });
+
+        context.RegisterSourceOutput(
+            serializedViewModelFields,
+            static (ctx, data) =>
+            {
+                if (data is { } diagnostic)
+                {
+                    ctx.ReportDiagnostic(Diagnostic.Create(
+                        DiagnosticDescriptors.Bnd005,
+                        diagnostic.Location,
+                        diagnostic.FieldName,
+                        diagnostic.ViewModelTypeName));
+                }
+            });
+    }
+
+    /// <summary>
+    /// Returns diagnostic data when [SerializeField] is applied to a field whose type is
+    /// annotated with [ViewModel]. Other field types and non-field attribute targets are ignored.
+    /// </summary>
+    private static (Location Location, string FieldName, string ViewModelTypeName)? CollectSerializeFieldDiagnostic(
+        GeneratorAttributeSyntaxContext ctx,
+        CancellationToken ct)
+    {
+        if (ctx.TargetSymbol is not IFieldSymbol field || field.Type is not INamedTypeSymbol fieldType)
+        {
+            return null;
+        }
+
+        foreach (var attr in fieldType.GetAttributes())
+        {
+            if (attr.AttributeClass?.ToDisplayString() != ViewModelAttributeFullName)
+            {
+                continue;
+            }
+
+            var location = ctx.Attributes[0].ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
+                ?? ctx.TargetNode.GetLocation();
+            return (location, field.Name, fieldType.ToDisplayString());
+        }
+
+        return null;
     }
 
     /// <summary>
