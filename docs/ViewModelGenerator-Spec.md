@@ -41,11 +41,14 @@ SourceGenerator では `AttributeData.ConstructorArguments` からこの文字�
 | `"TMPro.TMP_Text.text"` | `"TMPro.TMP_Text"` | `"text"` |
 | `"UnityEngine.UI.Button.onClick"` | `"UnityEngine.UI.Button"` | `"onClick"` |
 | `"UnityEngine.UI.Toggle.interactable"` | `"UnityEngine.UI.Toggle"` | `"interactable"` |
+| `"UnityEngine.RectTransform.rect.size"` | `"UnityEngine.RectTransform"` | `"rect.size"` |
 
 - **完全修飾型名（フィールド宣言用）:** `global::{型部分}`  
   例: `global::TMPro.TMP_Text`、`global::UnityEngine.UI.Button`
 - **メンバアクセス（BindAll 内）:** `_field.{メンバ名}`  
   例: `_button.onClick`、`_toggle.interactable`
+
+`"UnityEngine.RectTransform.rect.size"` は多段パスの例外であり、View のコンポーネントフィールド型が `global::UnityEngine.RectTransform` になるよう型部分を正規化する。同じ `id` を持つ `UnityEngine.RectTransform` の他のバインディング（例: `sizeDelta`）とは同一コンポーネントフィールドにグループ化する。
 
 ### 1.3 入力サンプル（CountViewModel.cs より抜粋）
 
@@ -420,9 +423,11 @@ private void BindAll()
 |---|---|
 | バインディングパスが **`"TMPro.TMP_Text.text"`** かつ `format` なし | `global::Bindings.TextMeshProExtensions.SetValue({_field}, _viewModel.{Property});` |
 | バインディングパスが **`"TMPro.TMP_Text.text"`** かつ `format` あり | `global::Bindings.TextMeshProExtensions.SetValue({_field}, _viewModel.{Property}, "{format}");` |
+| バインディングパスが **`"UnityEngine.GameObject.activeSelf"`** | `{_field}.SetActive(_viewModel.{Property});` |
+| バインディングパスが **`"UnityEngine.RectTransform.rect.size"`** | `{_field}.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.{Property}.x);` の後に、垂直軸と `.y` について同様に呼び出す |
 | **それ以外すべて** | `{_field}.{member} = _viewModel.{Property};` |
 
-> **補足:** `SetValue` 拡張メソッドは `TMPro.TMP_Text.text` の組み合わせに対してのみ用意されている。他のバインディングパス（他の TMPro 型を含む）に対する拡張メソッドは提供されないため、すべて直接代入を使う。
+> **補足:** `SetValue` 拡張メソッドは `TMPro.TMP_Text.text` の組み合わせに対してのみ用意されている。`GameObject.activeSelf` と `RectTransform.rect.size` は上記の専用 API を使用し、それ以外は直接代入を使う。`RectTransform.sizeDelta` は例外扱いせず、従来どおり直接代入する。
 
 #### イベントバインドの生成ルール
 

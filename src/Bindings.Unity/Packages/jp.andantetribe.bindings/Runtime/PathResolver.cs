@@ -172,6 +172,10 @@ namespace Bindings
                 public const string offsetMin = nameof(UnityEngine) + "." + nameof(G_UnityEngine.RectTransform) + "." + nameof(G_UnityEngine.RectTransform.offsetMin);
                 public const string pivot = nameof(UnityEngine) + "." + nameof(G_UnityEngine.RectTransform) + "." + nameof(G_UnityEngine.RectTransform.pivot);
                 public const string sizeDelta = nameof(UnityEngine) + "." + nameof(G_UnityEngine.RectTransform) + "." + nameof(G_UnityEngine.RectTransform.sizeDelta);
+                public static class rect
+                {
+                    public const string size = nameof(UnityEngine) + "." + nameof(G_UnityEngine.RectTransform) + "." + nameof(G_UnityEngine.RectTransform.rect) + "." + nameof(G_UnityEngine.Rect.size);
+                }
                 public const string eulerAngles = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Transform) + "." + nameof(G_UnityEngine.Transform.eulerAngles);
                 public const string forward = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Transform) + "." + nameof(G_UnityEngine.Transform.forward);
                 public const string hasChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Transform) + "." + nameof(G_UnityEngine.Transform.hasChanged);

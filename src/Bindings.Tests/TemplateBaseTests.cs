@@ -441,4 +441,12 @@ public class TemplateBaseTests
         Assert.Equal("nodot", typePart);
         Assert.Equal("", memberName);
     }
+
+    [Fact]
+    public void ViewTemplate_SplitBindingPath_RectTransformRectSize_ReturnsComponentTypeAndNestedMember()
+    {
+        var (typePart, memberName) = ViewTemplate.SplitBindingPath("UnityEngine.RectTransform.rect.size");
+        Assert.Equal("UnityEngine.RectTransform", typePart);
+        Assert.Equal("rect.size", memberName);
+    }
 }

@@ -289,6 +289,17 @@ private bool _isVisible;
 
 The generated binding will call `_gameObject.SetActive(_viewModel.IsVisible);` (or the equivalent generated helper) when applying the binding.
 
+#### RectTransform calculated size binding
+
+Use `PathResolver.UnityEngine.RectTransform.rect.size` to bind a `Vector2` to the calculated size of a `RectTransform` while preserving its current anchors:
+
+```csharp
+[Schema(PathResolver.UnityEngine.RectTransform.rect.size)]
+private Vector2 _size;
+```
+
+The generated View calls `RectTransform.SetSizeWithCurrentAnchors` once for the horizontal axis with `Size.x` and once for the vertical axis with `Size.y`. This binding is opt-in; `PathResolver.UnityEngine.RectTransform.sizeDelta` continues to assign `RectTransform.sizeDelta` directly.
+
 ## Messaging with `IMvvmSubscriber<T>`
 
 In addition to automatic UI rebinding, a ViewModel can send arbitrary messages to Views that have opted in. This allows the ViewModel to push events (e.g., showing a dialog, playing an animation) without coupling it to the View type.

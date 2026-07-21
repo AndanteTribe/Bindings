@@ -6,6 +6,12 @@
                                     [System.Obsolete("{0}")]
                                     public const string {1} = {2};
                                     """;
+    const string rectSizeTemplate = """
+                                    public static class rect
+                                    {
+                                        public const string size = nameof(UnityEngine) + "." + nameof(G_UnityEngine.RectTransform) + "." + nameof(G_UnityEngine.RectTransform.rect) + "." + nameof(G_UnityEngine.Rect.size);
+                                    }
+                                    """;
     const string imageEventAlphaThresholdObsoleteMessage =
         "eventAlphaThreshold has been deprecated. Use eventMinimumAlphaThreshold instead (UnityUpgradable) -> alphaHitTestMinimumThreshold";
     const string inputFieldOnValueChangeObsoleteMessage = "onValueChange has been renamed to onValueChanged";
@@ -31,7 +37,7 @@
         { $"{gUnityEngine}.CanvasGroup", ([ "alpha", "blocksRaycasts", "ignoreParentGroups", "interactable" ], [], $"{gUnityEngine}.Behaviour") },
         { $"{gUnityEngine}.CanvasRenderer", ([ "clippingSoftness", "cull", "cullTransparentMesh", "hasPopInstruction", "materialCount", "popMaterialCount" ], [], $"{gUnityEngine}.Component") },
         { $"{gUnityEngine}.Transform", ([ "eulerAngles", "forward", "hasChanged", "hierarchyCapacity", "localEulerAngles", "localPosition", "localRotation", "localScale", "parent", "position", "right", "rotation", "up" ], [], $"{gUnityEngine}.Component") },
-        { $"{gUnityEngine}.RectTransform", ([ "anchoredPosition", "anchoredPosition3D", "anchorMax", "anchorMin", "offsetMax", "offsetMin", "pivot", "sizeDelta" ], [], $"{gUnityEngine}.Transform") },
+        { $"{gUnityEngine}.RectTransform", ([ "anchoredPosition", "anchoredPosition3D", "anchorMax", "anchorMin", "offsetMax", "offsetMin", "pivot", "sizeDelta" ], [ rectSizeTemplate ], $"{gUnityEngine}.Transform") },
 
         { $"{gUnityEngine}.UI.AspectRatioFitter", ([ "aspectMode", "aspectRatio" ], [], $"{gUnityEngine}.UI.UIBehaviour") },
         { $"{gUnityEngine}.UI.Button", ([ "onClick" ], [], $"{gUnityEngine}.UI.Selectable") },
