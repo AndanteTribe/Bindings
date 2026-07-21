@@ -98,6 +98,7 @@ namespace Bindings
 namespace UnityEngine
 {
     public sealed class SerializeField : System.Attribute { }
+    public sealed class SerializeReference : System.Attribute { }
     public sealed class NonSerialized : System.Attribute { }
     public sealed class Tooltip : System.Attribute { public Tooltip(string tip) { } }
 }
@@ -117,7 +118,12 @@ namespace UnityEngine.UI
 }
 ";
 
-    private static (string? ViewModelSource, string? ViewSource) RunGenerator(string userCode)
+    private static (string? ViewModelSource, string? ViewSource) RunGenerator(string userCode) =>
+        RunGenerator(userCode, out _);
+
+    private static (string? ViewModelSource, string? ViewSource) RunGenerator(
+        string userCode,
+        out GeneratorDriverRunResult runResult)
     {
         var generator = new ViewModelGenerator();
         var driver = CSharpGeneratorDriver.Create(generator);
@@ -127,15 +133,17 @@ namespace UnityEngine.UI
             new[]
             {
                 CSharpSyntaxTree.ParseText(AttributeStubs),
+                CSharpSyntaxTree.ParseText(RuntimeStubs),
                 CSharpSyntaxTree.ParseText(userCode),
             },
             new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
             },
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        var runResult = driver.RunGenerators(compilation).GetRunResult();
+        runResult = driver.RunGenerators(compilation).GetRunResult();
 
         // ViewModel file: contains "ViewModel" in the filename and ends with ".g.cs"
         // View file: contains "View" but NOT "ViewModel" in the filename, ends with ".g.cs"
@@ -243,6 +251,76 @@ namespace UnityEngine.UI
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("NotApplicable", diagnostic.GetMessage());
         Assert.Contains("MissingViewModel", diagnostic.GetMessage());
+    }
+
+    [Fact]
+    public void BND005SerializeFieldOnViewModelTypeReportsWarningAndContinuesGeneration()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelSerialized
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+    }
+
+    public sealed class ViewModelHost
+    {
+        [UnityEngine.SerializeField]
+        private CountViewModelSerialized _viewModel;
+    }
+}";
+
+        RunGenerator(userCode, out var runResult);
+
+        var diagnostic = Assert.Single(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
+        Assert.Contains("_viewModel", diagnostic.GetMessage());
+        Assert.Contains("Bindings.Sample.CountViewModelSerialized", diagnostic.GetMessage());
+        Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
+            .GetText()
+            .ToString(diagnostic.Location.SourceSpan));
+        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewModelSerialized.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewSerialized.g.cs"));
+    }
+
+    [Fact]
+    public void BND005DoesNotReportForNonViewModelSerializeField()
+    {
+        const string userCode = @"
+public sealed class PrimitiveHost
+{
+    [UnityEngine.SerializeField]
+    private int _count;
+}";
+
+        RunGenerator(userCode, out var runResult);
+
+        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+    }
+
+    [Fact]
+    public void BND005DoesNotReportForSerializeReference()
+    {
+        const string userCode = @"
+[Bindings.ViewModel]
+public partial class CountViewModelReference
+{
+    [Bindings.Schema(""TMPro.TMP_Text.text"")]
+    private int _count;
+}
+
+public sealed class ViewModelHost
+{
+    [UnityEngine.SerializeReference]
+    private CountViewModelReference _viewModel;
+}";
+
+        RunGenerator(userCode, out var runResult);
+
+        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
     }
 
     // -------------------------------------------------------------------------

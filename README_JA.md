@@ -338,6 +338,7 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 | `BND002` | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
 | `BND003` | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
 | `BND004` | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
+| `BND005` | 警告 | `[ViewModel]` 型のフィールドに Unity の `[SerializeField]` が付与されている。デシリアライズ時に Unity が ViewModel を構築できない可能性がある。 |
 
 ## ライセンス
 このライブラリは MIT ライセンスで公開しています。

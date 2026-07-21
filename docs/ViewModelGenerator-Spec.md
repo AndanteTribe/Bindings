@@ -121,10 +121,13 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 | `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `[Schema] id value {id} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.` |
 | `BND003` | Error | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
 | `BND004` | Error | `[ViewModel]` 型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
+| `BND005` | Warning | `[ViewModel]` が付与された型のフィールドに Unity の `[SerializeField]` が付与されている | `Field '{fieldName}' serializes ViewModel type '{ViewModelTypeName}' with [SerializeField]. Unity may not be able to construct this type during deserialization. Use [SerializeReference] only if reference serialization is intentional.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
 `BND004` が発生した ViewModel については、Generator 全体を例外で停止させず、その ViewModel の ViewModel ソースと View ソースの両方を生成しない。
+
+`BND005` は `[SerializeField]` 属性の位置に報告する。ViewModel 型に生成されるコンストラクタを Unity の値シリアライズが呼び出せない可能性を通知する警告であり、対象 ViewModel の ViewModel ソースと View ソースの生成は継続する。`[SerializeReference]` のみが付与されたフィールド、および ViewModel 内にある ViewModel 型以外の `[SerializeField]` フィールドは対象外とする。
 
 ---
 

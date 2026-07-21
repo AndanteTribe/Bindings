@@ -55,4 +55,16 @@ internal static class DiagnosticDescriptors
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// BND005: emitted when a field whose type is annotated with [ViewModel] is marked with
+    /// Unity's [SerializeField]. Unity may not be able to invoke the generated constructor.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bnd005 = new(
+        id: "BND005",
+        title: "ViewModel should not be serialized with [SerializeField]",
+        messageFormat: "Field '{0}' serializes ViewModel type '{1}' with [SerializeField]. Unity may not be able to construct this type during deserialization. Use [SerializeReference] only if reference serialization is intentional.",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
 }
