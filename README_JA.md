@@ -289,6 +289,17 @@ private bool _isVisible;
 
 生成されるバインディングでは `_gameObject.SetActive(_viewModel.IsVisible);`（または相当する生成ヘルパー）が呼ばれ、アクティブ状態が反映されます。
 
+#### RectTransform の計算後サイズバインド
+
+現在のアンカーを維持しながら `RectTransform` の計算後サイズへ `Vector2` をバインドする場合は、`PathResolver.UnityEngine.RectTransform.rect.size` を指定します。
+
+```csharp
+[Schema(PathResolver.UnityEngine.RectTransform.rect.size)]
+private Vector2 _size;
+```
+
+生成される View は、水平軸へ `Size.x`、垂直軸へ `Size.y` を渡して `RectTransform.SetSizeWithCurrentAnchors` をそれぞれ1回呼び出します。この動作は明示的にこのパスを選んだ場合だけ有効であり、`PathResolver.UnityEngine.RectTransform.sizeDelta` は引き続き `RectTransform.sizeDelta` へ直接代入します。
+
 ## `IMvvmSubscriber<T>` によるメッセージング
 
 自動 UI 再バインドに加え、ViewModel は任意のメッセージを、オプトインした View に送信できます。これにより、ViewModel を View の具体的な型に依存させることなく、ダイアログ表示やアニメーション再生などのイベントをプッシュできます。

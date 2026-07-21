@@ -378,11 +378,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Splits a binding path at the last '.' and returns the type part and member name.
+    /// Splits a binding path and returns the component type part and member path.
     /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
+    /// The nested RectTransform.rect.size path is normalized to the RectTransform component type.
     /// </summary>
     private static (string TypePart, string MemberName) SplitBindingPath(string path)
     {
+        if (path == "UnityEngine.RectTransform.rect.size")
+        {
+            return ("UnityEngine.RectTransform", "rect.size");
+        }
+
         var lastDot = path.LastIndexOf('.');
         if (lastDot < 0)
         {

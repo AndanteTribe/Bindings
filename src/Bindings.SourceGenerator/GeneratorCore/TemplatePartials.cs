@@ -142,11 +142,17 @@ namespace Bindings.GeneratorCore
             TemplateHelpers.ToPropertyName(fieldName);
 
         /// <summary>
-        /// Splits a binding path at the last '.' and returns (TypePart, MemberName).
+        /// Splits a binding path and returns (TypePart, MemberName).
         /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
+        /// The nested RectTransform.rect.size path is normalized to the RectTransform component type.
         /// </summary>
         public static (string TypePart, string MemberName) SplitBindingPath(string path)
         {
+            if (path == "UnityEngine.RectTransform.rect.size")
+            {
+                return ("UnityEngine.RectTransform", "rect.size");
+            }
+
             var lastDot = path.LastIndexOf('.');
             if (lastDot < 0)
             {
@@ -183,6 +189,13 @@ namespace Bindings.GeneratorCore
                     case "UnityEngine.GameObject.activeSelf":
                         sb.Append(indent);
                         sb.Append(viewField).Append(".SetActive(_viewModel.").Append(propName).Append(");");
+                        break;
+                    case "UnityEngine.RectTransform.rect.size":
+                        sb.Append(indent);
+                        sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.").Append(propName).Append(".x);");
+                        sb.AppendLine();
+                        sb.Append(indent);
+                        sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.").Append(propName).Append(".y);");
                         break;
                     default:
                         var (_, memberName) = SplitBindingPath(bindingPath);

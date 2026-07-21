@@ -101,6 +101,17 @@ namespace UnityEngine
     public sealed class SerializeReference : System.Attribute { }
     public sealed class NonSerialized : System.Attribute { }
     public sealed class Tooltip : System.Attribute { public Tooltip(string tip) { } }
+    public struct Vector2
+    {
+        public float x;
+        public float y;
+    }
+    public class RectTransform
+    {
+        public enum Axis { Horizontal, Vertical }
+        public Vector2 sizeDelta { get; set; }
+        public void SetSizeWithCurrentAnchors(Axis axis, float size) { }
+    }
 }
 namespace TMPro
 {
@@ -798,6 +809,67 @@ namespace Bindings.Sample
         // Direct assignment, not SetValue
         Assert.Contains("_image.fillAmount = _viewModel.Progress;", viewSource);
         Assert.DoesNotContain("SetValue", viewSource);
+    }
+
+    // -------------------------------------------------------------------------
+    // RectTransform.rect.size field binding uses SetSizeWithCurrentAnchors
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void RectTransformRectSizeBindingUsesSetSizeWithCurrentAnchors()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class RectSizeViewModel
+    {
+        [Bindings.Schema(""UnityEngine.RectTransform.rect.size"")]
+        private UnityEngine.Vector2 _size;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.Contains("private global::UnityEngine.RectTransform _rectTransform = null!;", viewSource);
+        Assert.Contains("_rectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.Size.x);", viewSource);
+        Assert.Contains("_rectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.Size.y);", viewSource);
+        Assert.DoesNotContain("global::UnityEngine.RectTransform.rect", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void RectTransformRectSizeAndSizeDeltaWithSameIdShareComponentField()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class RectSizeViewModel
+    {
+        [Bindings.Schema(""UnityEngine.RectTransform.rect.size"", id: 1)]
+        private UnityEngine.Vector2 _size;
+
+        [Bindings.Schema(""UnityEngine.RectTransform.sizeDelta"", id: 1)]
+        private UnityEngine.Vector2 _sizeDelta;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        const string fieldDeclaration = "private global::UnityEngine.RectTransform _rectTransform1 = null!;";
+        Assert.Contains(fieldDeclaration, viewSource);
+        Assert.Equal(viewSource.IndexOf(fieldDeclaration, System.StringComparison.Ordinal), viewSource.LastIndexOf(fieldDeclaration, System.StringComparison.Ordinal));
+        Assert.Contains("_rectTransform1.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.Size.x);", viewSource);
+        Assert.Contains("_rectTransform1.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.Size.y);", viewSource);
+        Assert.Contains("_rectTransform1.sizeDelta = _viewModel.SizeDelta;", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
     }
 
     // -------------------------------------------------------------------------
