@@ -257,6 +257,25 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     /// <summary>
+    /// Builds a source hint name from the namespace, containing type chain, and generated type name.
+    /// </summary>
+    private static string GetHintName(GenerationContext context, string typeName)
+    {
+        var builder = new StringBuilder();
+        if (!string.IsNullOrEmpty(context.Namespace))
+        {
+            builder.Append(context.Namespace).Append('.');
+        }
+
+        for (var i = 0; i < context.ContainingTypes.Length; i++)
+        {
+            builder.Append(context.ContainingTypes[i].TypeName).Append('.');
+        }
+
+        return builder.Append(typeName).Append(".g.cs").ToString();
+    }
+
+    /// <summary>
     /// Returns the C# keyword for a type accessibility and reports a diagnostic when the
     /// accessibility cannot be represented in generated source.
     /// </summary>
@@ -660,7 +679,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     }
 
     // -------------------------------------------------------------------------
-    // ViewModel partial generation → {ClassName}.g.cs
+    // ViewModel partial generation → {FullyQualifiedViewModelName}.g.cs
     // -------------------------------------------------------------------------
 
     /// <summary>
@@ -677,11 +696,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext context)
     {
         var template = new ViewModelTemplate(context);
-        ctx.AddSource($"{context.ClassName}.g.cs", SourceText.From(template.TransformText(), Encoding.UTF8));
+        ctx.AddSource(GetHintName(context, context.ClassName), SourceText.From(template.TransformText(), Encoding.UTF8));
     }
 
     // -------------------------------------------------------------------------
-    // View sealed partial generation → {ViewClassName}.g.cs
+    // View sealed partial generation → {FullyQualifiedViewName}.g.cs
     // -------------------------------------------------------------------------
 
     /// <summary>
@@ -716,6 +735,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         var viewClassName = context.ClassName.Replace("ViewModel", "View");
         var template = new ViewTemplate(context, fieldAssignments, methodAssignments, orderedFields.ToArray());
-        ctx.AddSource($"{viewClassName}.g.cs", SourceText.From(template.TransformText(), Encoding.UTF8));
+        ctx.AddSource(GetHintName(context, viewClassName), SourceText.From(template.TransformText(), Encoding.UTF8));
     }
 }

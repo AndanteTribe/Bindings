@@ -6,8 +6,8 @@
 
 | 生成ファイル | 内容 |
 |---|---|
-| `{ClassName}.g.cs` | ViewModel の partial クラス（バックグラウンドロジック） |
-| `{ViewClassName}.g.cs` | View の sealed partial クラス（Unity UI バインド） |
+| `{FullyQualifiedViewModelName}.g.cs` | ViewModel の partial クラス（バックグラウンドロジック） |
+| `{FullyQualifiedViewName}.g.cs` | View の sealed partial クラス（Unity UI バインド） |
 
 > **原則:** 生成コード内のすべての型参照は `global::` プレフィックスを付ける。これはユーザー定義の型名と衝突しないようにするためである。
 
@@ -134,7 +134,7 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 ---
 
-## 4. 生成ルール：ViewModel (`{ClassName}.g.cs`)
+## 4. 生成ルール：ViewModel (`{FullyQualifiedViewModelName}.g.cs`)
 
 ### 4.1 クラス/構造体宣言
 
@@ -241,7 +241,7 @@ private void PublishRebindMessage()
 
 ---
 
-## 5. 生成ルール：View (`{ViewClassName}.g.cs`)
+## 5. 生成ルール：View (`{FullyQualifiedViewName}.g.cs`)
 
 ### 5.1 View クラス名の命名規則
 
@@ -257,8 +257,11 @@ ViewModel クラス名中の `"ViewModel"` を `"View"` に置換する。
 
 ### 5.2 生成ファイル名
 
-- ViewModel: `{ClassName}.g.cs` （例: `CountViewModel1.g.cs`）
-- View: `{ViewClassName}.g.cs` （例: `CountView1.g.cs`）
+`{FullyQualifiedViewModelName}` と `{FullyQualifiedViewName}` は、それぞれ生成される ViewModel 型と View 型を識別する名前であり、名前空間、親型チェーン、型名をすべて `.` で連結する。
+
+- ViewModel: `{FullyQualifiedViewModelName}.g.cs`（例: `Bindings.Sample.CountViewModel1.g.cs`）
+- View: `{FullyQualifiedViewName}.g.cs`（例: `Bindings.Sample.CountView1.g.cs`）
+- ネスト型の例: `Bindings.Sample.Outer.CountViewModel1.g.cs`、`Bindings.Sample.Outer.CountView1.g.cs`
 
 ### 5.3 クラス宣言
 

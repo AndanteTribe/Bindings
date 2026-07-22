@@ -136,8 +136,14 @@ namespace Bindings
         [System.Diagnostics.DebuggerNonUserCode]
         private static async ValueTask RunAsync(IView view, IList<IView> nextChangedViews, CancellationToken cancellationToken)
         {
-            await BindingScheduler.EnqueueAsync(cancellationToken);
-            nextChangedViews.Remove(view);
+            try
+            {
+                await BindingScheduler.EnqueueAsync(cancellationToken);
+            }
+            finally
+            {
+                nextChangedViews.Remove(view);
+            }
             await view.BindAsync(cancellationToken);
         }
     }
