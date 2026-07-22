@@ -40,7 +40,7 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write(" : global::Bindings.IViewModel\n{\n    private readonly global::Bindings.IMvvmPubli" +
                     "sher _publisher;\n");
- foreach (var schemaField in Context.SchemaFields) { 
+ foreach (var schemaField in SchemaPropertyFields) {
             this.Write("\n    public ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldTypeName ));
             this.Write(" ");

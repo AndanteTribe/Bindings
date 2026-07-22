@@ -101,6 +101,8 @@ namespace UnityEngine
     public sealed class SerializeReference : System.Attribute { }
     public sealed class NonSerialized : System.Attribute { }
     public sealed class Tooltip : System.Attribute { public Tooltip(string tip) { } }
+    public class GameObject { public bool activeSelf { get; private set; } public void SetActive(bool value) => activeSelf = value; }
+    public class Behaviour { public bool enabled { get; set; } }
     public struct Vector2
     {
         public float x;
@@ -474,6 +476,41 @@ namespace Bindings.Sample
         Assert.DoesNotContain("_text0", viewSource);
         Assert.DoesNotContain("_button0", viewSource);
         Assert.DoesNotContain("_button1", viewSource);
+    }
+
+    [Fact]
+    public void MultipleSchemasOnSameFieldGenerateOnePropertyAndAllViewBindings()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelMultipleSchemas
+    {
+        [Bindings.Schema(""UnityEngine.GameObject.activeSelf"")]
+        [Bindings.Schema(""UnityEngine.Behaviour.enabled"")]
+        private bool _active;
+    }
+}";
+
+        var (vmSource, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+
+        const string propertyDeclaration = "public bool Active";
+        Assert.Contains(propertyDeclaration, vmSource);
+        Assert.Equal(
+            vmSource.IndexOf(propertyDeclaration, System.StringComparison.Ordinal),
+            vmSource.LastIndexOf(propertyDeclaration, System.StringComparison.Ordinal));
+
+        Assert.Contains("private global::UnityEngine.GameObject _gameObject = null!;", viewSource);
+        Assert.Contains("private global::UnityEngine.Behaviour _behaviour = null!;", viewSource);
+        Assert.Contains("_gameObject.SetActive(_viewModel.Active);", viewSource);
+        Assert.Contains("_behaviour.enabled = _viewModel.Active;", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
     }
 
     // -------------------------------------------------------------------------

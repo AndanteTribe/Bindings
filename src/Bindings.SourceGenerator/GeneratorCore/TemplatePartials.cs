@@ -57,6 +57,27 @@ namespace Bindings.GeneratorCore
         }
 
         /// <summary>
+        /// Schema fields used to generate ViewModel properties, deduplicated by source field name.
+        /// Multiple Schema attributes on one field still remain in <see cref="GenerationContext.SchemaFields"/>
+        /// so the View can generate every declared binding.
+        /// </summary>
+        public IEnumerable<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)> SchemaPropertyFields
+        {
+            get
+            {
+                var fieldNames = new HashSet<string>();
+                for (var i = 0; i < Context.SchemaFields.Length; i++)
+                {
+                    var schemaField = Context.SchemaFields[i];
+                    if (fieldNames.Add(schemaField.FieldName))
+                    {
+                        yield return schemaField;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Returns the ViewModel property name derived from a field name (first letter uppercased).
         /// e.g. _count → Count, m_Count → Count
         /// </summary>

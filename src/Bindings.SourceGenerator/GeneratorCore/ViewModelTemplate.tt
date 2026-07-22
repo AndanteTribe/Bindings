@@ -17,7 +17,7 @@ namespace <#= Context.Namespace #>
 <#= Context.Accessibility #> partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
     private readonly global::Bindings.IMvvmPublisher _publisher;
-<# foreach (var schemaField in Context.SchemaFields) { #>
+<# foreach (var schemaField in SchemaPropertyFields) {#>
 
     public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
     {
