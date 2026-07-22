@@ -69,12 +69,12 @@ namespace MyApp
 ```
 
 ソースジェネレーターにより以下のファイルが自動生成されます。
-- `CounterViewModel.g.cs` — プロパティ、コンストラクタ、パブリッシャー配線を含む partial ViewModel クラス。
-- `CounterView.g.cs` — シリアライズされた UI コンポーネントフィールドとバインドロジックを含む sealed partial View クラス。
+- `MyApp.CounterViewModel.g.cs` — プロパティ、コンストラクタ、パブリッシャー配線を含む partial ViewModel クラス。
+- `MyApp.CounterView.g.cs` — シリアライズされた UI コンポーネントフィールドとバインドロジックを含む sealed partial View クラス。
 
 ### 生成されるコード
 
-**`CounterViewModel.g.cs`**
+**`MyApp.CounterViewModel.g.cs`**
 
 ```csharp
 #nullable enable
@@ -118,7 +118,7 @@ namespace MyApp
 }
 ```
 
-**`CounterView.g.cs`**
+**`MyApp.CounterView.g.cs`**
 
 ```csharp
 #nullable enable

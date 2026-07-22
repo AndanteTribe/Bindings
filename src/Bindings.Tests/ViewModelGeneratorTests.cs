@@ -158,22 +158,22 @@ namespace UnityEngine.UI
 
         runResult = driver.RunGenerators(compilation).GetRunResult();
 
-        // ViewModel file: contains "ViewModel" in the filename and ends with ".g.cs"
-        // View file: contains "View" but NOT "ViewModel" in the filename, ends with ".g.cs"
         var vmSource = runResult.GeneratedTrees
-            .FirstOrDefault(t => System.IO.Path.GetFileName(t.FilePath).Contains("ViewModel") && t.FilePath.EndsWith(".g.cs"))
+            .FirstOrDefault(IsGeneratedViewModelSource)
             ?.GetText().ToString();
 
         var viewSource = runResult.GeneratedTrees
-            .FirstOrDefault(t =>
-            {
-                var name = System.IO.Path.GetFileName(t.FilePath);
-                return name.Contains("View") && !name.Contains("ViewModel") && t.FilePath.EndsWith(".g.cs");
-            })
+            .FirstOrDefault(IsGeneratedViewSource)
             ?.GetText().ToString();
 
         return (vmSource, viewSource);
     }
+
+    private static bool IsGeneratedViewModelSource(SyntaxTree tree) =>
+        tree.GetText().ToString().Contains(": global::Bindings.IViewModel");
+
+    private static bool IsGeneratedViewSource(SyntaxTree tree) =>
+        tree.GetText().ToString().Contains(": global::Bindings.IView<");
 
     /// <summary>
     /// Runs the generator on <paramref name="userCode"/> and then compiles the user code +
@@ -295,8 +295,8 @@ namespace Bindings.Sample
         Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewModelSerialized.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewSerialized.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewModelSerialized.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewSerialized.g.cs"));
     }
 
     [Fact]
@@ -609,11 +609,7 @@ namespace Bindings.Sample
 
         // View field should still be generated with the first tooltip
         var viewSource = runResult.GeneratedTrees
-            .FirstOrDefault(t =>
-            {
-                var name = System.IO.Path.GetFileName(t.FilePath);
-                return name.Contains("View") && !name.Contains("ViewModel") && t.FilePath.EndsWith(".g.cs");
-            })
+            .FirstOrDefault(IsGeneratedViewSource)
             ?.GetText().ToString();
         Assert.NotNull(viewSource);
         Assert.Contains("[global::UnityEngine.Tooltip(\"Increment\")]", viewSource);
@@ -689,16 +685,12 @@ namespace Bindings.Sample
 
         // No View should be generated for this type
         var viewSource = runResult.GeneratedTrees
-            .FirstOrDefault(t =>
-            {
-                var name = System.IO.Path.GetFileName(t.FilePath);
-                return name.Contains("View") && !name.Contains("ViewModel") && t.FilePath.EndsWith(".g.cs");
-            });
+            .FirstOrDefault(IsGeneratedViewSource);
         Assert.Null(viewSource);
 
         // ViewModel partial is still generated
         var vmSource = runResult.GeneratedTrees
-            .FirstOrDefault(t => System.IO.Path.GetFileName(t.FilePath).Contains("CountModel") && t.FilePath.EndsWith(".g.cs"));
+            .FirstOrDefault(IsGeneratedViewModelSource);
         Assert.NotNull(vmSource);
     }
 
@@ -1021,6 +1013,75 @@ namespace Bindings.Sample
         Assert.Contains("_button1.onClick.AddListener(_viewModel.Submit)", viewSource);
         Assert.Contains("_button2.onClick.AddListener(_viewModel.Cancel)", viewSource);
         Assert.DoesNotContain("_button3", viewSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void SameSimpleNameInDifferentNamespacesGeneratesUniqueHintNames()
+    {
+        const string userCode = @"
+namespace First
+{
+    [Bindings.ViewModel]
+    public partial class SharedViewModel { }
+}
+
+namespace Second
+{
+    [Bindings.ViewModel]
+    public partial class SharedViewModel { }
+}";
+
+        RunGenerator(userCode, out var runResult);
+
+        Assert.DoesNotContain(runResult.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var hintNames = runResult.GeneratedTrees
+            .Select(tree => System.IO.Path.GetFileName(tree.FilePath))
+            .ToArray();
+
+        Assert.Equal(4, hintNames.Length);
+        Assert.Contains("First.SharedViewModel.g.cs", hintNames);
+        Assert.Contains("First.SharedView.g.cs", hintNames);
+        Assert.Contains("Second.SharedViewModel.g.cs", hintNames);
+        Assert.Contains("Second.SharedView.g.cs", hintNames);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void SameSimpleNameInDifferentContainingTypesGeneratesUniqueHintNames()
+    {
+        const string userCode = @"
+namespace Common
+{
+    public partial class OuterA
+    {
+        [Bindings.ViewModel]
+        public partial class SharedViewModel { }
+    }
+
+    public partial class OuterB
+    {
+        [Bindings.ViewModel]
+        public partial class SharedViewModel { }
+    }
+}";
+
+        RunGenerator(userCode, out var runResult);
+
+        Assert.DoesNotContain(runResult.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var hintNames = runResult.GeneratedTrees
+            .Select(tree => System.IO.Path.GetFileName(tree.FilePath))
+            .ToArray();
+
+        Assert.Equal(4, hintNames.Length);
+        Assert.Contains("Common.OuterA.SharedViewModel.g.cs", hintNames);
+        Assert.Contains("Common.OuterA.SharedView.g.cs", hintNames);
+        Assert.Contains("Common.OuterB.SharedViewModel.g.cs", hintNames);
+        Assert.Contains("Common.OuterB.SharedView.g.cs", hintNames);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);

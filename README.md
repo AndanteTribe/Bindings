@@ -69,12 +69,12 @@ namespace MyApp
 ```
 
 The source generator automatically produces:
-- `CounterViewModel.g.cs` — a partial ViewModel class with properties, constructor, and publisher wiring.
-- `CounterView.g.cs` — a sealed partial View class with serialized UI component fields and binding logic.
+- `MyApp.CounterViewModel.g.cs` — a partial ViewModel class with properties, constructor, and publisher wiring.
+- `MyApp.CounterView.g.cs` — a sealed partial View class with serialized UI component fields and binding logic.
 
 ### Generated Code
 
-**`CounterViewModel.g.cs`**
+**`MyApp.CounterViewModel.g.cs`**
 
 ```csharp
 #nullable enable
@@ -118,7 +118,7 @@ namespace MyApp
 }
 ```
 
-**`CounterView.g.cs`**
+**`MyApp.CounterView.g.cs`**
 
 ```csharp
 #nullable enable
