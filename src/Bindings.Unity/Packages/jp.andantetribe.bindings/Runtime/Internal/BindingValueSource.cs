@@ -16,6 +16,7 @@ namespace Bindings.Internal
         {
             RunContinuationsAsynchronously = false
         };
+        private CancellationToken _cancellationToken;
 
         public short Version => _core.Version;
 
@@ -23,22 +24,26 @@ namespace Bindings.Internal
         {
         }
 
-        public static BindingValueSource Create()
+        public static BindingValueSource Create(CancellationToken cancellationToken)
         {
             if (s_head == null)
             {
-                return new BindingValueSource();
+                return new BindingValueSource
+                {
+                    _cancellationToken = cancellationToken
+                };
             }
 
             var instance = s_head;
             s_head = instance._next;
             instance._next = null;
+            instance._cancellationToken = cancellationToken;
             return instance;
         }
 
         public void SetResult() => _core.SetResult(Unit.Default);
 
-        public void SetCancel(CancellationToken cancellationToken) => _core.SetException(new OperationCanceledException(cancellationToken));
+        public void SetCancel() => _core.SetException(new OperationCanceledException(_cancellationToken));
 
         [DebuggerNonUserCode]
         void IValueTaskSource.GetResult(short token)

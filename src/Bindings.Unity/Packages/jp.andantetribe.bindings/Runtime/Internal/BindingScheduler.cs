@@ -46,60 +46,16 @@ namespace Bindings.Internal
         public static async ValueTask EnqueueAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var source = BindingValueSource.Create();
-            using var _ = cancellationToken.UnsafeRegister(static tuple =>
+            var source = BindingValueSource.Create(cancellationToken);
+            using var _ = cancellationToken.UnsafeRegister(static s =>
             {
-                var (s, ct) = (StateTuple)tuple!;
-                s.SetCancel(ct);
-                s_queue.Remove(s);
-            }, StateTuple.Create(source, cancellationToken));
+                var source = (BindingValueSource)s!;
+                source.SetCancel();
+                s_queue.Remove(source);
+            }, source);
 
             s_queue.Add(source);
             await new ValueTask(source, source.Version);
-        }
-
-        private sealed class StateTuple
-        {
-            private static StateTuple? s_head;
-            private StateTuple? _next;
-
-            private BindingValueSource? _source;
-            private CancellationToken _cancellationToken;
-
-            private StateTuple()
-            {
-            }
-
-            public static StateTuple Create(BindingValueSource source, CancellationToken cancellationToken)
-            {
-                if (s_head == null)
-                {
-                    return new StateTuple
-                    {
-                        _source = source,
-                        _cancellationToken = cancellationToken
-                    };
-                }
-
-                var instance = s_head;
-                s_head = instance._next;
-                instance._next = null;
-                instance._source = source;
-                instance._cancellationToken = cancellationToken;
-                return instance;
-            }
-
-            public void Deconstruct(out BindingValueSource source, out CancellationToken cancellationToken)
-            {
-                source = _source ?? throw new InvalidOperationException("StateTuple is not initialized.");
-                cancellationToken = _cancellationToken;
-
-                // reset
-                _source = null;
-                _cancellationToken = CancellationToken.None;
-                _next = s_head;
-                s_head = this;
-            }
         }
     }
 }
