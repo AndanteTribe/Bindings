@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Diagnostics;
@@ -16,7 +16,7 @@ namespace Bindings.Internal
         {
             RunContinuationsAsynchronously = false
         };
-        private CancellationToken _cancellationToken;
+        public CancellationTokenRegistration Registration { get; set; }
 
         public short Version => _core.Version;
 
@@ -24,26 +24,22 @@ namespace Bindings.Internal
         {
         }
 
-        public static BindingValueSource Create(CancellationToken cancellationToken)
+        public static BindingValueSource Create()
         {
             if (s_head == null)
             {
-                return new BindingValueSource
-                {
-                    _cancellationToken = cancellationToken
-                };
+                return new BindingValueSource();
             }
 
             var instance = s_head;
             s_head = instance._next;
             instance._next = null;
-            instance._cancellationToken = cancellationToken;
             return instance;
         }
 
         public void SetResult() => _core.SetResult(Unit.Default);
 
-        public void SetCancel() => _core.SetException(new OperationCanceledException(_cancellationToken));
+        public void SetCancel() => _core.SetException(new OperationCanceledException(Registration.Token));
 
         [DebuggerNonUserCode]
         void IValueTaskSource.GetResult(short token)
@@ -65,6 +61,8 @@ namespace Bindings.Internal
 
         private void Reset()
         {
+            Registration.Dispose();
+            Registration = default;
             _core.Reset();
             _next = s_head;
             s_head = this;

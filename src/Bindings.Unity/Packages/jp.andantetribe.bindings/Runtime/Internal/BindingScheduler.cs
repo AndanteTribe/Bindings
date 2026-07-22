@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -43,19 +43,19 @@ namespace Bindings.Internal
             s_queue.Clear();
         }
 
-        public static async ValueTask EnqueueAsync(CancellationToken cancellationToken)
+        public static ValueTask EnqueueAsync(CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var source = BindingValueSource.Create(cancellationToken);
-            using var _ = cancellationToken.UnsafeRegister(static s =>
+            var source = BindingValueSource.Create();
+            source.Registration = cancellationToken.UnsafeRegister(static s =>
             {
                 var source = (BindingValueSource)s!;
-                source.SetCancel();
                 s_queue.Remove(source);
+                source.SetCancel();
             }, source);
-
             s_queue.Add(source);
-            await new ValueTask(source, source.Version);
+
+            return new ValueTask(source, source.Version);
         }
     }
 }
