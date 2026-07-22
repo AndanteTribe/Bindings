@@ -47,7 +47,7 @@ namespace Bindings.Internal
         {
             cancellationToken.ThrowIfCancellationRequested();
             var source = BindingValueSource.Create();
-            using var _ = cancellationToken.UnsafeRegister(tuple =>
+            using var _ = cancellationToken.UnsafeRegister(static tuple =>
             {
                 var (s, ct) = (StateTuple)tuple!;
                 s.SetCancel(ct);
