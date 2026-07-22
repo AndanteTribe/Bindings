@@ -47,13 +47,13 @@ namespace Bindings.Internal
         {
             cancellationToken.ThrowIfCancellationRequested();
             var source = BindingValueSource.Create();
+            s_queue.Add(source);
             source.Registration = cancellationToken.UnsafeRegister(static s =>
             {
                 var source = (BindingValueSource)s!;
                 s_queue.Remove(source);
                 source.SetCancel();
             }, source);
-            s_queue.Add(source);
 
             return new ValueTask(source, source.Version);
         }
