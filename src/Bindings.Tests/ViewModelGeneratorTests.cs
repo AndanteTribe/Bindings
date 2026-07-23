@@ -292,6 +292,9 @@ namespace Bindings.Sample
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("Bindings.Sample.CountViewModelSerialized", diagnostic.GetMessage());
+        Assert.Contains("[SerializeField]", diagnostic.GetMessage());
+        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage());
+        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage());
         Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
@@ -315,9 +318,10 @@ public sealed class PrimitiveHost
     }
 
     [Fact]
-    public void BND005DoesNotReportForSerializeReference()
+    public void BND005SerializeReferenceOnSerializableViewModelTypeReportsWarningAndContinuesGeneration()
     {
         const string userCode = @"
+[System.Serializable]
 [Bindings.ViewModel]
 public partial class CountViewModelReference
 {
@@ -329,6 +333,32 @@ public sealed class ViewModelHost
 {
     [UnityEngine.SerializeReference]
     private CountViewModelReference _viewModel;
+}";
+
+        RunGenerator(userCode, out var runResult);
+
+        var diagnostic = Assert.Single(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
+        Assert.Contains("_viewModel", diagnostic.GetMessage());
+        Assert.Contains("CountViewModelReference", diagnostic.GetMessage());
+        Assert.Contains("[SerializeReference]", diagnostic.GetMessage());
+        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage());
+        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage());
+        Assert.Equal("UnityEngine.SerializeReference", diagnostic.Location.SourceTree!
+            .GetText()
+            .ToString(diagnostic.Location.SourceSpan));
+        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewModelReference.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewReference.g.cs"));
+    }
+
+    [Fact]
+    public void BND005DoesNotReportForNonViewModelSerializeReference()
+    {
+        const string userCode = @"
+public sealed class PrimitiveHost
+{
+    [UnityEngine.SerializeReference]
+    private object _value;
 }";
 
         RunGenerator(userCode, out var runResult);
@@ -634,19 +664,21 @@ namespace Bindings.Sample
     }
 }";
 
-        var (vmSource, _) = RunGenerator(userCode);
+        var (vmSource, _) = RunGenerator(userCode, out var runResult);
 
         Assert.NotNull(vmSource);
         // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
+        // [Serializable] alone can be used by custom serializers and must not report BND005.
+        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
     }
 
     // -------------------------------------------------------------------------
-    // BND001: [ViewModel] class name does not contain "ViewModel" → error diagnostic, no View generated
+    // BND001: [ViewModel] class name does not contain "ViewModel" → error diagnostic, no source generated
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void BND001TypeNameWithoutViewModelReportsErrorAndSkipsViewGeneration()
+    public void BND001TypeNameWithoutViewModelReportsErrorAndSkipsAllGeneration()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -682,16 +714,17 @@ namespace Bindings.Sample
         Assert.NotNull(bnd001);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd001.Severity);
         Assert.Contains("CountModel", bnd001.GetMessage());
+        Assert.Contains("No source will be generated for this ViewModel", bnd001.GetMessage());
 
         // No View should be generated for this type
         var viewSource = runResult.GeneratedTrees
             .FirstOrDefault(IsGeneratedViewSource);
         Assert.Null(viewSource);
 
-        // ViewModel partial is still generated
+        // No ViewModel partial should be generated for this type
         var vmSource = runResult.GeneratedTrees
             .FirstOrDefault(IsGeneratedViewModelSource);
-        Assert.NotNull(vmSource);
+        Assert.Null(vmSource);
     }
 
     // -------------------------------------------------------------------------
