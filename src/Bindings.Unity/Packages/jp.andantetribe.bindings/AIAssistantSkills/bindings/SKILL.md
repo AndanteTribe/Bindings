@@ -48,4 +48,4 @@ UI Toolkit のデータバインディング、一般的なリアクティブス
 - `id` を省略した各 `[Schema]` は、同じコンポーネント型でも別々の View フィールドとして扱われる。
 - `format` は `TMPro.TMP_Text.text` のフィールドバインドだけに適用される。
 - `[ViewModel(requireBindImplementation: true)]` は、生成 View の `IView.BindAsync` を独自実装する必要がある場合だけ使用する。
-- ViewModel 型を Unity の `[SerializeField]` で保持しない。Unity が生成コンストラクタを呼べない可能性がある。
+- ViewModel 型を Unity の `[SerializeField]` または `[SerializeReference]` で保持しない。`[Serializable]` を付けても生成されたランタイム状態の初期化は保証されないため、ViewModel は実行時に構築または代入する。

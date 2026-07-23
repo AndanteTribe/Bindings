@@ -77,6 +77,8 @@ Generator は次を作成する。
 
 ViewModel のメソッド内でも生成プロパティを使用できる。複数のバッキングフィールドをまとめて変更して再バインド要求を1回に抑えたい場合は、フィールドを直接変更した後に `PublishRebindMessage()` を1回呼ぶ。
 
+Generator が ViewModel に付ける `[System.Serializable]` は `UNITY_EDITOR` の場合だけ有効になる。ユーザーが明示的に `[System.Serializable]` を付けた場合、Generator はこの条件付き属性を重複生成しない。明示的な属性は独自シリアライザーには利用できるが、Unity の `[SerializeField]` または `[SerializeReference]` による ViewModel の永続化を Bindings がサポートすることを意味しない。
+
 ## Schema の引数
 
 | 引数 | 既定値 | 動作 |
