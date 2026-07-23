@@ -1013,13 +1013,13 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void CaseCMixedIdAssignsCorrectFieldNumbers()
+    public void MixedExplicitAndDefaultIdsProduceMemberBasedFieldNames()
     {
         const string userCode = @"
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelCaseC
+    public partial class CountViewModelMixedIds
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 2)]
         public void Submit() { }
@@ -1037,13 +1037,13 @@ namespace Bindings.Sample
     }
 
     [Fact]
-    public void CaseCMixedIdSkipsOccupiedFirstFieldNumber()
+    public void MixedExplicitAndDefaultIdsBindUsingMemberBasedFieldNames()
     {
         const string userCode = @"
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelCaseCOccupiedFirst
+    public partial class CountViewModelMixedIdsBinding
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
         public void Submit() { }
