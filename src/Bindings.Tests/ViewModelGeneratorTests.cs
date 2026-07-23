@@ -293,7 +293,8 @@ namespace Bindings.Sample
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("Bindings.Sample.CountViewModelSerialized", diagnostic.GetMessage());
         Assert.Contains("[SerializeField]", diagnostic.GetMessage());
-        Assert.Contains("not serializable in player builds", diagnostic.GetMessage());
+        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage());
+        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage());
         Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
@@ -317,9 +318,10 @@ public sealed class PrimitiveHost
     }
 
     [Fact]
-    public void BND005SerializeReferenceOnViewModelTypeReportsWarningAndContinuesGeneration()
+    public void BND005SerializeReferenceOnSerializableViewModelTypeReportsWarningAndContinuesGeneration()
     {
         const string userCode = @"
+[System.Serializable]
 [Bindings.ViewModel]
 public partial class CountViewModelReference
 {
@@ -340,7 +342,8 @@ public sealed class ViewModelHost
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("CountViewModelReference", diagnostic.GetMessage());
         Assert.Contains("[SerializeReference]", diagnostic.GetMessage());
-        Assert.Contains("not serializable in player builds", diagnostic.GetMessage());
+        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage());
+        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage());
         Assert.Equal("UnityEngine.SerializeReference", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
@@ -661,11 +664,13 @@ namespace Bindings.Sample
     }
 }";
 
-        var (vmSource, _) = RunGenerator(userCode);
+        var (vmSource, _) = RunGenerator(userCode, out var runResult);
 
         Assert.NotNull(vmSource);
         // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
+        // [Serializable] alone can be used by custom serializers and must not report BND005.
+        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
     }
 
     // -------------------------------------------------------------------------

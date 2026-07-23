@@ -349,7 +349,7 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 | `BND002` | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
 | `BND003` | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
 | `BND004` | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
-| `BND005` | 警告 | `[ViewModel]` 型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている。生成された ViewModel 型はプレイヤービルドではシリアライズできないため、実行時に構築または代入する必要がある。 |
+| `BND005` | 警告 | `[ViewModel]` 型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている。型に `[Serializable]` が付与されていても、Unity のデシリアライズ後に生成されたランタイム状態が未初期化になる可能性があるため、ViewModel は実行時に構築または代入する。独自シリアライズ用途を許容するため、ViewModel への `[Serializable]` の付与だけではこの診断を報告しない。 |
 
 ## ライセンス
 このライブラリは MIT ライセンスで公開しています。

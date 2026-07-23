@@ -62,8 +62,8 @@ internal static class DiagnosticDescriptors
     /// </summary>
     public static readonly DiagnosticDescriptor Bnd005 = new(
         id: "BND005",
-        title: "ViewModel should not be serialized by Unity",
-        messageFormat: "Field '{0}' attempts to serialize ViewModel type '{1}' with [{2}]. Generated ViewModel types are not serializable in player builds; construct or assign the ViewModel at runtime instead.",
+        title: "Unity deserialization may leave ViewModel state uninitialized",
+        messageFormat: "Field '{0}' uses [{2}] with ViewModel type '{1}'. Unity deserialization may leave generated runtime state uninitialized, even when the type is marked [Serializable]. Construct or assign the ViewModel at runtime instead.",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);

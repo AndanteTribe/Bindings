@@ -124,7 +124,7 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 | `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `[Schema] id value {id} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.` |
 | `BND003` | Error | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
 | `BND004` | Error | `[ViewModel]` 型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
-| `BND005` | Warning | `[ViewModel]` が付与された型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている | `Field '{fieldName}' attempts to serialize ViewModel type '{ViewModelTypeName}' with [{SerializationAttributeName}]. Generated ViewModel types are not serializable in player builds; construct or assign the ViewModel at runtime instead.` |
+| `BND005` | Warning | `[ViewModel]` が付与された型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている | `Field '{fieldName}' uses [{SerializationAttributeName}] with ViewModel type '{ViewModelTypeName}'. Unity deserialization may leave generated runtime state uninitialized, even when the type is marked [Serializable]. Construct or assign the ViewModel at runtime instead.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
@@ -132,7 +132,9 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 `BND004` が発生した ViewModel については、Generator 全体を例外で停止させず、その ViewModel の ViewModel ソースと View ソースの両方を生成しない。
 
-`BND005` は `[SerializeField]` または `[SerializeReference]` 属性の位置に報告する。ViewModel 型の `[System.Serializable]` は `UNITY_EDITOR` でのみ生成されるため、どちらの属性もプレイヤービルドで ViewModel をシリアライズする用途には適さない。ViewModel は実行時に構築または代入する。対象 ViewModel の ViewModel ソースと View ソースの生成は継続する。ViewModel 型以外のフィールドは対象外とする。
+`BND005` は `[SerializeField]` または `[SerializeReference]` 属性の位置に報告する。ViewModel 型の `[System.Serializable]` は Generator からは `UNITY_EDITOR` でのみ付与される。ユーザーが明示的に `[System.Serializable]` を付与した場合でも、Unity のデシリアライズ後に Generator が必要とするランタイム状態が正しく初期化されることは保証しないため、ViewModel は実行時に構築または代入する。対象 ViewModel の ViewModel ソースと View ソースの生成は継続する。ViewModel 型以外のフィールドは対象外とする。
+
+ユーザーによる ViewModel 型への `[System.Serializable]` の付与だけでは診断を報告しない。これは独自シリアライザーなど Unity のフィールドシリアライズを使用しない用途を許容するためであり、Bindings が Unity による ViewModel の永続化をサポートすることを意味しない。BND005 は、ViewModel 型のフィールドへ `[SerializeField]` または `[SerializeReference]` が付与された時点で、ViewModel 型自身の `[System.Serializable]` の有無にかかわらず報告する。
 
 ---
 
