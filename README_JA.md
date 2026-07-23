@@ -132,13 +132,13 @@ namespace MyApp
         private global::MyApp.CounterViewModel _viewModel = null!;
 
         [global::UnityEngine.SerializeField]
-        private global::TMPro.TMP_Text _text = null!;
+        private global::TMPro.TMP_Text _countText = null!;
 
         [global::UnityEngine.SerializeField]
-        private global::UnityEngine.UI.Button _button1 = null!;
+        private global::UnityEngine.UI.Button _incrementButton = null!;
 
         [global::UnityEngine.SerializeField]
-        private global::UnityEngine.UI.Button _button2 = null!;
+        private global::UnityEngine.UI.Button _decrementButton = null!;
 
         void global::Bindings.IView<global::MyApp.CounterViewModel>.Initialize(
             global::MyApp.CounterViewModel viewModel)
@@ -155,11 +155,11 @@ namespace MyApp
 
         private void BindAll()
         {
-            global::Bindings.TextMeshProExtensions.SetValue(_text, _viewModel.Count);
-            _button1.onClick.RemoveAllListeners();
-            _button1.onClick.AddListener(_viewModel.Increment);
-            _button2.onClick.RemoveAllListeners();
-            _button2.onClick.AddListener(_viewModel.Decrement);
+            global::Bindings.TextMeshProExtensions.SetValue(_countText, _viewModel.Count);
+            _incrementButton.onClick.RemoveAllListeners();
+            _incrementButton.onClick.AddListener(_viewModel.Increment);
+            _decrementButton.onClick.RemoveAllListeners();
+            _decrementButton.onClick.AddListener(_viewModel.Decrement);
             OnPostBind();
             _viewModel.NotifyCompletedBind();
         }
@@ -174,7 +174,7 @@ namespace MyApp
             global::Bindings.DebugBindMessage message)
         {
             message.BindTo(this);
-            global::Bindings.TextMeshProExtensions.SetValue(_text, _viewModel.Count);
+            global::Bindings.TextMeshProExtensions.SetValue(_countText, _viewModel.Count);
             OnPostBind();
             _viewModel.NotifyCompletedBind();
         }
@@ -287,7 +287,7 @@ public class GameLifetimeScope : LifetimeScope
 private bool _isVisible;
 ```
 
-生成されるバインディングでは `_gameObject.SetActive(_viewModel.IsVisible);`（または相当する生成ヘルパー）が呼ばれ、アクティブ状態が反映されます。
+生成されるバインディングでは `_isVisibleGameObject.SetActive(_viewModel.IsVisible);`（または相当する生成ヘルパー）が呼ばれ、アクティブ状態が反映されます。
 
 #### RectTransform の計算後サイズバインド
 

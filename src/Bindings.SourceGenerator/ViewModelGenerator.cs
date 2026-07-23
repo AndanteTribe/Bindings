@@ -467,15 +467,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// <summary>
     /// Assigns a View component field name to each schema entry (SchemaField / SchemaMethod).
     ///
-    /// Assignment rules (entries are grouped by their type part):
-    ///   Case A — all entries have id=-1 (unset)
-    ///     single entry : _{base} (no number suffix)
-    ///     multiple     : _{base}1, _{base}2, ... (numbered from 1 in appearance order)
-    ///   Case B — all entries have id>=0 (explicit id)
-    ///     each entry   : _{base}{id} (entries with the same id share one field)
-    ///   Case C — mixed id=-1 and id>=0
-    ///     id>=0  : _{base}{id}
-    ///     id=-1  : assigned the smallest positive integer that does not conflict with any explicit id
+    /// Each field name combines the ViewModel member name and the component type:
+    ///   _{memberBase}{ComponentBase}
+    /// Entries with the same type part and explicit id share one component field. Unset ids create
+    /// independent component fields. A numeric suffix is added only when multiple independent fields
+    /// have the same name candidate.
     ///
     /// Tooltip conflict (BND003): when multiple entries that share the same View field specify
     /// different non-empty tooltip strings, the conflicting field names are returned in ConflictingTooltipFields.
@@ -532,23 +528,28 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             }
         }
 
-        // Track tooltip per assigned View field name (first non-empty value wins)
-        var fieldTooltips = new Dictionary<string, string>();
-        // Track fields that have conflicting tooltip values (HashSet for O(1) lookup)
-        var conflictingTooltipFields = new HashSet<string>();
+        var componentGroups = new List<(
+            string CandidateName,
+            List<(bool IsMethod, int Index, string Tooltip)> Entries)>();
 
-        // Determine field names for each type part
+        // Build logical component groups. An explicit id groups entries within the same component type;
+        // each unset id represents an independent component.
         foreach (var typePart in typePartOrder)
         {
-            var fieldBase = TypePartToFieldBase(typePart);
+            var componentBase = TypePartToFieldBase(typePart);
 
             // Collect entries belonging to this type part (fields first, then methods, in appearance order)
-            var entries = new List<(bool IsMethod, int Index, int Id, string Tooltip)>();
+            var entries = new List<(bool IsMethod, int Index, int Id, string Tooltip, string MemberName)>();
             for (var i = 0; i < fieldCount; i++)
             {
                 if (fieldTypeParts[i] == typePart)
                 {
-                    entries.Add((false, i, data.SchemaFields[i].Id, data.SchemaFields[i].Tooltip));
+                    entries.Add((
+                        false,
+                        i,
+                        data.SchemaFields[i].Id,
+                        data.SchemaFields[i].Tooltip,
+                        data.SchemaFields[i].FieldName));
                 }
             }
 
@@ -556,105 +557,85 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             {
                 if (methodTypeParts[i] == typePart)
                 {
-                    entries.Add((true, i, data.SchemaMethods[i].Id, data.SchemaMethods[i].Tooltip));
+                    entries.Add((
+                        true,
+                        i,
+                        data.SchemaMethods[i].Id,
+                        data.SchemaMethods[i].Tooltip,
+                        data.SchemaMethods[i].MethodName));
                 }
             }
 
-            // Determine which cases apply
-            var hasExplicit = false;
-            var hasUnset = false;
-            foreach (var (_, _, id, _) in entries)
-            {
-                if (id >= 0)
-                {
-                    hasExplicit = true;
-                }
-                else
-                {
-                    hasUnset = true;
-                }
-            }
-
-            if (!hasExplicit)
-            {
-                // Case A: all id=-1
-                if (entries.Count == 1)
-                {
-                    // Single entry: no number suffix
-                    Assign(entries[0], $"_{fieldBase}", fieldAssignments, methodAssignments);
-                }
-                else
-                {
-                    // Multiple entries: number from 1
-                    for (var i = 0; i < entries.Count; i++)
-                    {
-                        Assign(entries[i], $"_{fieldBase}{i + 1}", fieldAssignments, methodAssignments);
-                    }
-                }
-            }
-            else if (!hasUnset)
-            {
-                // Case B: all id>=0 → _{base}{id} (entries with the same id share one field)
-                foreach (var entry in entries)
-                {
-                    Assign(entry, $"_{fieldBase}{entry.Id}", fieldAssignments, methodAssignments);
-                }
-            }
-            else
-            {
-                // Case C: mixed — first assign explicit ids, then assign available numbers to unset ids
-                var usedIds = new HashSet<int>();
-                foreach (var (_, _, id, _) in entries)
-                {
-                    if (id >= 0)
-                    {
-                        usedIds.Add(id);
-                    }
-                }
-
-                foreach (var entry in entries)
-                {
-                    if (entry.Id >= 0)
-                    {
-                        Assign(entry, $"_{fieldBase}{entry.Id}", fieldAssignments, methodAssignments);
-                    }
-                }
-
-                var nextNum = 1;
-                foreach (var entry in entries)
-                {
-                    if (entry.Id == -1)
-                    {
-                        while (usedIds.Contains(nextNum))
-                        {
-                            nextNum++;
-                        }
-
-                        usedIds.Add(nextNum);
-                        Assign(entry, $"_{fieldBase}{nextNum}", fieldAssignments, methodAssignments);
-                        nextNum++;
-                    }
-                }
-            }
-
-            // BND003: detect conflicting tooltip values among entries that share the same View field
+            var explicitGroupIndexes = new Dictionary<int, int>();
             foreach (var entry in entries)
             {
-                var assignedField = entry.IsMethod ? methodAssignments[entry.Index] : fieldAssignments[entry.Index];
+                if (entry.Id >= 0 && explicitGroupIndexes.TryGetValue(entry.Id, out var groupIndex))
+                {
+                    componentGroups[groupIndex].Entries.Add((entry.IsMethod, entry.Index, entry.Tooltip));
+                    continue;
+                }
+
+                var candidateName = BuildComponentFieldNameCandidate(entry.MemberName, componentBase);
+                var groupEntries = new List<(bool IsMethod, int Index, string Tooltip)>
+                {
+                    (entry.IsMethod, entry.Index, entry.Tooltip),
+                };
+                componentGroups.Add((candidateName, groupEntries));
+
+                if (entry.Id >= 0)
+                {
+                    explicitGroupIndexes.Add(entry.Id, componentGroups.Count - 1);
+                }
+            }
+        }
+
+        var candidateCounts = new Dictionary<string, int>();
+        foreach (var group in componentGroups)
+        {
+            candidateCounts.TryGetValue(group.CandidateName, out var count);
+            candidateCounts[group.CandidateName] = count + 1;
+        }
+
+        // Track tooltip per assigned View field name (first non-empty value wins)
+        var fieldTooltips = new Dictionary<string, string>();
+        // Track fields that have conflicting tooltip values (HashSet for O(1) lookup)
+        var conflictingTooltipFields = new HashSet<string>();
+        var candidateNumbers = new Dictionary<string, int>();
+        var usedFieldNames = new HashSet<string>();
+
+        foreach (var group in componentGroups)
+        {
+            var fieldName = group.CandidateName;
+            if (candidateCounts[fieldName] > 1 || !usedFieldNames.Add(fieldName))
+            {
+                candidateNumbers.TryGetValue(group.CandidateName, out var number);
+                do
+                {
+                    number++;
+                    fieldName = group.CandidateName + number;
+                }
+                while (!usedFieldNames.Add(fieldName));
+
+                candidateNumbers[group.CandidateName] = number;
+            }
+
+            foreach (var entry in group.Entries)
+            {
+                Assign(entry, fieldName, fieldAssignments, methodAssignments);
                 var tooltip = entry.Tooltip;
                 if (string.IsNullOrEmpty(tooltip))
                 {
                     continue;
                 }
 
-                if (!fieldTooltips.ContainsKey(assignedField))
+                if (!fieldTooltips.ContainsKey(fieldName))
                 {
-                    fieldTooltips[assignedField] = tooltip;
+                    fieldTooltips[fieldName] = tooltip;
                 }
-                else if (fieldTooltips[assignedField] != tooltip)
+                else if (fieldTooltips[fieldName] != tooltip)
                 {
                     // HashSet.Add is a no-op when the element already exists
-                    conflictingTooltipFields.Add(assignedField);
+                    conflictingTooltipFields.Add(fieldName);
                 }
             }
         }
@@ -684,8 +665,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         return (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields);
     }
 
+    private static string BuildComponentFieldNameCandidate(string memberName, string componentBase)
+    {
+        var memberBase = TemplateHelpers.ToParamName(memberName);
+        return $"_{memberBase}{TemplateHelpers.ToPropertyName(componentBase)}";
+    }
+
     private static void Assign(
-        (bool IsMethod, int Index, int Id, string Tooltip) entry,
+        (bool IsMethod, int Index, string Tooltip) entry,
         string fieldName,
         string[] fieldAssignments,
         string[] methodAssignments)

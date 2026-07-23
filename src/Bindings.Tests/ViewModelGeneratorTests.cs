@@ -367,7 +367,7 @@ public sealed class PrimitiveHost
     }
 
     // -------------------------------------------------------------------------
-    // Scenario 1: multiple same-type methods with id=-1 (default) produce separate fields
+    // Multiple same-type methods use their ViewModel member names
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -396,18 +396,14 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // id=-1 with multiple Button entries splits into _button1, _button2 (Case A)
-        Assert.Contains("_button1", viewSource);
-        Assert.Contains("_button2", viewSource);
-        Assert.DoesNotContain("_button0", viewSource);
-        // TMP_Text has only one entry so uses _text (no suffix)
-        Assert.Contains("_text ", viewSource);
-        Assert.DoesNotContain("_text0", viewSource);
+        Assert.Contains("_incrementButton", viewSource);
+        Assert.Contains("_decrementButton", viewSource);
+        Assert.Contains("_countText ", viewSource);
         // Increment / Decrement each AddListener on their respective button
-        Assert.Contains("_button1.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_button1.onClick.AddListener(_viewModel.Increment)", viewSource);
-        Assert.Contains("_button2.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_button2.onClick.AddListener(_viewModel.Decrement)", viewSource);
+        Assert.Contains("_incrementButton.onClick.RemoveAllListeners", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Increment)", viewSource);
+        Assert.Contains("_decrementButton.onClick.RemoveAllListeners", viewSource);
+        Assert.Contains("_decrementButton.onClick.AddListener(_viewModel.Decrement)", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -440,13 +436,13 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // 2 entries with id=1 share the same _button1 field (Case B)
-        Assert.Contains("_button1", viewSource);
-        Assert.DoesNotContain("_button2", viewSource);
+        // The first ViewModel member names the component shared by id=1.
+        Assert.Contains("_incrementButton", viewSource);
+        Assert.DoesNotContain("_decrementButton", viewSource);
         // Both methods AddListener on the same field
-        Assert.Contains("_button1.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_button1.onClick.AddListener(_viewModel.Increment)", viewSource);
-        Assert.Contains("_button1.onClick.AddListener(_viewModel.Decrement)", viewSource);
+        Assert.Contains("_incrementButton.onClick.RemoveAllListeners", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Increment)", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Decrement)", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -477,7 +473,7 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // Scenario: single id=-1 entry produces a field without suffix
+    // A single component binding does not need a numeric suffix
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -500,12 +496,33 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // One entry per type → no numeric suffix
-        Assert.Contains("_text ", viewSource);
-        Assert.Contains("_button ", viewSource);
-        Assert.DoesNotContain("_text0", viewSource);
-        Assert.DoesNotContain("_button0", viewSource);
-        Assert.DoesNotContain("_button1", viewSource);
+        Assert.Contains("_countText ", viewSource);
+        Assert.Contains("_incrementButton ", viewSource);
+        Assert.DoesNotContain("_countText1", viewSource);
+        Assert.DoesNotContain("_incrementButton1", viewSource);
+    }
+
+    [Fact]
+    public void RepeatedComponentBindingsOnSameMemberUseNumericSuffix()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelRepeatedMember
+    {
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
+        [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
+        public void Submit() { }
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        Assert.Contains("private global::UnityEngine.UI.Button _submitButton1 = null!;", viewSource);
+        Assert.Contains("private global::UnityEngine.UI.Button _submitButton2 = null!;", viewSource);
+        Assert.DoesNotContain("private global::UnityEngine.UI.Button _submitButton = null!;", viewSource);
     }
 
     [Fact]
@@ -534,10 +551,10 @@ namespace Bindings.Sample
             vmSource.IndexOf(propertyDeclaration, System.StringComparison.Ordinal),
             vmSource.LastIndexOf(propertyDeclaration, System.StringComparison.Ordinal));
 
-        Assert.Contains("private global::UnityEngine.GameObject _gameObject = null!;", viewSource);
-        Assert.Contains("private global::UnityEngine.Behaviour _behaviour = null!;", viewSource);
-        Assert.Contains("_gameObject.SetActive(_viewModel.Active);", viewSource);
-        Assert.Contains("_behaviour.enabled = _viewModel.Active;", viewSource);
+        Assert.Contains("private global::UnityEngine.GameObject _activeGameObject = null!;", viewSource);
+        Assert.Contains("private global::UnityEngine.Behaviour _activeBehaviour = null!;", viewSource);
+        Assert.Contains("_activeGameObject.SetActive(_viewModel.Active);", viewSource);
+        Assert.Contains("_activeBehaviour.enabled = _viewModel.Active;", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -635,7 +652,7 @@ namespace Bindings.Sample
         var bnd003 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND003");
         Assert.NotNull(bnd003);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd003.Severity);
-        Assert.Contains("_button1", bnd003.GetMessage());
+        Assert.Contains("_incrementButton", bnd003.GetMessage());
 
         // View field should still be generated with the first tooltip
         var viewSource = runResult.GeneratedTrees
@@ -869,7 +886,7 @@ namespace Bindings.Sample
 
         Assert.NotNull(viewSource);
         // Direct assignment, not SetValue
-        Assert.Contains("_image.fillAmount = _viewModel.Progress;", viewSource);
+        Assert.Contains("_progressImage.fillAmount = _viewModel.Progress;", viewSource);
         Assert.DoesNotContain("SetValue", viewSource);
     }
 
@@ -894,9 +911,9 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        Assert.Contains("private global::UnityEngine.RectTransform _rectTransform = null!;", viewSource);
-        Assert.Contains("_rectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.Size.x);", viewSource);
-        Assert.Contains("_rectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.Size.y);", viewSource);
+        Assert.Contains("private global::UnityEngine.RectTransform _sizeRectTransform = null!;", viewSource);
+        Assert.Contains("_sizeRectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.Size.x);", viewSource);
+        Assert.Contains("_sizeRectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.Size.y);", viewSource);
         Assert.DoesNotContain("global::UnityEngine.RectTransform.rect", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
@@ -923,12 +940,12 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        const string fieldDeclaration = "private global::UnityEngine.RectTransform _rectTransform1 = null!;";
+        const string fieldDeclaration = "private global::UnityEngine.RectTransform _sizeRectTransform = null!;";
         Assert.Contains(fieldDeclaration, viewSource);
         Assert.Equal(viewSource.IndexOf(fieldDeclaration, System.StringComparison.Ordinal), viewSource.LastIndexOf(fieldDeclaration, System.StringComparison.Ordinal));
-        Assert.Contains("_rectTransform1.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.Size.x);", viewSource);
-        Assert.Contains("_rectTransform1.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.Size.y);", viewSource);
-        Assert.Contains("_rectTransform1.sizeDelta = _viewModel.SizeDelta;", viewSource);
+        Assert.Contains("_sizeRectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.Size.x);", viewSource);
+        Assert.Contains("_sizeRectTransform.SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.Size.y);", viewSource);
+        Assert.Contains("_sizeRectTransform.sizeDelta = _viewModel.SizeDelta;", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -955,7 +972,7 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        Assert.Contains("SetValue(_text, _viewModel.Count, \"N0\");", viewSource);
+        Assert.Contains("SetValue(_countText, _viewModel.Count, \"N0\");", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -984,15 +1001,15 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        Assert.Contains("private global::Bindings.Sample.Widget_ _widget_", viewSource);
-        Assert.Contains("_widget_.value = _viewModel.Count;", viewSource);
+        Assert.Contains("private global::Bindings.Sample.Widget_ _countWidget_", viewSource);
+        Assert.Contains("_countWidget_.value = _viewModel.Count;", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
     }
 
     // -------------------------------------------------------------------------
-    // Case C: mixed id=-1 and id≥0 entries for the same type part
+    // Mixed explicit and default ids still use ViewModel member-based names
     // -------------------------------------------------------------------------
 
     [Fact]
@@ -1004,7 +1021,6 @@ namespace Bindings.Sample
     [Bindings.ViewModel]
     public partial class CountViewModelCaseC
     {
-        // id=2 → _button2; id=-1 (unset) → _button1 (first available, skipping 2)
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 2)]
         public void Submit() { }
 
@@ -1016,11 +1032,8 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // id=2 → _button2
-        Assert.Contains("_button2", viewSource);
-        // id=-1 unset → first available integer not taken by explicit ids (1)
-        Assert.Contains("_button1", viewSource);
-        Assert.DoesNotContain("_button3", viewSource);
+        Assert.Contains("_submitButton", viewSource);
+        Assert.Contains("_cancelButton", viewSource);
     }
 
     [Fact]
@@ -1043,9 +1056,8 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        Assert.Contains("_button1.onClick.AddListener(_viewModel.Submit)", viewSource);
-        Assert.Contains("_button2.onClick.AddListener(_viewModel.Cancel)", viewSource);
-        Assert.DoesNotContain("_button3", viewSource);
+        Assert.Contains("_submitButton.onClick.AddListener(_viewModel.Submit)", viewSource);
+        Assert.Contains("_cancelButton.onClick.AddListener(_viewModel.Cancel)", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -1240,10 +1252,10 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        // Both field and method share _button1
-        Assert.Contains("_button1", viewSource);
-        Assert.DoesNotContain("_button2", viewSource);
-        Assert.Contains("_button1.onClick.AddListener(_viewModel.OnClick)", viewSource);
+        // The field is encountered first and names the shared component.
+        Assert.Contains("_interactableButton", viewSource);
+        Assert.DoesNotContain("_onClickButton", viewSource);
+        Assert.Contains("_interactableButton.onClick.AddListener(_viewModel.OnClick)", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -1760,7 +1772,7 @@ namespace Bindings.Sample
 
         Assert.NotNull(viewSource);
         // Binding path is extracted as "TMPro_TMP_Text_text" → type part "TMPro_TMP_Text", member "text"
-        Assert.Contains("_text", viewSource);
+        Assert.Contains("_countText", viewSource);
     }
 
     // -------------------------------------------------------------------------
