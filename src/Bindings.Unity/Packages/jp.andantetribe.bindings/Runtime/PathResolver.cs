@@ -8,6 +8,13 @@ namespace Bindings
     using G_UnityEngine = global::UnityEngine;
     using G_TMPro = global::TMPro;
 
+    /// <summary>
+    /// Provides refactoring-safe Unity component member paths for <see cref="SchemaAttribute"/>.
+    /// </summary>
+    /// <remarks>
+    /// Pass these constants to <see cref="SchemaAttribute"/> instead of spelling binding path strings manually.
+    /// Nested classes mirror the namespace and component type that own each bindable member.
+    /// </remarks>
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     public static class PathResolver
     {
