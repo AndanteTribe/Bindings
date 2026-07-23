@@ -11,12 +11,12 @@ internal static class DiagnosticDescriptors
 
     /// <summary>
     /// BND001: emitted when a [ViewModel] class/struct name does not contain "ViewModel".
-    /// View class name cannot be derived, so no View is generated.
+    /// Neither ViewModel nor View source is generated for the annotated type.
     /// </summary>
     public static readonly DiagnosticDescriptor Bnd001 = new(
         id: "BND001",
         title: "ViewModel type name must contain \"ViewModel\"",
-        messageFormat: "Type '{0}' is annotated with [ViewModel] but its name does not contain \"ViewModel\". No View will be generated.",
+        messageFormat: "Type '{0}' is annotated with [ViewModel] but its name does not contain \"ViewModel\". No source will be generated for this ViewModel.",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -58,12 +58,12 @@ internal static class DiagnosticDescriptors
 
     /// <summary>
     /// BND005: emitted when a field whose type is annotated with [ViewModel] is marked with
-    /// Unity's [SerializeField]. Unity may not be able to invoke the generated constructor.
+    /// Unity's [SerializeField] or [SerializeReference].
     /// </summary>
     public static readonly DiagnosticDescriptor Bnd005 = new(
         id: "BND005",
-        title: "ViewModel should not be serialized with [SerializeField]",
-        messageFormat: "Field '{0}' serializes ViewModel type '{1}' with [SerializeField]. Unity may not be able to construct this type during deserialization. Use [SerializeReference] only if reference serialization is intentional.",
+        title: "ViewModel should not be serialized by Unity",
+        messageFormat: "Field '{0}' attempts to serialize ViewModel type '{1}' with [{2}]. Generated ViewModel types are not serializable in player builds; construct or assign the ViewModel at runtime instead.",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true);

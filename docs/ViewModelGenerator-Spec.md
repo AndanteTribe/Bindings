@@ -120,17 +120,19 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 | 診断 ID | レベル | 条件 | メッセージ（案） |
 |---|---|---|---|
-| `BND001` | Error | `[ViewModel]` が付与された型名に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No View will be generated.` |
+| `BND001` | Error | `[ViewModel]` が付与された型名に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No source will be generated for this ViewModel.` |
 | `BND002` | Error | `[Schema]` の `id` に `-1` 未満の値が指定された | `[Schema] id value {id} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.` |
 | `BND003` | Error | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
 | `BND004` | Error | `[ViewModel]` 型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
-| `BND005` | Warning | `[ViewModel]` が付与された型のフィールドに Unity の `[SerializeField]` が付与されている | `Field '{fieldName}' serializes ViewModel type '{ViewModelTypeName}' with [SerializeField]. Unity may not be able to construct this type during deserialization. Use [SerializeReference] only if reference serialization is intentional.` |
+| `BND005` | Warning | `[ViewModel]` が付与された型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている | `Field '{fieldName}' attempts to serialize ViewModel type '{ViewModelTypeName}' with [{SerializationAttributeName}]. Generated ViewModel types are not serializable in player builds; construct or assign the ViewModel at runtime instead.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
+`BND001` が発生した ViewModel については、ViewModel ソースと View ソースの両方を生成しない。
+
 `BND004` が発生した ViewModel については、Generator 全体を例外で停止させず、その ViewModel の ViewModel ソースと View ソースの両方を生成しない。
 
-`BND005` は `[SerializeField]` 属性の位置に報告する。ViewModel 型に生成されるコンストラクタを Unity の値シリアライズが呼び出せない可能性を通知する警告であり、対象 ViewModel の ViewModel ソースと View ソースの生成は継続する。`[SerializeReference]` のみが付与されたフィールド、および ViewModel 内にある ViewModel 型以外の `[SerializeField]` フィールドは対象外とする。
+`BND005` は `[SerializeField]` または `[SerializeReference]` 属性の位置に報告する。ViewModel 型の `[System.Serializable]` は `UNITY_EDITOR` でのみ生成されるため、どちらの属性もプレイヤービルドで ViewModel をシリアライズする用途には適さない。ViewModel は実行時に構築または代入する。対象 ViewModel の ViewModel ソースと View ソースの生成は継続する。ViewModel 型以外のフィールドは対象外とする。
 
 ---
 
@@ -160,7 +162,9 @@ namespace {Namespace}
     // ネスト型の場合、外側から内側まで親型ごとに繰り返す
     {ContainingTypeAccessibility} partial {ContainingTypeKeyword} {ContainingTypeName}
     {
-        [global::System.Serializable]          // ※ユーザーが既に [System.Serializable] を付与している場合は省略
+#if UNITY_EDITOR
+        [global::System.Serializable]          // ※ユーザーが既に [System.Serializable] を付与している場合は、この条件付き属性全体を省略
+#endif
         {Accessibility} partial class {ClassName} : global::Bindings.IViewModel    // クラスの場合
         // {Accessibility} partial struct {ClassName} : global::Bindings.IViewModel  // 通常 struct の場合
         // {Accessibility} partial struct {ClassName} : global::Bindings.IViewModel  // readonly struct の場合
@@ -253,7 +257,7 @@ ViewModel クラス名中の `"ViewModel"` を `"View"` に置換する。
 | `CountViewModel6` | `CountView6` |
 | `MyFeatureViewModel` | `MyFeatureView` |
 
-クラス名に `"ViewModel"` が含まれない場合はアナライザー診断 `BND001` を出力する。ViewModel の partial ソースは生成するが、View クラス名を導出できないため View ソースは生成しない（セクション3参照）。
+クラス名に `"ViewModel"` が含まれない場合はアナライザー診断 `BND001` を出力し、ViewModel の partial ソースと View ソースの両方を生成しない（セクション3参照）。
 
 ### 5.2 生成ファイル名
 
@@ -475,9 +479,9 @@ partial void OnPostBind();
 
 | # | シナリオ | 入力の特徴 | ViewModel 生成の変化点 | View 生成の変化点 |
 |---|---|---|---|---|
-| 1 | simple | 通常 | `[Serializable]` 自動付与 | `BindAsync` 生成あり |
+| 1 | simple | 通常 | `UNITY_EDITOR` の場合のみ `[Serializable]` 自動付与 | `BindAsync` 生成あり |
 | 2 | requireBindImplementation | `[ViewModel(requireBindImplementation: true)]` | なし | `BindAsync` 生成なし |
-| 3 | alreadySerializable | ユーザーが `[System.Serializable]` 付与済み | `[Serializable]` 重複付与しない | なし |
+| 3 | alreadySerializable | ユーザーが `[System.Serializable]` 付与済み | 条件付きの `[Serializable]` を重複付与しない | なし |
 | 4 | no required | `[Required]` なし | コンストラクタ引数は `publisher` のみ | なし |
 | 5 | multi required | 複数 `[Required]` | コンストラクタに複数 `[Required]` 引数 | なし |
 | 6 | same id pair | 同一 `id` の `[Schema]` メソッドが複数（ケース B） | なし | 同一コンポーネントフィールドを共有。`RemoveAllListeners` は1回のみ |
