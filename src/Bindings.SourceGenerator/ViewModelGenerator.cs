@@ -21,6 +21,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
     private const string SerializeFieldAttributeFullName = "UnityEngine.SerializeField";
+    private const string SerializeReferenceAttributeFullName = "UnityEngine.SerializeReference";
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -31,14 +32,19 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 predicate: static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax,
                 transform: static (ctx, ct) => CollectGenerationContext(ctx, ct));
 
-        // Find fields that attempt to serialize a [ViewModel] type through Unity's value
-        // serialization. These fields are analyzed separately because they can be declared
-        // anywhere in the user's compilation, not only inside a ViewModel.
-        var serializedViewModelFields = context.SyntaxProvider
+        // Find fields that attempt to serialize a [ViewModel] type through Unity.
+        // These fields are analyzed separately because they can be declared anywhere
+        // in the user's compilation, not only inside a ViewModel.
+        var serializeFieldViewModelFields = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 SerializeFieldAttributeFullName,
                 predicate: static (_, _) => true,
-                transform: static (ctx, ct) => CollectSerializeFieldDiagnostic(ctx, ct));
+                transform: static (ctx, ct) => CollectSerializationDiagnostic(ctx, ct));
+        var serializeReferenceViewModelFields = context.SyntaxProvider
+            .ForAttributeWithMetadataName(
+                SerializeReferenceAttributeFullName,
+                predicate: static (_, _) => true,
+                transform: static (ctx, ct) => CollectSerializationDiagnostic(ctx, ct));
 
         // Generate partial ViewModel type and sealed partial View type for each annotated type
         context.RegisterSourceOutput(
@@ -61,25 +67,39 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             });
 
         context.RegisterSourceOutput(
-            serializedViewModelFields,
-            static (ctx, data) =>
-            {
-                if (data is { } diagnostic)
-                {
-                    ctx.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.Bnd005,
-                        diagnostic.Location,
-                        diagnostic.FieldName,
-                        diagnostic.ViewModelTypeName));
-                }
-            });
+            serializeFieldViewModelFields,
+            static (ctx, data) => ReportSerializationDiagnostic(ctx, data));
+        context.RegisterSourceOutput(
+            serializeReferenceViewModelFields,
+            static (ctx, data) => ReportSerializationDiagnostic(ctx, data));
     }
 
     /// <summary>
-    /// Returns diagnostic data when [SerializeField] is applied to a field whose type is
-    /// annotated with [ViewModel]. Other field types and non-field attribute targets are ignored.
+    /// Reports BND005 for a Unity serialization attribute applied to a [ViewModel] field.
     /// </summary>
-    private static (Location Location, string FieldName, string ViewModelTypeName)? CollectSerializeFieldDiagnostic(
+    private static void ReportSerializationDiagnostic(
+        SourceProductionContext ctx,
+        (Location Location, string FieldName, string ViewModelTypeName, string SerializationAttributeName)? data)
+    {
+        if (data is not { } diagnostic)
+        {
+            return;
+        }
+
+        ctx.ReportDiagnostic(Diagnostic.Create(
+            DiagnosticDescriptors.Bnd005,
+            diagnostic.Location,
+            diagnostic.FieldName,
+            diagnostic.ViewModelTypeName,
+            diagnostic.SerializationAttributeName));
+    }
+
+    /// <summary>
+    /// Returns diagnostic data when [SerializeField] or [SerializeReference] is applied to a
+    /// field whose type is annotated with [ViewModel]. Other field types and non-field
+    /// attribute targets are ignored.
+    /// </summary>
+    private static (Location Location, string FieldName, string ViewModelTypeName, string SerializationAttributeName)? CollectSerializationDiagnostic(
         GeneratorAttributeSyntaxContext ctx,
         CancellationToken ct)
     {
@@ -97,7 +117,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
             var location = ctx.Attributes[0].ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
                 ?? ctx.TargetNode.GetLocation();
-            return (location, field.Name, fieldType.ToDisplayString());
+            var serializationAttributeName = ctx.Attributes[0].AttributeClass?.Name ?? string.Empty;
+            return (location, field.Name, fieldType.ToDisplayString(), serializationAttributeName);
         }
 
         return null;
@@ -153,6 +174,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         if (!typeSymbol.Name.Contains("ViewModel"))
         {
             diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, new[] { typeSymbol.Name }));
+            canGenerate = false;
         }
 
         // 7. Walk members to collect [Required] / [Schema] information
@@ -686,7 +708,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// Generates the partial class or struct for the ViewModel using the <see cref="ViewModelTemplate"/>.
     ///
     /// Generated contents:
-    ///   - [global::System.Serializable] (only when not already applied by the user)
+    ///   - [global::System.Serializable] in UNITY_EDITOR (only when not already applied by the user)
     ///   - IViewModel implementation
     ///   - _publisher field
     ///   - One public property per [Schema] field (in declaration order)
@@ -705,7 +727,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
     /// <summary>
     /// Generates the sealed partial class for the View using the <see cref="ViewTemplate"/>.
-    /// Skips generation when the class name does not contain "ViewModel" (BND001 is reported in RegisterSourceOutput).
     ///
     /// Generated contents:
     ///   - [global::System.Serializable] (always emitted)
@@ -718,12 +739,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// </summary>
     private static void EmitViewSource(SourceProductionContext ctx, GenerationContext context)
     {
-        // BND001 was already reported in RegisterSourceOutput; skip View generation here
-        if (!context.ClassName.Contains("ViewModel"))
-        {
-            return;
-        }
-
         var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) =
             BuildComponentFieldAssignments(context);
 
