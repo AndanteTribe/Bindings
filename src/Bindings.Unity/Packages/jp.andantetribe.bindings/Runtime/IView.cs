@@ -6,33 +6,39 @@ using System.Threading.Tasks;
 namespace Bindings
 {
     /// <summary>
-    /// A view that can be bound to a view model of type T.
+    /// Represents a view that can be assigned a ViewModel and asked to update itself from that ViewModel.
     /// </summary>
     public interface IView
     {
         /// <summary>
-        /// Binds the view to the view model.
+        /// Updates the view from the ViewModel previously supplied to <see cref="Initialize"/>.
         /// </summary>
+        /// <param name="cancellationToken">A token that cancels the binding operation.</param>
+        /// <returns>A task-like value that completes when binding finishes.</returns>
         ValueTask BindAsync(CancellationToken cancellationToken);
 
         /// <summary>
-        /// Determines whether the view can be bound to the view model.
+        /// Determines whether this view accepts the supplied ViewModel.
         /// </summary>
-        /// <param name="viewModel">The view model to check.</param>
-        /// <returns>true if the view can be bound to the view model; otherwise, false.</returns>
+        /// <param name="viewModel">The ViewModel to check.</param>
+        /// <returns><see langword="true"/> if the view accepts the ViewModel; otherwise, <see langword="false"/>.</returns>
         bool CanBind(IViewModel viewModel);
 
         /// <summary>
-        /// Initializes the view with the given view model.
+        /// Assigns a ViewModel to this view.
         /// </summary>
-        /// <param name="viewModel">The view model to bind to the view.</param>
-        void Initialize(IViewModel  viewModel);
+        /// <param name="viewModel">The ViewModel to assign.</param>
+        void Initialize(IViewModel viewModel);
     }
 
     /// <summary>
-    /// A view that can be bound to a view model of type T.
+    /// Represents a view that accepts ViewModels of type <typeparamref name="T"/>.
     /// </summary>
-    /// <typeparam name="T">The type of the view model.</typeparam>
+    /// <typeparam name="T">The ViewModel type accepted by the view.</typeparam>
+    /// <remarks>
+    /// This interface provides default implementations of <see cref="IView.CanBind"/> and
+    /// <see cref="IView.Initialize"/> using runtime type checks against <typeparamref name="T"/>.
+    /// </remarks>
     public interface IView<in T> : IView where T : IViewModel
     {
         /// <inheritdoc />
@@ -50,9 +56,9 @@ namespace Bindings
         }
 
         /// <summary>
-        /// Initializes the view with the given view model.
+        /// Assigns a strongly typed ViewModel to this view.
         /// </summary>
-        /// <param name="viewModel">The view model to bind to the view.</param>
+        /// <param name="viewModel">The ViewModel to assign.</param>
         void Initialize(T viewModel);
     }
 }

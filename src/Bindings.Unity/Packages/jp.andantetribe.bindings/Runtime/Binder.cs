@@ -9,6 +9,14 @@ using UnityEngine;
 
 namespace Bindings
 {
+    /// <summary>
+    /// Assigns compatible ViewModels to registered views and invokes their binding operations.
+    /// </summary>
+    /// <remarks>
+    /// Register <see cref="IView"/> instances in the Inspector, call <see cref="Initialize(IViewModel)"/> for each
+    /// ViewModel, and then call <see cref="Run"/>. This component also implements <see cref="IMvvmPublisher"/> to
+    /// route rebind requests and messages to its registered views.
+    /// </remarks>
     [DefaultExecutionOrder(-1000)]
     public sealed class Binder : MonoBehaviour, IMvvmPublisher
     {
@@ -35,9 +43,12 @@ namespace Bindings
         }
 
         /// <summary>
-        /// Initializes the view with the given view models.
+        /// Assigns each supplied ViewModel to every registered view that accepts it.
         /// </summary>
-        /// <param name="viewModels"></param>
+        /// <param name="viewModels">The ViewModels to assign to compatible views.</param>
+        /// <exception cref="InvalidOperationException">
+        /// No registered view accepts one of the supplied ViewModels.
+        /// </exception>
 #if ENABLE_VCONTAINER
         [VContainer.Inject]
 #endif
@@ -50,9 +61,10 @@ namespace Bindings
         }
 
         /// <summary>
-        /// Initializes the view with the given view model.
+        /// Assigns a ViewModel to every registered view that accepts it.
         /// </summary>
-        /// <param name="viewModel">The view model to bind to the view.</param>
+        /// <param name="viewModel">The ViewModel to assign to compatible views.</param>
+        /// <exception cref="InvalidOperationException">No registered view accepts <paramref name="viewModel"/>.</exception>
         public void Initialize(IViewModel viewModel)
         {
             var found = false;
@@ -72,8 +84,12 @@ namespace Bindings
         }
 
         /// <summary>
-        /// Binds the view to the view model.
+        /// Requests cancellation of pending or active binding operations, then invokes <see cref="IView.BindAsync"/>
+        /// on every registered view with a new cancellation token.
         /// </summary>
+        /// <remarks>
+        /// This method returns after invoking each view; it does not wait for binding operations to complete.
+        /// </remarks>
         public void Run()
         {
             if (!_cancellationTokenSource.IsCancellationRequested)
