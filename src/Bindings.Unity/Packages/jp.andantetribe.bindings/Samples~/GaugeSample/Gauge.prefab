@@ -279,8 +279,8 @@ MonoBehaviour:
         _effectTransform: {fileID: 2099606363784212471}
         _gaugeAnimDuration: 1
         _decreaseAnimWaitDuration: 2
-        _text1: {fileID: 5994350644666961948}
-        _text2: {fileID: 4679664868209317112}
+        _maxText: {fileID: 5994350644666961948}
+        _currentText: {fileID: 4679664868209317112}
 --- !u!1 &4562308911133348145
 GameObject:
   m_ObjectHideFlags: 0
