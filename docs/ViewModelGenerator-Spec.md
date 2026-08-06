@@ -46,7 +46,7 @@ SourceGenerator では `AttributeData.ConstructorArguments` からこの文字�
 - **完全修飾型名（フィールド宣言用）:** `global::{型部分}`  
   例: `global::TMPro.TMP_Text`、`global::UnityEngine.UI.Button`
 - **メンバアクセス（BindAll 内）:** `_field.{メンバ名}`  
-  例: `_button.onClick`、`_toggle.interactable`
+  例: `_incrementButton.onClick`、`_enabledToggle.interactable`
 
 `"UnityEngine.RectTransform.rect.size"` は多段パスの例外であり、View のコンポーネントフィールド型が `global::UnityEngine.RectTransform` になるよう型部分を正規化する。同じ `id` を持つ `UnityEngine.RectTransform` の他のバインディング（例: `sizeDelta`）とは同一コンポーネントフィールドにグループ化する。
 
@@ -297,71 +297,54 @@ private {ViewModelFullName} _viewModel = null!;
 
 #### 5.5.1 View フィールド名の命名規則
 
-バインディングパスの「型部分」から **クラス名**（最後のドット区切りセグメント）を取り出し、以下の変換を行う。
+View フィールド名は、`[Schema]` を定義した ViewModel メンバー名と、バインディングパスの「型部分」から求めるコンポーネント名を連結して生成する。
 
-1. クラス名中の **最後の `_` より後ろの部分**を取り出す（`_` がなければクラス名全体）
-2. 先頭を小文字化する
-3. `_` をプレフィックスとして付ける
+ViewModel メンバー名は次のように正規化する。
 
-| バインディングパスの型部分 | クラス名 | フィールド名ベース |
+- フィールド: 先頭の `_` をすべて除去し、続けて `m_` があれば除去した後、先頭を小文字化する
+- メソッド: 先頭を小文字化する
+
+コンポーネント名は従来どおり次のように求め、連結用に先頭を大文字化する。
+
+1. 型部分からクラス名（最後のドット区切りセグメント）を取り出す
+2. クラス名中の最後の `_` より後ろの部分を取り出す（末尾が `_` の場合はクラス名全体へフォールバック）
+3. 先頭を大文字化する
+
+最終的な候補名は `_{memberBase}{ComponentBase}`。
+
+| ViewModel メンバー | バインディングパスの型部分 | フィールド名候補 |
 |---|---|---|
-| `TMPro.TMP_Text` | `TMP_Text` | `Text` → `_text` |
-| `UnityEngine.UI.Button` | `Button` | `Button` → `_button` |
-| `UnityEngine.UI.Toggle` | `Toggle` | `Toggle` → `_toggle` |
+| `_count` | `TMPro.TMP_Text` | `_countText` |
+| `Increment` | `UnityEngine.UI.Button` | `_incrementButton` |
+| `m_IsOn` | `UnityEngine.UI.Toggle` | `_isOnToggle` |
 
 #### 5.5.2 コンポーネントの連番付与ルール
 
-`id` のデフォルト値は `-1`（未指定）。ユーザーが `id ≥ 0` を指定した場合は明示的 id。同一コンポーネント型（型部分が同じ）のスキーマをグループ化し、以下の3ケースで処理する。
+`id` のデフォルト値は `-1`（未指定）。同一の型部分かつ同じ明示的 `id ≥ 0` を持つ `[Schema]` エントリは、従来どおり1つのコンポーネントフィールドを共有する。`id=-1` の各エントリは独立したコンポーネントとして扱う。
 
-> **id 共有の原則（非 -1 の場合）:** `[Schema]` フィールドと `[Schema]` メソッドが同じ型部分かつ同じ `id ≥ 0` を持つ場合、View 内で同一コンポーネントフィールドを共有する。例えば、フィールド `[Schema("Button.interactable", id: 1)]` とメソッド `[Schema("Button.onClick", id: 1)]` は両方とも `_button1` を参照する。
+明示的 id で共有されるグループの候補名には、フィールド→メソッドの収集順で最初のエントリの ViewModel メンバー名を使う。id の値自体はフィールド名へ直接付加しない。
 
-> **id=-1 の場合:** 各エントリは独立して扱われる（他の id=-1 エントリとの共有はない）。同一型内でそれぞれ別のフィールドに割り当てられる。
-
-**ケース A: 同一型のスキーマがすべて id=-1（明示的 id なし）**
-
-| 同一型の総スキーマ数 | フィールド名 |
-|---|---|
-| 1つ | `_{base}`（連番なし）例: `_text`、`_toggle` |
-| 2つ以上 | `_{base}1`, `_{base}2`, ...（出現順に1から連番）例: `_button1`, `_button2` |
+論理コンポーネントグループごとに 5.5.1 の候補名を求め、同じ候補名が1つだけなら連番を付けない。同じ候補名を持つ独立グループが複数ある場合のみ、出現順に `1`, `2`, ... を付ける。生成済みの別候補名と衝突する場合も、未使用の番号まで進める。
 
 ```
-// ケース A-1: テキストが1つ → _text
-[Schema("TMPro.TMP_Text.text")]
+// メンバー名が異なる独立ボタン → 連番なし
+[Schema("UnityEngine.UI.Button.onClick")]
+public void Increment() {}  // → _incrementButton
 
-// ケース A-2: ボタンが2つ（両方 id=-1） → _button1, _button2（それぞれ独立したフィールド）
-[Schema("UnityEngine.UI.Button.onClick")]   // → _button1
-[Schema("UnityEngine.UI.Button.onClick")]   // → _button2
-```
+[Schema("UnityEngine.UI.Button.onClick")]
+public void Decrement() {}  // → _decrementButton
 
-**ケース B: 同一型のスキーマがすべて明示的 id（id ≥ 0）**
+// 同じメンバーに同型の独立コンポーネントが2つ → 連番あり
+[Schema("UnityEngine.UI.Button.onClick")]
+[Schema("UnityEngine.UI.Button.onClick")]
+public void Submit() {}     // → _submitButton1, _submitButton2
 
-- 同じ `id` を持つスキーマはすべて同一フィールドを共有する（`[Schema]` フィールドと `[Schema]` メソッドが混在してもよい）
-- フィールド名: `_{base}{N}`（例: `_button0`、`_button1`、`_button2`）
+// 同じ明示的 id を共有 → 最初のメンバー名による1フィールド
+[Schema("UnityEngine.UI.Button.onClick", id: 1)]
+public void Accept() {}     // → _acceptButton
 
-```
-// ケース B-1: id=1 と id=2 のボタン → _button1, _button2
-[Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1
-[Schema("UnityEngine.UI.Button.onClick", id: 1)]  // → _button1（同一フィールドを共有）
-[Schema("UnityEngine.UI.Button.onClick", id: 2)]  // → _button2
-
-// ケース B-2: フィールドとメソッドが同じ id → 共有
-[Schema("UnityEngine.UI.Button.interactable", id: 1)]  // フィールド → _button1
-[Schema("UnityEngine.UI.Button.onClick", id: 1)]        // メソッド → _button1（同一フィールドを共有）
-
-// id=0 は明示的な 0 番グループとして扱われる
-[Schema("UnityEngine.UI.Button.onClick", id: 0)]  // → _button0
-```
-
-**ケース C: id=-1（未指定）と明示的 id（≥ 0）が混在**
-
-- 明示的 id（≥ 0）のスキーマ → `_{base}{N}`
-- id=-1（未指定）のスキーマ → 明示的 id と重複しない最小の正整数を出現順に割り当て（1から順にスキップしながら）
-
-```
-// ケース C: 未指定2つ + id=2 のボタン → _button1, _button2（id=2と共有）, _button3
-[Schema("UnityEngine.UI.Button.onClick")]           // id=-1 → 未使用の最小番 → _button1
-[Schema("UnityEngine.UI.Button.onClick", id: 2)]    // id=2  → _button2
-[Schema("UnityEngine.UI.Button.onClick")]           // id=-1 → 次の未使用番 → _button3
+[Schema("UnityEngine.UI.Button.onClick", id: 1)]
+public void Confirm() {}    // → _acceptButton（同一フィールドを共有）
 ```
 
 #### 5.5.3 フィールド宣言

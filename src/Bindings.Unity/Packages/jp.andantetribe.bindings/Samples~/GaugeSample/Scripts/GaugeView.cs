@@ -45,7 +45,7 @@ namespace Bindings.Sample
             _valueChangeSource?.Dispose();
 
             // テキストの現在値は即更新.
-            _text2.SetValue(_viewModel.Current);
+            _currentText.SetValue(_viewModel.Current);
 
             _valueChangeSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             cancellationToken = _valueChangeSource.Token;
