@@ -18,6 +18,11 @@
             "name": "jp.hadashikick.vcontainer",
             "expression": "",
             "define": "ENABLE_VCONTAINER"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "2.6.0",
+            "define": "UGUI2_6_0_OR_GREATER"
         }
     ],
     "noEngineReferences": false
