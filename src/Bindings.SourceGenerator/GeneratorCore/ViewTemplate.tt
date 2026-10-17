@@ -53,7 +53,7 @@ namespace <#= Context.Namespace #>
 }
 <# } #>
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
 <# if (HasNamespace) { #>
 namespace <#= Context.Namespace #>
 {

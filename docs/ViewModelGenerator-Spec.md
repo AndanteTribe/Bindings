@@ -442,7 +442,7 @@ partial void OnPostBind();
 データバインド（フィールド）のみ再バインドし、イベントバインド（メソッド）は行わない。
 
 ```csharp
-#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
     {Accessibility} sealed partial class {ViewClassName} : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
     {
         void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(
