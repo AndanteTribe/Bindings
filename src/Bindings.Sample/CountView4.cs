@@ -42,7 +42,7 @@
 //         partial void OnPostBind();
 //     }
 //
-// #if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+// #if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
 //     public sealed partial class CountView4 : IMvvmSubscriber<global::Bindings.DebugBindMessage>
 //     {
 //         void IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)

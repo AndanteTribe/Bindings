@@ -76,7 +76,7 @@ namespace Bindings.GeneratorCore {
  if (HasNamespace) { 
             this.Write("}\n");
  } 
-            this.Write("\n#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT\n");
+            this.Write("\n#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT\n");
  if (HasNamespace) { 
             this.Write("namespace ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));

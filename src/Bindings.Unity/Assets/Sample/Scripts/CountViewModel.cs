@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Threading;
@@ -104,16 +104,16 @@ namespace Bindings.Sample
     //     partial void OnPostBind();
     // }
 
-// #if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
-//     public sealed partial class CountView : IMvvmSubscriber<global::Bindings.DebugBindMessage>
-//     {
-//         void IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
-//         {
-//             message.BindTo(this);
-//             _text.SetValue(_viewModel.Count);
-//             OnPostBind();
-//             _viewModel.NotifyCompletedBind();
-//         }
-//     }
-// #endif
+    // #if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
+    //     public sealed partial class CountView : IMvvmSubscriber<global::Bindings.DebugBindMessage>
+    //     {
+    //         void IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
+    //         {
+    //             message.BindTo(this);
+    //             _text.SetValue(_viewModel.Count);
+    //             OnPostBind();
+    //             _viewModel.NotifyCompletedBind();
+    //         }
+    //     }
+    // #endif
 }

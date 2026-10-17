@@ -167,7 +167,7 @@ namespace MyApp
         partial void OnPostBind();
     }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD || !DISABLE_DEBUGTOOLKIT
+#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
     public sealed partial class CounterView : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
     {
         void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(

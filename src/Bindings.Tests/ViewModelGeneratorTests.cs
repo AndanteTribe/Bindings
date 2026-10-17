@@ -227,6 +227,34 @@ namespace UnityEngine.UI
             .ToArray();
     }
 
+    [Theory]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, true)]
+    public void DebugToolkitSubscriberFollowsEditorAndDisableSymbols(bool editor, bool disabled, bool expected)
+    {
+        var (_, viewSource) = RunGenerator("[Bindings.ViewModel] public partial class CounterViewModel { }");
+        Assert.NotNull(viewSource);
+        Assert.Contains("#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT", viewSource);
+
+        var symbols = new List<string>();
+        if (editor)
+        {
+            symbols.Add("UNITY_EDITOR");
+        }
+        if (disabled)
+        {
+            symbols.Add("DISABLE_DEBUGTOOLKIT");
+        }
+
+        var tree = CSharpSyntaxTree.ParseText(viewSource, new CSharpParseOptions(preprocessorSymbols: symbols));
+        var hasSubscriber = tree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>()
+            .Any(declaration => declaration.BaseList?.Types.Any(type =>
+                type.Type.ToString().Contains("IMvvmSubscriber<global::Bindings.DebugBindMessage>")) == true);
+        Assert.Equal(expected, hasSubscriber);
+    }
+
     [Fact]
     public void BND004UnsupportedAccessibilityProducesDiagnosticData()
     {

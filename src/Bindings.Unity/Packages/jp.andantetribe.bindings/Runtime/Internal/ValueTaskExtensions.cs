@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Runtime.CompilerServices;
@@ -22,9 +22,10 @@ namespace Bindings.Internal
                 }
                 catch (Exception ex)
                 {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.LogException(ex);
-#endif
+                    if (Debug.isDebugBuild)
+                    {
+                        Debug.LogException(ex);
+                    }
                 }
             }
             else
@@ -73,9 +74,10 @@ namespace Bindings.Internal
                 }
                 catch (Exception ex)
                 {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                    Debug.LogException(ex);
-#endif
+                    if (Debug.isDebugBuild)
+                    {
+                        Debug.LogException(ex);
+                    }
                 }
                 finally
                 {
