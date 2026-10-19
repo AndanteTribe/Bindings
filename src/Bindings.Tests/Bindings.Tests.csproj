@@ -28,7 +28,6 @@
     <ItemGroup>
         <ProjectReference Include="..\Bindings.SourceGenerator\Bindings.SourceGenerator.csproj"/>
         <Compile Include="..\Bindings.Unity\Packages\jp.andantetribe.bindings\Runtime\TextMeshProExtensions.cs" Link="Runtime\TextMeshProExtensions.cs"/>
-        <Compile Include="..\Bindings.Unity\Packages\jp.andantetribe.bindings\Runtime\Internal\ValueTaskExtensions.cs" Link="Runtime\Internal\ValueTaskExtensions.cs"/>
     </ItemGroup>
 
     <ItemGroup>
