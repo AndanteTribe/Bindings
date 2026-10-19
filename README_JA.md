@@ -295,7 +295,7 @@ scrollViewModel.ScrollRatio = 0.5f;
 | `SingleAxisVirtualScrollViewModel.Publishers` | 表示順に並べた項目Publisher。 |
 | `SingleAxisVirtualScrollViewModel.ScrollRatio` | 最後に要求した位置。0が上端／左端、1が下端／右端です。代入値はこの範囲に制限され、`NaN` は `ArgumentOutOfRangeException` になります。ユーザー操作によるスクロールでは更新されません。 |
 | `ScrollItemMvvmPublisher.Create(out ViewModelContainer)` | 項目Publisherを生成し、ViewModel登録用コンテナを返します。 |
-| `ScrollItemMvvmPublisher.ViewModelContainer.Regist(IViewModel)` | 項目へViewModelを追加します。 |
+| `ScrollItemMvvmPublisher.ViewModelContainer.Register(IViewModel)` | 項目へViewModelを追加します。 |
 
 項目Publisherがメッセージや再バインド要求を転送するのは、その項目にBinderが割り当てられている間だけです。非表示中のメッセージは無視されるため、表示時に再バインドできるよう、保持すべきUI状態は項目ViewModelに保存してください。
 

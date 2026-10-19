@@ -77,7 +77,7 @@ namespace Bindings
             /// Adds a ViewModel to this scroll item.
             /// </summary>
             /// <param name="viewModel">The ViewModel constructed using the item's publisher.</param>
-            public void Regist(IViewModel viewModel) => _viewModels.Add(viewModel);
+            public void Register(IViewModel viewModel) => _viewModels.Add(viewModel);
         }
     }
 }

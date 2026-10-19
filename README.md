@@ -275,7 +275,7 @@ var publishers = new ScrollItemMvvmPublisher[models.Length];
 for (var i = 0; i < models.Length; i++)
 {
     var publisher = ScrollItemMvvmPublisher.Create(out var item);
-    item.Regist(new CounterViewModel(models[i], publisher));
+    item.Register(new CounterViewModel(models[i], publisher));
     publishers[i] = publisher;
 }
 
@@ -295,7 +295,7 @@ Call `Regist` multiple times when an item has multiple ViewModels. Only initiali
 | `SingleAxisVirtualScrollViewModel.Publishers` | Item publishers in display order. |
 | `SingleAxisVirtualScrollViewModel.ScrollRatio` | Last requested position: 0 is the top/left, 1 is the bottom/right. Assignments are clamped to this range; `NaN` throws `ArgumentOutOfRangeException`. User scrolling does not update this value. |
 | `ScrollItemMvvmPublisher.Create(out ViewModelContainer)` | Creates an item publisher and returns a container for registering its ViewModels. |
-| `ScrollItemMvvmPublisher.ViewModelContainer.Regist(IViewModel)` | Adds a ViewModel to the item. |
+| `ScrollItemMvvmPublisher.ViewModelContainer.Register(IViewModel)` | Adds a ViewModel to the item. |
 
 Item publishers forward messages and rebind requests only while their item has an assigned Binder. Messages sent while the item is not displayed are ignored; keep persistent UI state in the item ViewModels so it can be rebound when the item becomes visible.
 
