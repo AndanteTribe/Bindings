@@ -254,6 +254,51 @@ public class GameLifetimeScope : LifetimeScope
 }
 ```
 
+## Single-Axis Virtual Scrolling
+
+`SingleAxisVirtualScrollView` displays a vertical or horizontal list while reusing a limited number of item Binders as items enter and leave the viewport. Source generation is not required for the scroll ViewModel itself.
+
+### Inspector Setup
+
+1. Add `SingleAxisVirtualScrollView` to the outer Binder's **Views** list.
+2. Assign **Scroll Rect**, with a viewport and content configured, and enable exactly one direction: **Vertical** or **Horizontal**.
+3. Assign **Item Prefab**, a Binder prefab whose Views accept the item ViewModels. Give its RectTransform a positive, fixed size along the scroll axis.
+4. Set **Spacing** as needed. The view sizes the content and positions items automatically; avoid layout components that overwrite those values.
+
+### Creating Items
+
+Create one `ScrollItemMvvmPublisher` per logical item and register that item's ViewModels with the returned container. Pass the item's publisher—not the outer Binder—to each item ViewModel's constructor.
+
+```csharp
+// models is a CounterModel[] in display order; binder is the outer Binder.
+var publishers = new ScrollItemMvvmPublisher[models.Length];
+for (var i = 0; i < models.Length; i++)
+{
+    var publisher = ScrollItemMvvmPublisher.Create(out var item);
+    item.Register(new CounterViewModel(models[i], publisher));
+    publishers[i] = publisher;
+}
+
+var scrollViewModel = new SingleAxisVirtualScrollViewModel(publishers, binder);
+binder.Initialize(scrollViewModel);
+binder.Run();
+
+scrollViewModel.ScrollRatio = 0.5f;
+```
+
+Call `Regist` multiple times when an item has multiple ViewModels. Only initialize the outer Binder with the scroll ViewModel; item ViewModels are assigned to the reused item Binders automatically.
+
+### Public API
+
+| API | Description |
+|-----|-------------|
+| `SingleAxisVirtualScrollViewModel.Publishers` | Item publishers in display order. |
+| `SingleAxisVirtualScrollViewModel.ScrollRatio` | Last requested position: 0 is the top/left, 1 is the bottom/right. Assignments are clamped to this range; `NaN` throws `ArgumentOutOfRangeException`. User scrolling does not update this value. |
+| `ScrollItemMvvmPublisher.Create(out ViewModelContainer)` | Creates an item publisher and returns a container for registering its ViewModels. |
+| `ScrollItemMvvmPublisher.ViewModelContainer.Register(IViewModel)` | Adds a ViewModel to the item. |
+
+Item publishers forward messages and rebind requests only while their item has an assigned Binder. Messages sent while the item is not displayed are ignored; keep persistent UI state in the item ViewModels so it can be rebound when the item becomes visible.
+
 ## Attributes
 
 ### `[ViewModel]`
