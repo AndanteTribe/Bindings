@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -130,6 +133,32 @@ namespace UnityEngine.UI
     public class Image { public float fillAmount { get; set; } }
 }
 ";
+
+    [Fact]
+    public void RegisterViewModel_UsesBinderAsIMvvmPublisher()
+    {
+        var sourceFile = FindRepoFile("src/Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/External/VContainerExtensions.cs");
+        var source = File.ReadAllText(sourceFile);
+
+        Assert.Matches(@"WithParameter<\s*IMvvmPublisher\s*>\s*\(\s*binder\s*\)", source);
+    }
+
+    private static string FindRepoFile(string relativePath)
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null)
+        {
+            var candidate = Path.Combine(directory.FullName, relativePath);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            directory = directory.Parent;
+        }
+
+        throw new FileNotFoundException($"Could not locate '{relativePath}' from test output directory.");
+    }
 
     private static (string? ViewModelSource, string? ViewSource) RunGenerator(string userCode) =>
         RunGenerator(userCode, out _);

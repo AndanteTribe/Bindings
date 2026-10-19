@@ -23,7 +23,7 @@ namespace Bindings
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static RegistrationBuilder RegisterViewModel<T>(this IContainerBuilder builder, Binder binder, Lifetime lifetime = Lifetime.Scoped) where T : IViewModel
         {
-            return builder.Register<T>(lifetime).As<IViewModel>().WithParameter(binder);
+            return builder.Register<T>(lifetime).As<IViewModel>().WithParameter<IMvvmPublisher>(binder);
         }
     }
 }
