@@ -78,14 +78,14 @@ public class ValueTaskExtensionsTests
         {
             _exception = new OperationCanceledException(cancellationToken);
             _status = ValueTaskSourceStatus.Canceled;
-            _continuation?.Invoke(_state);
+            InvokeContinuationIfRegistered();
         }
 
         public void SetException(Exception exception)
         {
             _exception = exception;
             _status = ValueTaskSourceStatus.Faulted;
-            _continuation?.Invoke(_state);
+            InvokeContinuationIfRegistered();
         }
 
         public void GetResult(short token)
@@ -109,8 +109,28 @@ public class ValueTaskExtensionsTests
 
         public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
         {
+            if (_status != ValueTaskSourceStatus.Pending)
+            {
+                continuation(state);
+                return;
+            }
+
             _continuation = continuation;
             _state = state;
+        }
+
+        private void InvokeContinuationIfRegistered()
+        {
+            var continuation = _continuation;
+            if (continuation == null)
+            {
+                return;
+            }
+
+            var state = _state;
+            _continuation = null;
+            _state = null;
+            continuation(state);
         }
     }
 }
