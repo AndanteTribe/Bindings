@@ -39,7 +39,7 @@ namespace <#= Context.Namespace #>
 <# } #>
         _publisher = publisher;
 <# if (!Context.IsStruct) { #>
-        OnAfterConstruct();
+        OnPostConstruct();
 <# } #>
     }
 
@@ -48,7 +48,7 @@ namespace <#= Context.Namespace #>
     partial void OnPostBind();
 <# if (!Context.IsStruct) { #>
 
-    partial void OnAfterConstruct();
+    partial void OnPostConstruct();
 <# } #>
 
     [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

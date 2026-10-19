@@ -69,12 +69,12 @@ namespace Bindings.GeneratorCore {
  } 
             this.Write("        _publisher = publisher;\n");
  if (!Context.IsStruct) { 
-            this.Write("        OnAfterConstruct();\n");
+            this.Write("        OnPostConstruct();\n");
  } 
             this.Write("    }\n\n    public void NotifyCompletedBind() => OnPostBind();\n\n    partial void O" +
                     "nPostBind();\n");
  if (!Context.IsStruct) { 
-            this.Write("\n    partial void OnAfterConstruct();\n");
+            this.Write("\n    partial void OnPostConstruct();\n");
  } 
             this.Write("\n    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.C" +
                     "ompilerServices.MethodImplOptions.AggressiveInlining)]\n    private void PublishR" +

@@ -225,13 +225,13 @@ public {ClassName}(
     {fieldName2} = {paramName2};
     ...
     _publisher = publisher;
-    OnAfterConstruct();    // class のみ
+    OnPostConstruct();    // class のみ
 }
 ```
 
 `[Required]` フィールドが0個の場合は `publisher` 引数のみ。
 
-クラスの場合のみ、生成コンストラクタの末尾で `partial void OnAfterConstruct();` を呼び出す。これにより、`[Required]` メンバと `_publisher` の初期化完了後に1回だけ追加の初期化処理を実行できる。構造体では definite-assignment の制約を避けるため、このフックを生成しない。
+クラスの場合のみ、生成コンストラクタの末尾で `partial void OnPostConstruct();` を呼び出す。これにより、`[Required]` メンバと `_publisher` の初期化完了後に1回だけ追加の初期化処理を実行できる。構造体では definite-assignment の制約を避けるため、このフックを生成しない。
 
 ### 4.5 ヘルパーメソッド
 
@@ -240,7 +240,7 @@ public void NotifyCompletedBind() => OnPostBind();
 
 partial void OnPostBind();
 
-partial void OnAfterConstruct();    // class のみ
+partial void OnPostConstruct();    // class のみ
 
 [global::System.Runtime.CompilerServices.MethodImpl(
     global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]

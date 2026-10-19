@@ -1239,7 +1239,7 @@ namespace Bindings.Sample
     }
 
     [Fact]
-    public void ClassGeneratesOnAfterConstructHook()
+    public void ClassGeneratesOnPostConstructHook()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -1258,7 +1258,7 @@ namespace Bindings.Sample
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
 
-        partial void OnAfterConstruct()
+        partial void OnPostConstruct()
         {
             _count = _model.Count;
         }
@@ -1269,15 +1269,15 @@ namespace Bindings.Sample
 
         Assert.NotNull(vmSource);
         Assert.Contains("_publisher = publisher;", vmSource);
-        Assert.Contains("OnAfterConstruct();", vmSource);
-        Assert.Contains("partial void OnAfterConstruct();", vmSource);
+        Assert.Contains("OnPostConstruct();", vmSource);
+        Assert.Contains("partial void OnPostConstruct();", vmSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
     }
 
     [Fact]
-    public void StructDoesNotGenerateOnAfterConstructHook()
+    public void StructDoesNotGenerateOnPostConstructHook()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -1293,7 +1293,7 @@ namespace Bindings.Sample
         var (vmSource, _) = RunGenerator(userCode);
 
         Assert.NotNull(vmSource);
-        Assert.DoesNotContain("OnAfterConstruct", vmSource);
+        Assert.DoesNotContain("OnPostConstruct", vmSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
