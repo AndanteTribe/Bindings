@@ -38,11 +38,18 @@ namespace <#= Context.Namespace #>
         <#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
 <# } #>
         _publisher = publisher;
+<# if (!Context.IsStruct) { #>
+        OnAfterConstruct();
+<# } #>
     }
 
     public void NotifyCompletedBind() => OnPostBind();
 
     partial void OnPostBind();
+<# if (!Context.IsStruct) { #>
+
+    partial void OnAfterConstruct();
+<# } #>
 
     [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private void PublishRebindMessage()

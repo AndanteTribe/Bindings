@@ -1238,6 +1238,66 @@ namespace Bindings.Sample
         Assert.Contains("model,", vmSource);
     }
 
+    [Fact]
+    public void ClassGeneratesOnAfterConstructHook()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    public sealed class CounterModel
+    {
+        public int Count { get; } = 1;
+    }
+
+    [Bindings.ViewModel]
+    public partial class CountViewModelAfterConstruct
+    {
+        [Bindings.Required]
+        private readonly CounterModel _model;
+
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private int _count;
+
+        partial void OnAfterConstruct()
+        {
+            _count = _model.Count;
+        }
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.Contains("_publisher = publisher;\n        OnAfterConstruct();", vmSource);
+        Assert.Contains("partial void OnAfterConstruct();", vmSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
+    [Fact]
+    public void StructDoesNotGenerateOnAfterConstructHook()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial struct CountViewModelStructAfterConstruct
+    {
+        [Bindings.Required]
+        private readonly object _model;
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.DoesNotContain("OnAfterConstruct", vmSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
     // -------------------------------------------------------------------------
     // BND002 on a method schema with id < -1
     // -------------------------------------------------------------------------

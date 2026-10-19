@@ -102,11 +102,14 @@ namespace MyApp
         {
             _model = model;
             _publisher = publisher;
+            OnAfterConstruct();
         }
 
         public void NotifyCompletedBind() => OnPostBind();
 
         partial void OnPostBind();
+
+        partial void OnAfterConstruct();
 
         [global::System.Runtime.CompilerServices.MethodImpl(
             global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -264,6 +267,8 @@ public class GameLifetimeScope : LifetimeScope
 ### `[Required]`
 
 フィールドまたはプロパティに付与し、生成されるコンストラクタの引数として追加します。生成されるコンストラクタはそのフィールドの型の引数を受け取り、代入します。
+
+ViewModel クラスでは、生成コンストラクタはすべての `[Required]` メンバと内部の `IMvvmPublisher` を代入した後に `partial void OnAfterConstruct();` を呼び出します。コンストラクタと競合する独自実装を追加する代わりに、このフックを partial クラス側で実装して一度だけ必要な初期化を行ってください。
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 

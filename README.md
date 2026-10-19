@@ -102,11 +102,14 @@ namespace MyApp
         {
             _model = model;
             _publisher = publisher;
+            OnAfterConstruct();
         }
 
         public void NotifyCompletedBind() => OnPostBind();
 
         partial void OnPostBind();
+
+        partial void OnAfterConstruct();
 
         [global::System.Runtime.CompilerServices.MethodImpl(
             global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -264,6 +267,8 @@ Applied to a `partial` class or struct to mark it as a ViewModel and trigger sou
 ### `[Required]`
 
 Applied to a field or property to include it as a parameter in the generated constructor. The generated constructor will accept a parameter of the field's type and assign it.
+
+For ViewModel classes, the generated constructor also calls `partial void OnAfterConstruct();` after all `[Required]` members and the internal `IMvvmPublisher` have been assigned. Implement this hook in your partial class for one-time post-construction initialization instead of defining a competing constructor.
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 
