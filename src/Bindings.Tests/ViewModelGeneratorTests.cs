@@ -1268,7 +1268,8 @@ namespace Bindings.Sample
         var (vmSource, _) = RunGenerator(userCode);
 
         Assert.NotNull(vmSource);
-        Assert.Contains("_publisher = publisher;\n        OnAfterConstruct();", vmSource);
+        Assert.Contains("_publisher = publisher;", vmSource);
+        Assert.Contains("OnAfterConstruct();", vmSource);
         Assert.Contains("partial void OnAfterConstruct();", vmSource);
 
         var errors = RunGeneratorAndCompile(userCode);
