@@ -27,7 +27,7 @@ public class ValueTaskExtensionsTests
         var valueTaskSource = new TestValueTaskSource();
 
         valueTaskSource.CreateValueTask().Forget();
-        valueTaskSource.SetException(new OperationCanceledException());
+        valueTaskSource.SetCanceled(new CancellationToken(canceled: true));
 
         await valueTaskSource.GetResultCalled;
 
@@ -65,24 +65,40 @@ public class ValueTaskExtensionsTests
     private sealed class TestValueTaskSource : IValueTaskSource
     {
         private readonly TaskCompletionSource<bool> _getResultCalled = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        private ManualResetValueTaskSourceCore<bool> _source;
-
-        public TestValueTaskSource()
-        {
-            _source.RunContinuationsAsynchronously = true;
-        }
+        private Exception? _exception;
+        private Action<object?>? _continuation;
+        private object? _state;
+        private ValueTaskSourceStatus _status;
 
         public Task GetResultCalled => _getResultCalled.Task;
 
-        public ValueTask CreateValueTask() => new(this, _source.Version);
+        public ValueTask CreateValueTask() => new(this, token: 0);
 
-        public void SetException(Exception exception) => _source.SetException(exception);
+        public void SetCanceled(CancellationToken cancellationToken)
+        {
+            _exception = new OperationCanceledException(cancellationToken);
+            _status = ValueTaskSourceStatus.Canceled;
+            _continuation?.Invoke(_state);
+        }
+
+        public void SetException(Exception exception)
+        {
+            _exception = exception;
+            _status = ValueTaskSourceStatus.Faulted;
+            _continuation?.Invoke(_state);
+        }
 
         public void GetResult(short token)
         {
             try
             {
-                _source.GetResult(token);
+                switch (_status)
+                {
+                    case ValueTaskSourceStatus.Canceled:
+                        throw _exception!;
+                    case ValueTaskSourceStatus.Faulted:
+                        throw _exception!;
+                }
             }
             finally
             {
@@ -90,9 +106,12 @@ public class ValueTaskExtensionsTests
             }
         }
 
-        public ValueTaskSourceStatus GetStatus(short token) => _source.GetStatus(token);
+        public ValueTaskSourceStatus GetStatus(short token) => _status;
 
-        public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags) =>
-            _source.OnCompleted(continuation, state, token, flags);
+        public void OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
+        {
+            _continuation = continuation;
+            _state = state;
+        }
     }
 }
