@@ -8,8 +8,15 @@ using UnityEngine.UI;
 
 namespace Bindings
 {
+    /// <summary>
+    /// Displays a single-axis list by reusing item Binders as items enter and leave the viewport.
+    /// </summary>
+    /// <remarks>
+    /// Add this view to a Binder and configure its item Binder prefab, spacing, and ScrollRect in the Inspector.
+    /// Enable exactly one ScrollRect direction and use a prefab with a positive size along that axis.
+    /// </remarks>
     [Serializable]
-    public sealed class SingleAxisVirtualScrollView : IView<SingleAxisVirtualScrollViewModel>, IMvvmSubscriber<ScrollToRatioMessage>
+    public sealed class SingleAxisVirtualScrollView : IView<SingleAxisVirtualScrollViewModel>, IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>
     {
         [SerializeField]
         private Binder _itemPrefab = null!;
@@ -59,7 +66,8 @@ namespace Bindings
             OnScrollValueChanged(default);
         }
 
-        void IMvvmSubscriber<ScrollToRatioMessage>.OnReceivedMessage(ScrollToRatioMessage message)
+        void IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>.OnReceivedMessage(
+            SingleAxisVirtualScrollViewModel.ScrollToRatioMessage message)
         {
             if (!_boundPublishers.IsEmpty)
             {

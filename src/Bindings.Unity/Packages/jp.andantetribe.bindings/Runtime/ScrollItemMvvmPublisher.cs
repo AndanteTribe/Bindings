@@ -4,6 +4,10 @@ using System.Collections.Generic;
 
 namespace Bindings
 {
+    /// <summary>
+    /// Routes an individual virtual scroll item's ViewModel messages to its currently assigned Binder.
+    /// </summary>
+    /// <remarks>Messages are ignored while no Binder is assigned to the item.</remarks>
     public sealed class ScrollItemMvvmPublisher : IMvvmPublisher
     {
         private readonly IReadOnlyList<IViewModel> _viewModels;
@@ -30,6 +34,11 @@ namespace Bindings
             }
         }
 
+        /// <summary>
+        /// Creates an item publisher and a container for registering the item's ViewModels.
+        /// </summary>
+        /// <param name="container">The container to populate with ViewModels constructed using the returned publisher.</param>
+        /// <returns>The publisher shared by the item's ViewModels.</returns>
         public static ScrollItemMvvmPublisher Create(out ViewModelContainer container)
         {
             var viewModels = new List<IViewModel>();
@@ -37,6 +46,7 @@ namespace Bindings
             return new ScrollItemMvvmPublisher(viewModels);
         }
 
+        /// <inheritdoc />
         void IMvvmPublisher.PublishRebindMessage<T>()
         {
             if (Binder != null)
@@ -45,6 +55,7 @@ namespace Bindings
             }
         }
 
+        /// <inheritdoc />
         void IMvvmPublisher.Publish<T>(T message)
         {
             if (Binder != null)
@@ -53,12 +64,19 @@ namespace Bindings
             }
         }
 
+        /// <summary>
+        /// Registers the ViewModels assigned to a virtual scroll item's Binder when the item becomes visible.
+        /// </summary>
         public readonly ref struct ViewModelContainer
         {
             private readonly List<IViewModel> _viewModels;
 
             internal ViewModelContainer(List<IViewModel> viewModels) => _viewModels = viewModels;
 
+            /// <summary>
+            /// Adds a ViewModel to this scroll item.
+            /// </summary>
+            /// <param name="viewModel">The ViewModel constructed using the item's publisher.</param>
             public void Regist(IViewModel viewModel) => _viewModels.Add(viewModel);
         }
     }
