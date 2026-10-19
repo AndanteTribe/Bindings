@@ -500,6 +500,30 @@ namespace Bindings.Sample
         Assert.DoesNotContain("set", vmSource);
     }
 
+    [Fact]
+    public void NullableReferenceSchemaFieldPreservesNullablePropertyType()
+    {
+        const string userCode = @"
+#nullable enable
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class CountViewModelNullableText
+    {
+        [Bindings.Schema(""TMPro.TMP_Text.text"")]
+        private string? _rightButtonText;
+    }
+}";
+
+        var (vmSource, _) = RunGenerator(userCode);
+
+        Assert.NotNull(vmSource);
+        Assert.Contains("public string? RightButtonText", vmSource);
+
+        var errors = RunGeneratorAndCompile(userCode);
+        Assert.Empty(errors);
+    }
+
     // -------------------------------------------------------------------------
     // A single component binding does not need a numeric suffix
     // -------------------------------------------------------------------------

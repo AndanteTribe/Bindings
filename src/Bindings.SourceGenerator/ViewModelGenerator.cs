@@ -22,6 +22,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
     private const string SerializeFieldAttributeFullName = "UnityEngine.SerializeField";
     private const string SerializeReferenceAttributeFullName = "UnityEngine.SerializeReference";
+    private static readonly SymbolDisplayFormat s_fullyQualifiedNullableFormat =
+        SymbolDisplayFormat.FullyQualifiedFormat.AddMiscellaneousOptions(
+            SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
@@ -197,7 +200,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                         if (attrName == RequiredAttributeFullName)
                         {
                             requiredFields.Add((
-                                TypeFullName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                TypeFullName: field.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
                                 FieldName: field.Name));
                         }
                         else if (attrName == SchemaAttributeFullName)
@@ -212,7 +215,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             }
                             schemaFields.Add((
                                 FieldName: field.Name,
-                                FieldTypeName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                FieldTypeName: field.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
                                 BindingPath: GetBindingPath(attr),
                                 Id: id,
                                 Format: GetSchemaFormat(attr),
@@ -229,7 +232,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                         if (attr.AttributeClass?.ToDisplayString() == RequiredAttributeFullName)
                         {
                             requiredFields.Add((
-                                TypeFullName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                                TypeFullName: prop.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
                                 FieldName: prop.Name));
                         }
                     }
