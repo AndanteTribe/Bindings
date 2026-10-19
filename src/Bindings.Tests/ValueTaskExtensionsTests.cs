@@ -95,7 +95,6 @@ public class ValueTaskExtensionsTests
                 switch (_status)
                 {
                     case ValueTaskSourceStatus.Canceled:
-                        throw _exception!;
                     case ValueTaskSourceStatus.Faulted:
                         throw _exception!;
                 }
