@@ -20,6 +20,10 @@ namespace Bindings.Internal
                 {
                     awaiter.GetResult();
                 }
+                catch (OperationCanceledException)
+                {
+                    // ignore
+                }
                 catch (Exception ex)
                 {
                     if (Debug.isDebugBuild)
