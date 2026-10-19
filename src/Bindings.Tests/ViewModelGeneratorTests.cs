@@ -1250,7 +1250,7 @@ namespace Bindings.Sample
     }
 
     [Bindings.ViewModel]
-    public partial class CountViewModelAfterConstruct
+    public partial class CountViewModelPostConstruct
     {
         [Bindings.Required]
         private readonly CounterModel _model;
