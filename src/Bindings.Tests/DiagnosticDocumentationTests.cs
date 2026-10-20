@@ -23,14 +23,28 @@ public class DiagnosticDocumentationTests
             .ToArray();
         Assert.NotEmpty(descriptors);
 
-        var readme = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "README.md"));
-        var readmeJa = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "README_JA.md"));
+        var repositoryRoot = FindRepositoryRoot();
+        var readme = File.ReadAllText(Path.Combine(repositoryRoot, "README.md"));
+        var readmeJa = File.ReadAllText(Path.Combine(repositoryRoot, "README_JA.md"));
 
         foreach (var descriptor in descriptors)
         {
             Assert.Contains($"| `{descriptor.Id}` | {descriptor.DefaultSeverity} |", readme);
             Assert.Contains($"| `{descriptor.Id}` | {ToJapaneseSeverity(descriptor.DefaultSeverity)} |", readmeJa);
         }
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        for (DirectoryInfo? directory = new(AppContext.BaseDirectory); directory != null; directory = directory.Parent)
+        {
+            if (File.Exists(Path.Combine(directory.FullName, "Bindings.slnx")))
+            {
+                return directory.FullName;
+            }
+        }
+
+        throw new DirectoryNotFoundException("Could not find the Bindings repository root.");
     }
 
     private static string ToJapaneseSeverity(DiagnosticSeverity severity) => severity switch
