@@ -7,8 +7,6 @@
         <IsPackable>false</IsPackable>
 
         <RootNamespace>Bindings.Tests</RootNamespace>
-        <BindingsTmpSpan Condition="'$(BindingsTmpSpan)' == ''">true</BindingsTmpSpan>
-        <DefineConstants Condition="'$(BindingsTmpSpan)' == 'true'">$(DefineConstants);UGUI2_6_0_OR_GREATER</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
@@ -27,13 +25,6 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Bindings.SourceGenerator\Bindings.SourceGenerator.csproj"/>
-        <Compile Include="..\Bindings.Unity\Packages\jp.andantetribe.bindings\Runtime\TextMeshProExtensions.cs" Link="Runtime\TextMeshProExtensions.cs"/>
     </ItemGroup>
-
-    <ItemGroup>
-        <None Include="..\..\README.md" Link="README.md" CopyToOutputDirectory="PreserveNewest"/>
-        <None Include="..\..\README_JA.md" Link="README_JA.md" CopyToOutputDirectory="PreserveNewest"/>
-    </ItemGroup>
-
 
 </Project>

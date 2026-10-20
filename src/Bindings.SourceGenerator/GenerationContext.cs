@@ -54,11 +54,15 @@ public sealed class GenerationContext
     /// </summary>
     public readonly bool AlreadySerializable;
 
+    /// <summary>Whether a constructor-only VContainer injector can be generated safely.</summary>
+    public readonly bool GenerateVContainerInjector;
+
     /// <summary>
-    /// Fully-qualified type name and field name of each field
-    /// annotated with RequiredAttribute, in declaration order.
+    /// Fully-qualified declaration type name, member name, and typeof-compatible type name
+    /// of each required field or property, in declaration order.
+    /// TypeOfName excludes nullable reference annotations while preserving nullable value types.
     /// </summary>
-    public readonly (string TypeFullName, string FieldName)[] RequiredFields;
+    public readonly (string TypeFullName, string FieldName, string TypeOfName)[] RequiredFields;
 
     /// <summary>
     /// Attribute arguments for each field annotated with SchemaAttribute, in declaration order.
@@ -89,10 +93,11 @@ public sealed class GenerationContext
         bool isReadOnly,
         bool requireBindImplementation,
         bool alreadySerializable,
-        (string TypeFullName, string FieldName)[] requiredFields,
+        (string TypeFullName, string FieldName, string TypeOfName)[] requiredFields,
         (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] schemaFields,
         (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods,
-        (DiagnosticDescriptor Descriptor, Location Location, string[] Args)[] diagnostics)
+        (DiagnosticDescriptor Descriptor, Location Location, string[] Args)[] diagnostics,
+        bool generateVContainerInjector = false)
     {
         ClassName = className;
         Namespace = @namespace;
@@ -107,5 +112,6 @@ public sealed class GenerationContext
         SchemaFields = schemaFields;
         SchemaMethods = schemaMethods;
         Diagnostics = diagnostics;
+        GenerateVContainerInjector = generateVContainerInjector;
     }
 }

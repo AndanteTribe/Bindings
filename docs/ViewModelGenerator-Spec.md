@@ -15,6 +15,22 @@
 
 ## 1. 入力：ユーザー記述コード
 
+### VContainer injector generation
+
+When the compilation exposes `VContainer.IInjector`, `IObjectResolver`, `IInjectParameter`, `IObjectResolverExtensions`, and `PreserveAttribute`, the ViewModel template also emits a preserved private sealed `__BindingsInjector` nested inside the ViewModel. ViewModels added through the `RegisterBinder` scope use a custom `RegistrationBuilder.Build()` to discover and instantiate this private injector, retaining the registration's parameters, lifetime, interfaces, and key. Other registration paths do not automatically select it. This does not require or attempt to detect VContainer's Source Generator.
+
+The registration API is deferred: `VContainerExtensions.RegisterBinder(builder, binder, keyed = false)` returns a `readonly struct BinderRegistration` holding the builder, Binder, key option, and ViewModel builder list. It has no state wrapper, disposal flag, or public `Register()` method. Declare it directly in a using statement/declaration and do not copy, box, default-construct, dispose twice, or use it after the block ends. `IDisposable.Dispose` is implemented explicitly. A future analyzer will enforce using-scope consumption; no such diagnostic is currently implemented. Repeated `WithViewModel<T>(Lifetime)` calls return native VContainer registration builders without committing anything or adding service interfaces automatically. Each ViewModel receives the Binder as `IMvvmPublisher`. Dispose commits even during exception unwinding and does not implement rollback. The scope must end before building the container and owns neither the Binder nor the container.
+
+`ViewModelInjectorCache<T>` selects and caches the private `__BindingsInjector` once per ViewModel type, falling back to VContainer's `InjectorCache.GetOrBuild` when absent or incompatible. `BinderViewModelRegistrationBuilder.Build()` always creates a `BindingsViewModelInstanceProvider` with that cached injector and the final parameters and records the final registration. Commit registers ViewModels in addition order, then uses standard `RegisterComponent` for the Binder, applying its instance key only when requested (keyed component callbacks require VContainer 1.19.0 or later).
+
+`BinderViewModelDelegatePool` rents entries from a concurrent bag. Each entry retains a group's builder list and caches its resolve and return delegates once. The explicit `IReadOnlyList<IViewModel>` parameter resolves the exact final registrations in order, without type/key lookup. Registering a container disposal callback transfers the entry's lifetime to the container: the callback clears the registration-list reference and returns the entry to the pool. Entries remain rented for the entire container lifetime. Empty scopes yield an empty array. `Binder.Run()` is never invoked by these helpers.
+
+Only top-level, non-generic, concrete classes directly deriving from `System.Object`, without explicit constructors or `[VContainer.Inject]` members, are eligible. Structs, nested types, custom base classes, and existing nested `__BindingsInjector` types are excluded. The custom builder falls back to standard VContainer registration when no compatible private injector is present. An existing top-level VContainer injector does not prevent generation. `InjectIgnore` does not disable this Bindings-owned injector.
+
+`CreateInstance` resolves each generated constructor argument using `ResolveOrParameter`, preserving its normalized parameter name and runtime type (including nullable value types, excluding nullable reference annotations). Required fields/properties precede the publisher. It directly invokes the generated constructor, including `OnPostConstruct`. `Inject` is empty because eligible types have no injectable members.
+
+The nested name avoids collisions with VContainer-generated injectors. However, if VContainer's generator also targets the original partial declaration, it may emit invalid constructor calls because generators cannot see each other's output in the same compilation. This separate limitation is intentionally left unchanged; a user-authored `[VContainer.InjectIgnore]` is an optional workaround, not a requirement imposed by the Bindings injector itself.
+
 ### 1.1 使用属性
 
 | 属性 | 対象 | 意味 |

@@ -80,7 +80,38 @@ namespace Bindings.GeneratorCore {
                     "ompilerServices.MethodImplOptions.AggressiveInlining)]\n    private void PublishR" +
                     "ebindMessage()\n    {\n        _publisher.PublishRebindMessage<");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
-            this.Write(">();\n    }\n}\n");
+            this.Write(">();\n    }\n");
+if (Context.GenerateVContainerInjector) {
+            this.Write(@"
+    [global::VContainer.Preserve]
+    private sealed class __BindingsInjector : global::VContainer.IInjector
+    {
+        public object CreateInstance(global::VContainer.IObjectResolver resolver, global::System.Collections.Generic.IReadOnlyList<global::VContainer.IInjectParameter> parameters)
+        {
+            return new ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
+            this.Write("(\n");
+foreach (var field in Context.RequiredFields) {
+            this.Write("                (");
+            this.Write(this.ToStringHelper.ToStringWithCulture( field.TypeFullName ));
+            this.Write(")global::VContainer.IObjectResolverExtensions.ResolveOrParameter(resolver, typeof" +
+                    "(");
+            this.Write(this.ToStringHelper.ToStringWithCulture( field.TypeOfName ));
+            this.Write("), \"");
+            this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(field.FieldName) ));
+            this.Write("\", parameters),\n");
+}
+            this.Write(@"                (global::Bindings.IMvvmPublisher)global::VContainer.IObjectResolverExtensions.ResolveOrParameter(resolver, typeof(global::Bindings.IMvvmPublisher), ""publisher"", parameters));
+        }
+
+        public void Inject(object instance, global::VContainer.IObjectResolver resolver, global::System.Collections.Generic.IReadOnlyList<global::VContainer.IInjectParameter> parameters)
+        {
+            // All dependencies are supplied through the generated constructor.
+        }
+    }
+");
+}
+            this.Write("}\n");
  foreach (var _ in Context.ContainingTypes) { 
             this.Write("}\n");
  } 

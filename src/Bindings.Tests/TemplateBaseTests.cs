@@ -34,7 +34,7 @@ public class TemplateBaseTests
             isReadOnly: isReadOnly,
             requireBindImplementation: false,
             alreadySerializable: false,
-            requiredFields: Array.Empty<(string, string)>(),
+            requiredFields: Array.Empty<(string, string, string)>(),
             schemaFields: Array.Empty<(string, string, string, int, string, string)>(),
             schemaMethods: Array.Empty<(string, string, int, string)>(),
             diagnostics: Array.Empty<(DiagnosticDescriptor, Location, string[])>());
