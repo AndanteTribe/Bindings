@@ -172,6 +172,125 @@ namespace UnityEngine.UI
     private static bool IsGeneratedViewModelSource(SyntaxTree tree) =>
         tree.GetText().ToString().Contains(": global::Bindings.IViewModel");
 
+    private const string VContainerStubs = @"
+namespace VContainer
+{
+    public sealed class PreserveAttribute : System.Attribute { }
+    public sealed class InjectAttribute : System.Attribute { }
+    public sealed class InjectIgnoreAttribute : System.Attribute { }
+    public interface IObjectResolver { }
+    public interface IInjectParameter { }
+    public interface IInjector
+    {
+        object CreateInstance(IObjectResolver resolver, System.Collections.Generic.IReadOnlyList<IInjectParameter> parameters);
+        void Inject(object instance, IObjectResolver resolver, System.Collections.Generic.IReadOnlyList<IInjectParameter> parameters);
+    }
+    public static class IObjectResolverExtensions
+    {
+        public static object ResolveOrParameter(IObjectResolver resolver, System.Type type, string name,
+            System.Collections.Generic.IReadOnlyList<IInjectParameter> parameters) => null!;
+    }
+}
+";
+
+    [Theory]
+    [InlineData("", "public partial class TestViewModel { }", true)]
+    [InlineData("", "[VContainer.InjectIgnore] public partial class TestViewModel { }", true)]
+    [InlineData("namespace Example;", "internal partial class TestViewModel { [Bindings.Required] private string? _text; [Bindings.Required] public int? Number { get; } }", true)]
+    [InlineData("", "public partial struct TestViewModel { }", false)]
+    [InlineData("", "public abstract partial class TestViewModel { }", false)]
+    [InlineData("", "public partial class TestViewModel { [VContainer.Inject] public void Initialize() { } }", false)]
+    [InlineData("", "public partial class TestViewModel { [VContainer.Inject] public int Value; }", false)]
+    [InlineData("", "public partial class TestViewModel { [VContainer.Inject] public int Value { get; set; } }", false)]
+    [InlineData("", "public partial class TestViewModel { [VContainer.Inject] public TestViewModel() { } }", false)]
+    [InlineData("", "public partial class TestViewModel { public TestViewModel(int value) { } }", false)]
+    [InlineData("", "public class Base { } public partial class TestViewModel : Base { }", false)]
+    [InlineData("", "public class TestViewModelGeneratedInjector { } public partial class TestViewModel { }", true)]
+    [InlineData("", "public partial class TestViewModel { private class __BindingsInjector { } }", false)]
+    public void VContainerInjectorGenerationIsConditional(string ns, string declaration, bool expected)
+    {
+        // Put the attribute immediately before the target declaration, even when helper types precede it.
+        var code = ns + "\n" + declaration.Replace("public partial class TestViewModel", "[Bindings.ViewModel] public partial class TestViewModel")
+            .Replace("internal partial class TestViewModel", "[Bindings.ViewModel] internal partial class TestViewModel")
+            .Replace("public partial struct TestViewModel", "[Bindings.ViewModel] public partial struct TestViewModel")
+            .Replace("public abstract partial class TestViewModel", "[Bindings.ViewModel] public abstract partial class TestViewModel");
+        var (source, _) = RunGenerator(code + VContainerStubs, out var result);
+        Assert.Empty(result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.NotNull(source);
+        // Namespace declarations in the user source must not enclose the VContainer stubs.
+        if (ns.Length > 0)
+        {
+            code = "namespace Example { " + code.Substring(ns.Length) + " }";
+            (source, _) = RunGenerator(code + VContainerStubs);
+        }
+        Assert.Equal(expected, source!.Contains("private sealed class __BindingsInjector : global::VContainer.IInjector"));
+        Assert.DoesNotContain("class TestViewModelGeneratedInjector", source);
+        if (expected)
+        {
+            var tree = CSharpSyntaxTree.ParseText(source);
+            var injector = tree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>()
+                .Single(c => c.Identifier.ValueText == "__BindingsInjector");
+            Assert.Equal("TestViewModel", Assert.IsType<ClassDeclarationSyntax>(injector.Parent).Identifier.ValueText);
+            Assert.Contains("[global::VContainer.Preserve]", source);
+            Assert.Contains("\"publisher\", parameters)", source);
+            if (ns.Length > 0)
+            {
+                Assert.Contains("typeof(string), \"text\", parameters)", source);
+                Assert.Contains("typeof(int?), \"number\", parameters)", source);
+            }
+            Assert.Empty(RunGeneratorAndCompile(code + VContainerStubs));
+        }
+    }
+
+    [Fact]
+    public void VContainerRequiredMemberMetadataKeepsDeclarationAndRuntimeTypesTogether()
+    {
+        const string code = """
+            #nullable enable
+            namespace Example
+            {
+                [Bindings.ViewModel]
+                public partial class MixedViewModel
+                {
+                    [Bindings.Required] private readonly string? _text;
+                    [Bindings.Required] public int? Amount { get; }
+                    [Bindings.Required] private readonly System.Collections.Generic.List<string?>? _items;
+                    [Bindings.Required] public System.DateTime? Created { get; }
+                    [Bindings.Required] private readonly string?[]? _names;
+                }
+            }
+            """;
+        var (source, _) = RunGenerator(code + VContainerStubs);
+        Assert.Contains("string? text, int? amount, global::System.Collections.Generic.List<string?>? items, global::System.DateTime? created, string?[]? names", source!);
+        Assert.Contains("typeof(string), \"text\", parameters)", source);
+        Assert.Contains("typeof(int?), \"amount\", parameters)", source);
+        Assert.Contains("typeof(global::System.Collections.Generic.List<string>), \"items\", parameters)", source);
+        Assert.Contains("typeof(global::System.DateTime?), \"created\", parameters)", source);
+        Assert.Contains("typeof(string[]), \"names\", parameters)", source);
+        Assert.Empty(RunGeneratorAndCompile(code + VContainerStubs));
+    }
+
+    [Fact]
+    public void NoVContainerReferenceDoesNotGenerateInjector()
+    {
+        var (source, _) = RunGenerator("[Bindings.ViewModel] public partial class TestViewModel { }");
+        Assert.DoesNotContain("VContainer", source!);
+    }
+
+    [Fact]
+    public void NestedViewModelDoesNotGenerateVContainerInjector()
+    {
+        var (source, _) = RunGenerator(VContainerStubs + "public partial class Outer { [Bindings.ViewModel] public partial class NestedViewModel { } }");
+        Assert.DoesNotContain("__BindingsInjector", source!);
+    }
+
+    [Fact]
+    public void IncompleteVContainerApiDoesNotGenerateInjector()
+    {
+        var (source, _) = RunGenerator("namespace VContainer { public interface IInjector { } } [Bindings.ViewModel] public partial class TestViewModel { }");
+        Assert.DoesNotContain("__BindingsInjector", source!);
+    }
+
     private static bool IsGeneratedViewSource(SyntaxTree tree) =>
         tree.GetText().ToString().Contains(": global::Bindings.IView<");
 

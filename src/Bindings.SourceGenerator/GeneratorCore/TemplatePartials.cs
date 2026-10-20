@@ -47,7 +47,7 @@ namespace Bindings.GeneratorCore
             get
             {
                 var sb = new StringBuilder();
-                foreach (var (typeFullName, fieldName) in Context.RequiredFields.AsSpan())
+                foreach (var (typeFullName, fieldName, _) in Context.RequiredFields.AsSpan())
                 {
                     sb.Append(typeFullName).Append(' ').Append(ToParamName(fieldName)).Append(", ");
                 }

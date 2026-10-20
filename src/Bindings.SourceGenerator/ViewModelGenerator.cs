@@ -182,7 +182,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // 7. Walk members to collect [Required] / [Schema] information
         // [Schema] is only valid on fields and methods; properties are excluded.
-        var requiredFields = new List<(string TypeFullName, string FieldName)>();
+        var requiredFields = new List<(string TypeFullName, string FieldName, string TypeOfName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)>();
         var schemaMethods = new List<(string MethodName, string BindingPath, int Id, string Tooltip)>();
 
@@ -201,7 +201,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                         {
                             requiredFields.Add((
                                 TypeFullName: field.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
-                                FieldName: field.Name));
+                                FieldName: field.Name,
+                                TypeOfName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
                         }
                         else if (attrName == SchemaAttributeFullName)
                         {
@@ -233,7 +234,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                         {
                             requiredFields.Add((
                                 TypeFullName: prop.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
-                                FieldName: prop.Name));
+                                FieldName: prop.Name,
+                                TypeOfName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
                         }
                     }
                     break;
@@ -278,7 +280,45 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             requiredFields: requiredFields.ToArray(),
             schemaFields: schemaFields.ToArray(),
             schemaMethods: schemaMethods.ToArray(),
-            diagnostics: diagnostics.ToArray());
+            diagnostics: diagnostics.ToArray(),
+            generateVContainerInjector: CanGenerateVContainerInjector(ctx.SemanticModel.Compilation, typeSymbol));
+    }
+
+    private static bool CanGenerateVContainerInjector(Compilation compilation, INamedTypeSymbol type)
+    {
+        // Do not replace reflection injection when user-defined injection behavior is present.
+        if (type.TypeKind != TypeKind.Class || type.IsAbstract || type.IsStatic || type.IsGenericType ||
+            type.ContainingType != null || type.BaseType?.SpecialType != SpecialType.System_Object)
+        {
+            return false;
+        }
+
+        foreach (var name in new[] { "VContainer.IInjector", "VContainer.IObjectResolver", "VContainer.IInjectParameter",
+                     "VContainer.IObjectResolverExtensions", "VContainer.PreserveAttribute" })
+        {
+            if (compilation.GetTypeByMetadataName(name) == null)
+            {
+                return false;
+            }
+        }
+
+        foreach (var member in type.GetMembers())
+        {
+            if (member is IMethodSymbol { MethodKind: MethodKind.Constructor, IsImplicitlyDeclared: false })
+            {
+                return false;
+            }
+
+            foreach (var attribute in member.GetAttributes())
+            {
+                if (attribute.AttributeClass?.ToDisplayString() == "VContainer.InjectAttribute")
+                {
+                    return false;
+                }
+            }
+        }
+
+        return type.GetTypeMembers("__BindingsInjector").Length == 0;
     }
 
     /// <summary>

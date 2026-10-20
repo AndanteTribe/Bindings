@@ -33,6 +33,7 @@
     <ItemGroup>
         <None Include="..\..\README.md" Link="README.md" CopyToOutputDirectory="PreserveNewest"/>
         <None Include="..\..\README_JA.md" Link="README_JA.md" CopyToOutputDirectory="PreserveNewest"/>
+        <None Include="..\Bindings.Unity\Packages\jp.andantetribe.bindings\Runtime\External\VContainerExtensions.cs" Link="VContainerExtensions.cs" CopyToOutputDirectory="PreserveNewest"/>
     </ItemGroup>
 
 

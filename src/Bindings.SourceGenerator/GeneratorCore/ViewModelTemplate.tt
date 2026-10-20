@@ -56,6 +56,26 @@ namespace <#= Context.Namespace #>
     {
         _publisher.PublishRebindMessage<<#= ViewModelFullName #>>();
     }
+<#if (Context.GenerateVContainerInjector) {#>
+
+    [global::VContainer.Preserve]
+    private sealed class __BindingsInjector : global::VContainer.IInjector
+    {
+        public object CreateInstance(global::VContainer.IObjectResolver resolver, global::System.Collections.Generic.IReadOnlyList<global::VContainer.IInjectParameter> parameters)
+        {
+            return new <#= ViewModelFullName #>(
+<#foreach (var field in Context.RequiredFields) {#>
+                (<#= field.TypeFullName #>)global::VContainer.IObjectResolverExtensions.ResolveOrParameter(resolver, typeof(<#= field.TypeOfName #>), "<#= ToParamName(field.FieldName) #>", parameters),
+<#}#>
+                (global::Bindings.IMvvmPublisher)global::VContainer.IObjectResolverExtensions.ResolveOrParameter(resolver, typeof(global::Bindings.IMvvmPublisher), "publisher", parameters));
+        }
+
+        public void Inject(object instance, global::VContainer.IObjectResolver resolver, global::System.Collections.Generic.IReadOnlyList<global::VContainer.IInjectParameter> parameters)
+        {
+            // All dependencies are supplied through the generated constructor.
+        }
+    }
+<#}#>
 }
 <# foreach (var _ in Context.ContainingTypes) { #>
 }
