@@ -1,12 +1,19 @@
 #nullable enable
 
 using System;
+#if ENABLE_VCONTAINER
+using System.Collections.Generic;
+using VContainer;
+#endif
 
 namespace Bindings
 {
     /// <summary>
     /// Provides item publishers and scroll position requests for a single-axis virtual scroll view.
     /// </summary>
+#if ENABLE_VCONTAINER
+    [InjectIgnore]
+#endif
     public sealed class SingleAxisVirtualScrollViewModel : IViewModel
     {
         /// <summary>
@@ -59,4 +66,24 @@ namespace Bindings
             }
         }
     }
+
+#if ENABLE_VCONTAINER
+    // InjectorCache discovers this type by the ViewModel's full name plus "GeneratedInjector".
+    [Preserve]
+    internal sealed class SingleAxisVirtualScrollViewModelGeneratedInjector : IInjector
+    {
+        public object CreateInstance(IObjectResolver resolver, IReadOnlyList<IInjectParameter> parameters)
+        {
+            var publishers = (ReadOnlyMemory<ScrollItemMvvmPublisher>)resolver.ResolveOrParameter(
+                typeof(ReadOnlyMemory<ScrollItemMvvmPublisher>), "publishers", parameters);
+            var publisher = (IMvvmPublisher)resolver.ResolveOrParameter(typeof(IMvvmPublisher), "publisher", parameters);
+            return new SingleAxisVirtualScrollViewModel(publishers, publisher);
+        }
+
+        public void Inject(object instance, IObjectResolver resolver, IReadOnlyList<IInjectParameter> parameters)
+        {
+            // This ViewModel has no injectable fields, properties, or methods.
+        }
+    }
+#endif
 }
