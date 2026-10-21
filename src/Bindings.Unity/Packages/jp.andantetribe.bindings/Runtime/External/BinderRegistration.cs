@@ -44,6 +44,11 @@ namespace Bindings
             return viewModel.WithParameter(_publisher);
         }
 
+        /// <summary>Adds a deferred ViewModel registration for a single-axis virtual scroll view, building a publisher for each item.</summary>
+        /// <typeparam name="TItem">The item data type used to configure each scroll item.</typeparam>
+        /// <param name="getItems">Resolves the ordered item data from the container when the ViewModel is constructed.</param>
+        /// <param name="configureItem">Configures each item's ViewModels through the supplied item registration scope.</param>
+        /// <returns>A builder supporting AsSelf, Keyed, WithParameter, and other VContainer options.</returns>
         public RegistrationBuilder WithScrollViewModel<TItem>(
             Func<IObjectResolver, IReadOnlyList<TItem>> getItems,
             Action<BinderRegistration, TItem> configureItem)
