@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Bindings.Internal;
 using VContainer;
 using VContainer.Unity;
 
@@ -16,16 +17,16 @@ namespace Bindings
     public readonly struct BinderRegistration : IDisposable
     {
         private readonly IContainerBuilder _builder;
-        private readonly Binder _binder;
+        private readonly IMvvmPublisher _publisher;
         private readonly bool _keyed;
-        private readonly List<BinderViewModelRegistrationBuilder> _viewModels;
+        private readonly List<ViewModelRegistrationBuilder> _viewModels;
 
-        internal BinderRegistration(IContainerBuilder builder, Binder binder, bool keyed)
+        internal BinderRegistration(IContainerBuilder builder, IMvvmPublisher publisher, bool keyed)
         {
             _builder = builder;
-            _binder = binder;
+            _publisher = publisher;
             _keyed = keyed;
-            _viewModels = new List<BinderViewModelRegistrationBuilder>();
+            _viewModels = new List<ViewModelRegistrationBuilder>();
         }
 
         /// <summary>Adds a deferred ViewModel registration and returns its native VContainer options builder.</summary>
@@ -38,9 +39,24 @@ namespace Bindings
         /// </remarks>
         public RegistrationBuilder WithViewModel<T>(Lifetime lifetime = Lifetime.Scoped) where T : IViewModel
         {
-            var viewModel = new BinderViewModelRegistrationBuilder(typeof(T), lifetime, ViewModelInjectorCache<T>.Injector);
+            var viewModel = new ViewModelRegistrationBuilder(typeof(T), lifetime, ViewModelInjectorCache<T>.Injector);
             _viewModels.Add(viewModel);
-            return viewModel.WithParameter<IMvvmPublisher>(_binder);
+            return viewModel.WithParameter(_publisher);
+        }
+
+        public RegistrationBuilder WithScrollViewModel<TItem>(
+            Func<IObjectResolver, IReadOnlyList<TItem>> getItems,
+            Action<BinderRegistration, TItem> configureItem)
+        {
+            if (!_builder.Exists(typeof(DisposableBag)))
+            {
+                _ = _builder.Register<DisposableBag>(Lifetime.Scoped);
+            }
+
+            var entry = ScrollViewModelDelegatePool<TItem>.Rent(getItems, configureItem);
+            _builder.RegisterDisposeCallback(entry.Return);
+            return WithViewModel<SingleAxisVirtualScrollViewModel>()
+                .WithParameter(entry.Resolve);
         }
 
         void IDisposable.Dispose()
@@ -51,15 +67,35 @@ namespace Bindings
                 _ = _builder.Register(registration);
             }
 
-            var delegates = BinderViewModelDelegatePool.Rent(registrations);
-            var binderRegistration = _builder.RegisterComponent(_binder)
-                .WithParameter(typeof(IReadOnlyList<IViewModel>), delegates.Resolve);
-            if (_keyed)
+            var entry = ViewModelDelegatePool.Rent(registrations);
+            RegistrationBuilder publisherRegistration;
+
+            switch (_publisher)
             {
-                _ = binderRegistration.Keyed(_binder);
+                case Binder binder:
+                    publisherRegistration = _builder.RegisterComponent(binder)
+                        .WithParameter(typeof(IReadOnlyList<IViewModel>), entry.Resolve);
+                    break;
+                case ScrollItemMvvmPublisher scrollItemPublisher:
+                    publisherRegistration = _builder.RegisterInstance(scrollItemPublisher);
+                    _ = _builder.RegisterInstance(entry);
+                    _builder.RegisterBuildCallback(static resolver =>
+                    {
+                        var publisher = resolver.Resolve<ScrollItemMvvmPublisher>();
+                        var entry = resolver.Resolve<ViewModelDelegatePool.Entry>();
+                        publisher._viewModels.AddRange((IReadOnlyList<IViewModel>)entry.Resolve(resolver));
+                    });
+                    break;
+                default:
+                    throw new NotSupportedException("Only Binder and ScrollItemMvvmPublisher are supported.");
             }
 
-            _builder.RegisterDisposeCallback(delegates.Return);
+            if (_keyed)
+            {
+                _ = publisherRegistration.Keyed(_publisher);
+            }
+
+            _builder.RegisterDisposeCallback(entry.Return);
         }
     }
 }

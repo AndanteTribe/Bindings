@@ -6,13 +6,13 @@ using VContainer;
 
 namespace Bindings
 {
-    internal sealed class BinderViewModelRegistrationBuilder : RegistrationBuilder
+    internal sealed class ViewModelRegistrationBuilder : RegistrationBuilder
     {
         private readonly IInjector _injector;
 
         public Registration Registration { get; private set; } = null!;
 
-        public BinderViewModelRegistrationBuilder(Type implementationType, Lifetime lifetime, IInjector injector)
+        public ViewModelRegistrationBuilder(Type implementationType, Lifetime lifetime, IInjector injector)
             : base(implementationType, lifetime)
         {
             _injector = injector;
@@ -20,7 +20,7 @@ namespace Bindings
 
         public override Registration Build()
         {
-            var instanceProvider = new BindingsViewModelInstanceProvider(_injector, Parameters);
+            var instanceProvider = new ViewModelInstanceProvider(_injector, Parameters);
             Registration = new Registration(ImplementationType, Lifetime, InterfaceTypes, instanceProvider, Key);
             return Registration;
         }

@@ -10,12 +10,16 @@ namespace Bindings
     /// <remarks>Messages are ignored while no Binder is assigned to the item.</remarks>
     public sealed class ScrollItemMvvmPublisher : IMvvmPublisher
     {
-        private readonly IReadOnlyList<IViewModel> _viewModels;
+        internal readonly List<IViewModel> _viewModels;
         private Binder? _binder;
 
-        internal ScrollItemMvvmPublisher(IReadOnlyList<IViewModel> viewModels)
+        private ScrollItemMvvmPublisher(List<IViewModel> viewModels)
         {
             _viewModels = viewModels;
+        }
+
+        internal ScrollItemMvvmPublisher() : this(new List<IViewModel>())
+        {
         }
 
         internal Binder? Binder
