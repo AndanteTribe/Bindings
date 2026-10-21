@@ -8,11 +8,11 @@ using VContainer;
 
 namespace Bindings
 {
-    internal static class BinderViewModelDelegatePool
+    internal static class ViewModelDelegatePool
     {
         private static readonly ConcurrentBag<Entry> s_pool = new();
 
-        public static Entry Rent(List<BinderViewModelRegistrationBuilder> registrations)
+        public static Entry Rent(List<ViewModelRegistrationBuilder> registrations)
         {
             if (!s_pool.TryTake(out var entry))
             {
@@ -25,7 +25,7 @@ namespace Bindings
 
         internal sealed class Entry
         {
-            public List<BinderViewModelRegistrationBuilder> Registrations = null!;
+            public List<ViewModelRegistrationBuilder> Registrations = null!;
 
             public readonly Func<IObjectResolver, object> Resolve;
 

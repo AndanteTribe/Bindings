@@ -7,12 +7,12 @@ using VContainer;
 
 namespace Bindings
 {
-    internal sealed class BindingsViewModelInstanceProvider : IInstanceProvider
+    internal sealed class ViewModelInstanceProvider : IInstanceProvider
     {
         private readonly IInjector _injector;
         private readonly IReadOnlyList<IInjectParameter> _parameters;
 
-        public BindingsViewModelInstanceProvider(IInjector injector, IReadOnlyList<IInjectParameter> parameters)
+        public ViewModelInstanceProvider(IInjector injector, IReadOnlyList<IInjectParameter> parameters)
         {
             _injector = injector;
             _parameters = parameters;
