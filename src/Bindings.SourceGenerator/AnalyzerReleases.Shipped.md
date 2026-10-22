@@ -12,3 +12,4 @@ BND002  | Bindings | Error    | InvalidSchemaIdValue
 BND003  | Bindings | Error    | ConflictingTooltipValues
 BND004  | Bindings | Error    | UnsupportedTypeAccessibility
 BND005  | Bindings | Warning  | ViewModelSerializedByUnity
+BND006  | Bindings | Error    | ViewMustNotDeriveFromMonoBehaviour

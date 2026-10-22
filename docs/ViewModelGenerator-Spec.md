@@ -134,6 +134,8 @@ count       →（1）変化なし →（2）該当なし → count
 
 Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、以下の診断を出力する。
 
+`BND001`–`BND004` are reported by `ViewModelGenerator` during generation. `BND005` and `BND006` are reported independently by `BindingsUsageAnalyzer`, a `DiagnosticAnalyzer` shipped in the same DLL. Usage diagnostics do not disable source generation.
+
 | 診断 ID | レベル | 条件 | メッセージ（案） |
 |---|---|---|---|
 | `BND001` | Error | `[ViewModel]` が付与された型名に `"ViewModel"` が含まれない | `Type '{ClassName}' is annotated with [ViewModel] but its name does not contain "ViewModel". No source will be generated for this ViewModel.` |
@@ -141,6 +143,7 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 | `BND003` | Error | 同一 View コンポーネントフィールドに対して複数の `[Schema]` エントリが異なる非空 `tooltip` 文字列を指定した | `View field '{fieldName}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.` |
 | `BND004` | Error | `[ViewModel]` 型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
 | `BND005` | Warning | `[ViewModel]` が付与された型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている | `Field '{fieldName}' uses [{SerializationAttributeName}] with ViewModel type '{ViewModelTypeName}'. Unity deserialization may leave generated runtime state uninitialized, even when the type is marked [Serializable]. Construct or assign the ViewModel at runtime instead.` |
+| `BND006` | Error | A class implements `Bindings.IView` and derives from `UnityEngine.MonoBehaviour` | `Type '{TypeName}' implements Bindings.IView and derives from UnityEngine.MonoBehaviour. View implementations must not derive from MonoBehaviour.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
@@ -151,6 +154,10 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 `BND005` は `[SerializeField]` または `[SerializeReference]` 属性の位置に報告する。ViewModel 型の `[System.Serializable]` は Generator からは `UNITY_EDITOR` でのみ付与される。ユーザーが明示的に `[System.Serializable]` を付与した場合でも、Unity のデシリアライズ後に Generator が必要とするランタイム状態が正しく初期化されることは保証しないため、ViewModel は実行時に構築または代入する。対象 ViewModel の ViewModel ソースと View ソースの生成は継続する。ViewModel 型以外のフィールドは対象外とする。
 
 ユーザーによる ViewModel 型への `[System.Serializable]` の付与だけでは診断を報告しない。これは独自シリアライザーなど Unity のフィールドシリアライズを使用しない用途を許容するためであり、Bindings が Unity による ViewModel の永続化をサポートすることを意味しない。BND005 は、ViewModel 型のフィールドへ `[SerializeField]` または `[SerializeReference]` が付与された時点で、ViewModel 型自身の `[System.Serializable]` の有無にかかわらず報告する。
+
+`BND006` checks all class implementations, including abstract and nested classes, `IView<T>`, inherited interfaces, and indirect MonoBehaviour inheritance. It reports once per type at a source type identifier; partial declarations are analyzed as one symbol. A user-written partial View that derives from MonoBehaviour is also invalid when its IView interface is supplied by generated code. Generation continues even though this diagnostic is an Error.
+
+Usage analysis excludes generated code. BND005 retains its direct named-field-type scope: arrays, type parameters, and non-field targets are not checked. Each serialization attribute on each matching field reports a warning at the attribute. Framework types and attributes are matched by symbol identity, not simple names; missing types do not cause analyzer exceptions.
 
 ---
 

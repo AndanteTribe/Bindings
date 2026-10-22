@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -18,7 +19,7 @@ public class ViewModelGeneratorTests
     // Stub definitions for testing (substitutes for Unity-dependent types)
     // -------------------------------------------------------------------------
 
-    private const string AttributeStubs = @"
+    internal const string AttributeStubs = @"
 using System;
 using System.Runtime.CompilerServices;
 
@@ -94,7 +95,7 @@ namespace Bindings
 ";
 
     // Stubs for Unity and third-party types referenced in the generated View code.
-    private const string RuntimeStubs = @"
+    internal const string RuntimeStubs = @"
 namespace UnityEngine
 {
     public sealed class SerializeField : System.Attribute { }
@@ -136,7 +137,12 @@ namespace UnityEngine.UI
 
     private static (string? ViewModelSource, string? ViewSource) RunGenerator(
         string userCode,
-        out GeneratorDriverRunResult runResult)
+        out GeneratorDriverRunResult runResult) => RunGenerator(userCode, out runResult, out _);
+
+    private static (string? ViewModelSource, string? ViewSource) RunGenerator(
+        string userCode,
+        out GeneratorDriverRunResult runResult,
+        out Compilation outputCompilation)
     {
         var generator = new ViewModelGenerator();
         var driver = CSharpGeneratorDriver.Create(generator);
@@ -156,7 +162,7 @@ namespace UnityEngine.UI
             },
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        runResult = driver.RunGenerators(compilation).GetRunResult();
+        runResult = driver.RunGeneratorsAndUpdateCompilation(compilation, out outputCompilation, out _).GetRunResult();
 
         var vmSource = runResult.GeneratedTrees
             .FirstOrDefault(IsGeneratedViewModelSource)
@@ -414,7 +420,7 @@ namespace VContainer
     }
 
     [Fact]
-    public void BND005SerializeFieldOnViewModelTypeReportsWarningAndContinuesGeneration()
+    public async Task BND005SerializeFieldOnViewModelTypeReportsWarningAndContinuesGeneration()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -433,9 +439,11 @@ namespace Bindings.Sample
     }
 }";
 
-        RunGenerator(userCode, out var runResult);
+        RunGenerator(userCode, out var runResult, out var compilation);
+        var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
 
-        var diagnostic = Assert.Single(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        var diagnostic = Assert.Single(diagnostics, candidate => candidate.Id == "BND005");
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("Bindings.Sample.CountViewModelSerialized", diagnostic.GetMessage());
@@ -450,7 +458,7 @@ namespace Bindings.Sample
     }
 
     [Fact]
-    public void BND005DoesNotReportForNonViewModelSerializeField()
+    public async Task BND005DoesNotReportForNonViewModelSerializeField()
     {
         const string userCode = @"
 public sealed class PrimitiveHost
@@ -459,13 +467,13 @@ public sealed class PrimitiveHost
     private int _count;
 }";
 
-        RunGenerator(userCode, out var runResult);
+        RunGenerator(userCode, out _, out var compilation);
 
-        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
     }
 
     [Fact]
-    public void BND005SerializeReferenceOnSerializableViewModelTypeReportsWarningAndContinuesGeneration()
+    public async Task BND005SerializeReferenceOnSerializableViewModelTypeReportsWarningAndContinuesGeneration()
     {
         const string userCode = @"
 [System.Serializable]
@@ -482,9 +490,11 @@ public sealed class ViewModelHost
     private CountViewModelReference _viewModel;
 }";
 
-        RunGenerator(userCode, out var runResult);
+        RunGenerator(userCode, out var runResult, out var compilation);
+        var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
 
-        var diagnostic = Assert.Single(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        var diagnostic = Assert.Single(diagnostics, candidate => candidate.Id == "BND005");
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("CountViewModelReference", diagnostic.GetMessage());
@@ -499,7 +509,7 @@ public sealed class ViewModelHost
     }
 
     [Fact]
-    public void BND005DoesNotReportForNonViewModelSerializeReference()
+    public async Task BND005DoesNotReportForNonViewModelSerializeReference()
     {
         const string userCode = @"
 public sealed class PrimitiveHost
@@ -508,9 +518,9 @@ public sealed class PrimitiveHost
     private object _value;
 }";
 
-        RunGenerator(userCode, out var runResult);
+        RunGenerator(userCode, out _, out var compilation);
 
-        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
     }
 
     // -------------------------------------------------------------------------

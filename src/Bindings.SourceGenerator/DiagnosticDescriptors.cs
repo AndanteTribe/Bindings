@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 namespace Bindings;
 
 /// <summary>
-/// Central registry of all <see cref="DiagnosticDescriptor"/> instances reported by the ViewModelGenerator.
+/// Central registry of all <see cref="DiagnosticDescriptor"/> instances reported by Bindings.
 /// </summary>
 internal static class DiagnosticDescriptors
 {
@@ -66,5 +66,16 @@ internal static class DiagnosticDescriptors
         messageFormat: "Field '{0}' uses [{2}] with ViewModel type '{1}'. Unity deserialization may leave generated runtime state uninitialized, even when the type is marked [Serializable]. Construct or assign the ViewModel at runtime instead.",
         category: Category,
         defaultSeverity: DiagnosticSeverity.Warning,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// BND006: emitted when an IView implementation derives from MonoBehaviour.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bnd006 = new(
+        id: "BND006",
+        title: "View implementations must not derive from MonoBehaviour",
+        messageFormat: "Type '{0}' implements Bindings.IView and derives from UnityEngine.MonoBehaviour. View implementations must not derive from MonoBehaviour.",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 }
