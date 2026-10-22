@@ -22,7 +22,7 @@ public sealed class BindingsUsageAnalyzer : DiagnosticAnalyzer
             var viewModelAttribute = context.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute);
             var serializeField = context.Compilation.GetTypeByMetadataName(TypeNames.SerializeField);
             var serializeReference = context.Compilation.GetTypeByMetadataName(TypeNames.SerializeReference);
-            var view = context.Compilation.GetTypeByMetadataName(TypeNames.IView);
+            var view = context.Compilation.GetTypeByMetadataName(TypeNames.ViewAbstraction);
             var monoBehaviour = context.Compilation.GetTypeByMetadataName(TypeNames.MonoBehaviour);
 
             context.RegisterSymbolAction(context =>
