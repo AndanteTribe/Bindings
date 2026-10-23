@@ -32,6 +32,12 @@ namespace Bindings.Sample
                 _maxRight = -_gaugeRoot.rect.width;
             }
 
+            // Binding may update text, but must not reset an active animation.
+            if (_valueChangeSource != null)
+            {
+                return;
+            }
+
             _fillTransform.offsetMax = CalculateOffsetMax();
 
             // エフェクトは使うときまで非表示.
@@ -42,45 +48,51 @@ namespace Bindings.Sample
         {
             // 前の演出が終わってないときはキャンセルで停止.
             _valueChangeSource?.Cancel();
-            _valueChangeSource?.Dispose();
-
-            // テキストの現在値は即更新.
-            _currentText.SetValue(_viewModel.Current);
-
-            _valueChangeSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            cancellationToken = _valueChangeSource.Token;
-
-            // offsetMax.x ≒ -right なので _maxRight = -200 ならoffsetMax.xは -200 ~ 0 で推移.
-            if (message.Previous < _viewModel.Current) // e.g. heal...etc
+            var source = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _valueChangeSource = source;
+            cancellationToken = source.Token;
+            try
             {
-                // エフェクトは使わないので非表示.
-                _effectTransform.gameObject.SetActive(false);
-                await LMotion.Create(_fillTransform.offsetMax, CalculateOffsetMax(), _gaugeAnimDuration)
-                    .Bind(_fillTransform, static (value, gauge) => gauge.offsetMax = value)
-                    .ToValueTask(CancelBehavior.Complete, cancellationToken);
-            }
-            else
-            {
-                // ゲージのほうは即更新.
-                var previousFullOffsetMax = _fillTransform.offsetMax;
-                var fullOffsetMax = _fillTransform.offsetMax = CalculateOffsetMax();
-
-                // エフェクトは使うので初期化して表示.
-                var effectObj = _effectTransform.gameObject;
-                if (!effectObj.activeSelf)
+                // offsetMax.x ≒ -right なので _maxRight = -200 ならoffsetMax.xは -200 ~ 0 で推移.
+                if (message.Previous < _viewModel.Current) // e.g. heal...etc
                 {
-                    _effectTransform.offsetMax = previousFullOffsetMax;
-                    effectObj.SetActive(true);
+                    // エフェクトは使わないので非表示.
+                    _effectTransform.gameObject.SetActive(false);
+                    await LMotion.Create(_fillTransform.offsetMax, CalculateOffsetMax(), _gaugeAnimDuration)
+                        .Bind(_fillTransform, static (value, gauge) => gauge.offsetMax = value)
+                        .ToValueTask(CancelBehavior.Complete, cancellationToken);
                 }
+                else
+                {
+                    // ゲージのほうは即更新.
+                    var previousFullOffsetMax = _fillTransform.offsetMax;
+                    var fullOffsetMax = _fillTransform.offsetMax = CalculateOffsetMax();
 
-                // 若干待機してからエフェクトを再生.
-                await Awaitable.WaitForSecondsAsync(_decreaseAnimWaitDuration, cancellationToken);
-                await LMotion.Create(_effectTransform.offsetMax, fullOffsetMax, _gaugeAnimDuration)
-                    .Bind(_effectTransform, static (value, effect) => effect.offsetMax = value)
-                    .ToValueTask(CancelBehavior.Cancel, cancellationToken);
+                    // エフェクトは使うので初期化して表示.
+                    var effectObj = _effectTransform.gameObject;
+                    if (!effectObj.activeSelf)
+                    {
+                        _effectTransform.offsetMax = previousFullOffsetMax;
+                        effectObj.SetActive(true);
+                    }
 
-                // エフェクトは非表示に戻す.
-                effectObj.SetActive(false);
+                    // 若干待機してからエフェクトを再生.
+                    await Awaitable.WaitForSecondsAsync(_decreaseAnimWaitDuration, cancellationToken);
+                    await LMotion.Create(_effectTransform.offsetMax, fullOffsetMax, _gaugeAnimDuration)
+                        .Bind(_effectTransform, static (value, effect) => effect.offsetMax = value)
+                        .ToValueTask(CancelBehavior.Cancel, cancellationToken);
+
+                    // エフェクトは非表示に戻す.
+                    effectObj.SetActive(false);
+                }
+            }
+            finally
+            {
+                if (ReferenceEquals(_valueChangeSource, source))
+                {
+                    _valueChangeSource = null;
+                }
+                source.Dispose();
             }
         }
 

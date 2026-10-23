@@ -78,4 +78,15 @@ internal static class DiagnosticDescriptors
         category: Category,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
+
+    /// <summary>
+    /// BND007: emitted when user code directly accesses a [Schema] field in a ViewModel.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bnd007 = new(
+        id: "BND007",
+        title: "Schema fields must be accessed through generated properties",
+        messageFormat: "Field '{0}' is annotated with [Schema]. Access the generated property '{1}' instead of the field.",
+        category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
 }

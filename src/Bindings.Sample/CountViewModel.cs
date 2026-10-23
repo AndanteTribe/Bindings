@@ -21,20 +21,18 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            _publisher.PublishRebindMessage<CountViewModel1>();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            _publisher.PublishRebindMessage<CountViewModel1>();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
+            _model.Count = Count;
         }
     }
 
@@ -52,20 +50,18 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            _publisher.PublishRebindMessage<CountViewModel2>();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            _publisher.PublishRebindMessage<CountViewModel2>();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
+            _model.Count = Count;
         }
     }
 
@@ -84,20 +80,18 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            PublishRebindMessage();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            PublishRebindMessage();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
+            _model.Count = Count;
         }
     }
 
@@ -112,15 +106,13 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            PublishRebindMessage();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            PublishRebindMessage();
+            Count -= 1;
         }
     }
 
@@ -141,21 +133,19 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            PublishRebindMessage();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            PublishRebindMessage();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
-            _model2.Count = _count;
+            _model.Count = Count;
+            _model2.Count = Count;
         }
     }
 
@@ -173,20 +163,18 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick, id: 1)]
         public void Increment()
         {
-            _count += 1;
-            PublishRebindMessage();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick, id: 1)]
         public void Decrement()
         {
-            _count -= 1;
-            PublishRebindMessage();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
+            _model.Count = Count;
         }
     }
 
@@ -207,21 +195,22 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            PublishRebindMessage();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            PublishRebindMessage();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
-            _interactable = true;
+            _model.Count = Count;
+            if (!Interactable)
+            {
+                Interactable = true;
+            }
         }
     }
 }
