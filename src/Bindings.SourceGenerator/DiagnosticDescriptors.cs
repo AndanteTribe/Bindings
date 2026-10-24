@@ -24,7 +24,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink,
-        customTags: new[] { Category });
+        customTags: [Category]);
 
     /// <summary>
     /// BND002: emitted when a [Schema] id value is less than -1. Only -1 (unset) or 0+ are valid.
@@ -37,7 +37,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink,
-        customTags: new[] { Category });
+        customTags: [Category]);
 
     /// <summary>
     /// BND003: emitted when multiple [Schema] entries that share the same View component field
@@ -51,7 +51,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink,
-        customTags: new[] { Category });
+        customTags: [Category]);
 
     /// <summary>
     /// BND004: emitted when a ViewModel or one of its containing types has an accessibility
@@ -65,7 +65,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink,
-        customTags: new[] { Category });
+        customTags: [Category]);
 
     /// <summary>
     /// BND005: emitted when a field whose type is annotated with [ViewModel] is marked with
@@ -79,7 +79,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Warning,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink,
-        customTags: new[] { Category });
+        customTags: [Category]);
 
     /// <summary>
     /// BND006: emitted when an IView implementation derives from MonoBehaviour.
@@ -92,7 +92,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink,
-        customTags: new[] { Category });
+        customTags: [Category]);
 
     /// <summary>
     /// BND007: emitted when user code directly accesses a [Schema] field in a ViewModel.
@@ -105,7 +105,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: HelpLink,
-        customTags: new[] { Category });
+        customTags: [Category]);
 
     /// <summary>
     /// BNDP001: requires the generated helper for equivalent self-rebind requests by default.
@@ -118,7 +118,7 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: PracticesHelpLink,
-        customTags: new[] { PracticesCategory });
+        customTags: [PracticesCategory]);
 
     /// <summary>
     /// BNDP002: requires Views to receive ViewModels instead of constructing them.
@@ -131,6 +131,6 @@ internal static class DiagnosticDescriptors
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true,
         helpLinkUri: PracticesHelpLink,
-        customTags: new[] { PracticesCategory });
+        customTags: [PracticesCategory]);
 
 }

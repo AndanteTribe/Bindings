@@ -20,43 +20,53 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.Analyze | GeneratedCodeAnalysisFlags.ReportDiagnostics);
         context.EnableConcurrentExecution();
 
-        context.RegisterCompilationStartAction(static context =>
+        context.RegisterCompilationStartAction(static compilationContext =>
         {
-            var viewInterface = context.Compilation.GetTypeByMetadataName(TypeNames.ViewAbstraction);
-            var viewModelInterface = context.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAbstraction);
-            var viewModelAttribute = context.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute);
-            var publisherInterface = context.Compilation.GetTypeByMetadataName(TypeNames.PublisherAbstraction);
+            var viewInterface = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.ViewAbstraction);
+            var viewModelInterface = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAbstraction);
+            var viewModelAttribute = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute);
+            var publisherInterface = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.PublisherAbstraction);
 
-            context.RegisterSymbolStartAction(context =>
+            compilationContext.RegisterSymbolStartAction(symbolContext =>
             {
-                var owner = (INamedTypeSymbol)context.Symbol;
+                var owner = (INamedTypeSymbol)symbolContext.Symbol;
                 if (owner.HasAttribute(viewModelAttribute))
                 {
                     // Collect helper bodies and call sites independently; callback order is unspecified.
                     var helpers = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
                     var calls = new List<(IInvocationOperation Invocation, IMethodSymbol Helper)>();
-                    context.RegisterOperationAction(
-                        context => CollectRebindCalls(context, owner, viewModelAttribute, publisherInterface, helpers, calls),
+                    symbolContext.RegisterOperationAction(
+                        operationContext => CollectRebindCalls(
+                            operationContext,
+                            owner,
+                            viewModelAttribute,
+                            publisherInterface,
+                            helpers,
+                            calls),
                         OperationKind.Invocation);
-                    context.RegisterSymbolEndAction(context => ReportRebindCalls(context, owner, helpers, calls));
+                    symbolContext.RegisterSymbolEndAction(
+                        symbolEndContext => ReportRebindCalls(symbolEndContext, owner, helpers, calls));
                 }
 
             }, SymbolKind.NamedType);
 
-            context.RegisterOperationAction(context =>
+            compilationContext.RegisterOperationAction(operationContext =>
             {
-                var constructedType = context.Operation.Type;
+                var constructedType = operationContext.Operation.Type;
                 if (constructedType == null || !constructedType.ImplementsInterface(viewModelInterface))
                 {
                     return;
                 }
 
-                var viewType = context.ContainingSymbol.GetContainingTypeImplementingInterface(viewInterface);
+                var viewType = operationContext.ContainingSymbol.GetContainingTypeImplementingInterface(viewInterface);
                 if (viewType != null)
                 {
-                    context.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.Bndp002,
-                        context.Operation.Syntax.GetLocation(), viewType.ToDisplayString(), constructedType.ToDisplayString()));
+                    operationContext.ReportDiagnostic(
+                        Diagnostic.Create(
+                            DiagnosticDescriptors.Bndp002,
+                            operationContext.Operation.Syntax.GetLocation(),
+                            viewType.ToDisplayString(),
+                            constructedType.ToDisplayString()));
                 }
             }, OperationKind.ObjectCreation, OperationKind.TypeParameterObjectCreation);
         });
@@ -104,9 +114,11 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
         {
             if (helpers.Contains(helper))
             {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    DiagnosticDescriptors.Bndp001,
-                    invocation.Syntax.GetLocation(), owner.ToDisplayString()));
+                context.ReportDiagnostic(
+                    Diagnostic.Create(
+                        DiagnosticDescriptors.Bndp001,
+                        invocation.Syntax.GetLocation(),
+                        owner.ToDisplayString()));
             }
         }
     }

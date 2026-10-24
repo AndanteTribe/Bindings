@@ -37,7 +37,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 // Report all diagnostics collected during the transform phase.
                 foreach (var (descriptor, location, args) in data.Diagnostics)
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(descriptor, location, args));
+                    ctx.ReportDiagnostic(Diagnostic.Create(descriptor, location, [.. args]));
                 }
 
                 if (!data.CanGenerate)
@@ -54,7 +54,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 }
 
                 var viewClassName = data.ClassName.Replace("ViewModel", "View");
-                ctx.AddSource(GetHintName(data, viewClassName), CreateViewSource(data, fieldAssignments, methodAssignments, orderedFields));
+                ctx.AddSource(
+                    GetHintName(data, viewClassName),
+                    CreateViewSource(data, fieldAssignments, methodAssignments, orderedFields));
             });
     }
 
@@ -102,7 +104,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         // 6. Validate the ViewModel class name
         if (!typeSymbol.Name.Contains("ViewModel"))
         {
-            diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, new[] { typeSymbol.Name }));
+            diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, [typeSymbol.Name]));
             canGenerate = false;
         }
 
@@ -136,7 +138,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             if (id < -1)
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
-                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
+                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, [id.ToString()]));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaFields.Add((
@@ -165,8 +167,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     }
                     break;
                 }
-                case IMethodSymbol method
-                    when method.MethodKind == MethodKind.Ordinary && !method.IsImplicitlyDeclared:
+                case IMethodSymbol { MethodKind: MethodKind.Ordinary, IsImplicitlyDeclared: false } method:
                 {
                     foreach (var attr in method.GetAttributes())
                     {
@@ -177,7 +178,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             if (id < -1)
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
-                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
+                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, [id.ToString()]));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaMethods.Add((
@@ -212,14 +213,24 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     private static bool CanGenerateVContainerInjector(Compilation compilation, INamedTypeSymbol type)
     {
         // Do not replace reflection injection when user-defined injection behavior is present.
-        if (type.TypeKind != TypeKind.Class || type.IsAbstract || type.IsStatic || type.IsGenericType ||
-            type.ContainingType != null || type.BaseType?.SpecialType != SpecialType.System_Object)
+        if (type.TypeKind != TypeKind.Class
+            || type.IsAbstract
+            || type.IsStatic
+            || type.IsGenericType
+            || type.ContainingType != null
+            || type.BaseType?.SpecialType != SpecialType.System_Object)
         {
             return false;
         }
 
-        foreach (var name in new[] { "VContainer.IInjector", "VContainer.IObjectResolver", "VContainer.IInjectParameter",
-                     "VContainer.IObjectResolverExtensions", "VContainer.PreserveAttribute" })
+        foreach (var name in new[]
+                 {
+                     "VContainer.IInjector",
+                     "VContainer.IObjectResolver",
+                     "VContainer.IInjectParameter",
+                     "VContainer.IObjectResolverExtensions",
+                     "VContainer.PreserveAttribute"
+                 })
         {
             if (compilation.GetTypeByMetadataName(name) == null)
             {
@@ -283,12 +294,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         diagnostics.Add((
             DiagnosticDescriptors.Bnd004,
             location,
-            new[]
-            {
+            [
                 typeSymbol.ToDisplayString(),
                 typeSymbol.DeclaredAccessibility.ToString(),
                 viewModelName,
-            }));
+            ]));
         return (string.Empty, false);
     }
 
@@ -339,7 +349,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // String overload: first argument is the binding path string
         var firstArg = attr.ConstructorArguments[0];
-        if (firstArg.Kind == TypedConstantKind.Primitive && firstArg.Value is string path)
+        if (firstArg is { Kind: TypedConstantKind.Primitive, Value: string path })
         {
             return path;
         }
@@ -385,24 +395,19 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Splits a binding path and returns the component type part and member path.
-    /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
+    /// Extracts the component type part of a binding path.
+    /// e.g. "TMPro.TMP_Text.text" → "TMPro.TMP_Text"
     /// The nested RectTransform.rect.size path is normalized to the RectTransform component type.
     /// </summary>
-    private static (string TypePart, string MemberName) SplitBindingPath(string path)
+    private static string GetComponentTypePart(string path)
     {
         if (path == "UnityEngine.RectTransform.rect.size")
         {
-            return ("UnityEngine.RectTransform", "rect.size");
+            return "UnityEngine.RectTransform";
         }
 
         var lastDot = path.LastIndexOf('.');
-        if (lastDot < 0)
-        {
-            return (path, string.Empty);
-        }
-
-        return (path.Substring(0, lastDot), path.Substring(lastDot + 1));
+        return lastDot < 0 ? path : path.Substring(0, lastDot);
     }
 
     /// <summary>
@@ -467,12 +472,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var methodTypeParts = new string[methodCount];
         for (var i = 0; i < fieldCount; i++)
         {
-            (fieldTypeParts[i], _) = SplitBindingPath(data.SchemaFields[i].BindingPath);
+            fieldTypeParts[i] = GetComponentTypePart(data.SchemaFields[i].BindingPath);
         }
 
         for (var i = 0; i < methodCount; i++)
         {
-            (methodTypeParts[i], _) = SplitBindingPath(data.SchemaMethods[i].BindingPath);
+            methodTypeParts[i] = GetComponentTypePart(data.SchemaMethods[i].BindingPath);
         }
 
         // Build an ordered list of unique type parts (fields first, then methods)
@@ -594,11 +599,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                if (!fieldTooltips.ContainsKey(fieldName))
+                if (!fieldTooltips.TryGetValue(fieldName, out var existingTooltip))
                 {
                     fieldTooltips[fieldName] = tooltip;
                 }
-                else if (fieldTooltips[fieldName] != tooltip)
+                else if (existingTooltip != tooltip)
                 {
                     // HashSet.Add is a no-op when the element already exists
                     conflictingTooltipFields.Add(fieldName);
