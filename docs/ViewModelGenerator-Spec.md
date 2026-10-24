@@ -134,7 +134,7 @@ count       →（1）変化なし →（2）該当なし → count
 
 Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、以下の診断を出力する。
 
-`BND001`–`BND004` are reported by `ViewModelGenerator` during generation. `BND005` and `BND006` are reported independently by `BindingsUsageAnalyzer`, a `DiagnosticAnalyzer` shipped in the same DLL. Usage diagnostics do not disable source generation.
+`BND001`–`BND004` are reported by `ViewModelGenerator` during generation. `BND005`–`BND007` are reported independently by `BindingsUsageAnalyzer`, a `DiagnosticAnalyzer` shipped in the same DLL. Usage diagnostics do not disable source generation.
 
 | 診断 ID | レベル | 条件 | メッセージ（案） |
 |---|---|---|---|
@@ -144,6 +144,7 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 | `BND004` | Error | `[ViewModel]` 型またはいずれかの親型のアクセシビリティを生成コードで表現できない | `Type '{TypeName}' has unsupported accessibility '{Accessibility}'. No source will be generated for ViewModel '{ViewModelName}'.` |
 | `BND005` | Warning | `[ViewModel]` が付与された型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている | `Field '{fieldName}' uses [{SerializationAttributeName}] with ViewModel type '{ViewModelTypeName}'. Unity deserialization may leave generated runtime state uninitialized, even when the type is marked [Serializable]. Construct or assign the ViewModel at runtime instead.` |
 | `BND006` | Error | A class implements `Bindings.IView` and derives from `UnityEngine.MonoBehaviour` | `Type '{TypeName}' implements Bindings.IView and derives from UnityEngine.MonoBehaviour. View implementations must not derive from MonoBehaviour.` |
+| `BND007` | Error | User code directly references a field with `[Schema]` declared in a `[ViewModel]` type | `Field '{FieldName}' is annotated with [Schema]. Access the generated property '{PropertyName}' instead of the field.` |
 
 > **理由:** View クラス名は ViewModel クラス名中の `"ViewModel"` を `"View"` に置換して導出するため、`"ViewModel"` を含まない名前では View ファイルを生成できない。
 
@@ -159,7 +160,30 @@ Roslyn SourceGenerator プロジェクト内にアナライザーを同梱し、
 
 Usage analysis excludes generated code. BND005 retains its direct named-field-type scope: arrays, type parameters, and non-field targets are not checked. Each serialization attribute on each matching field reports a warning at the attribute. Framework types and attributes are matched by symbol identity, not simple names; missing types do not cause analyzer exceptions.
 
+`BND007` analyzes field-reference operations and reports once per reference at the field-reference expression. It covers reads, assignments, compound assignments, increments/decrements, references passed as `ref`/`out`/`in`, and ref locals. Constructors, user-written accessors, lambdas, local functions, nested types, partial declarations, and external accesses to non-private Schema fields are included. All field accessibilities are checked; only fields declared in a type directly annotated with `[ViewModel]` are targeted. Methods bearing `[Schema]`, unannotated fields, unrelated same-name symbols, and Schema fields outside ViewModels are excluded.
+
+Generated getter/setter field accesses and other generated code are excluded. `nameof` is excluded because it does not read or write the field value. A field declaration initializer is allowed, but any Schema field references within its expression are checked. The suggested property name uses the generator's shared naming helper. BND007 remains an Error by default even when replacing the reference requires restructuring (for example, ref arguments or mutable struct member writes); no automatic replacement is performed. Source generation continues so the suggested property remains available. Generated property setters publish rebind messages, so callers must avoid redundant manual notifications and must initialize publisher dependencies before invoking setters during construction.
+
 ---
+
+### 3.1 Best-practice diagnostics
+
+Unlike the BND usage constraints, BNDP diagnostics recommend library-author design practices. `BindingsPracticesAnalyzer` reports them independently of generation. These diagnostics do not suppress any generated source.
+
+| ID | Severity | Category | Condition | Message |
+|---|---|---|---|---|
+| `BNDP001` | Error, enabled by default | `Bindings.Practices` | A user-written invocation in a `[ViewModel]` publishes an equivalent rebind for its own exact type through its own `_publisher` field | `Use PublishRebindMessage() instead of directly publishing a rebind message for '{TypeName}'` |
+| `BNDP002` | Error, enabled by default | `Bindings.Practices` | An object-creation operation inside a View constructs a ViewModel | `View '{ViewType}' constructs ViewModel '{ViewModelType}'. Construct the ViewModel outside the View and pass it in instead.` |
+
+BNDP001 uses invocation operations and symbol identity. The target must be the parameterless generic `Bindings.IMvvmPublisher.PublishRebindMessage<T>()` returning void; `T` must equal the current ViewModel type. The receiver must be an instance reference to that type's non-static `_publisher` field of type `IMvvmPublisher`. Locals, properties, other instances, conditional access, explicit receiver conversions, other publishers, other type arguments, and generated code are excluded.
+
+An unambiguous parameterless instance helper returning void must exist on that type. Its block body must contain exactly one expression statement, or its expression body must contain one expression, invoking the same self-rebind operation. The helper itself is not diagnosed, preventing a recursive replacement. The analyzer waits until an equivalent helper is available rather than suggesting an unavailable or behaviorally different method. Invocations with preprocessor directives are excluded.
+
+`OperationExtensions.GetEquivalentRebindHelper` shares the target and equivalence checks between analyzer and code fix and returns a method symbol, not replacement syntax. The analyzer only reports diagnostics. `BindingsPracticesCodeFixProvider`, located alongside the analyzers in the project root, constructs replacement syntax and performs speculative binding only on the IDE side. It is included in the same DLL and offers an explicit IDE code action and document/project/solution Fix All through the batch fixer. Each action uses its diagnostic ID as its equivalence key so future fixes in the provider remain distinct. Shared equivalence checks are repeated when registering a fix to reject stale diagnostics. Speculative binding chooses `PublishRebindMessage()` when it resolves to the helper, or `this.PublishRebindMessage()` when local-name shadowing requires qualification. Receiver/type-argument comments and argument-list trivia are preserved. No compiler-time rewriting is performed; actual action discovery depends on the IDE's Roslyn integration. Individual severities and the `Bindings.Practices` category are configurable in `.editorconfig`; BNDP001 defaults to Error. Source generation still continues when this error is reported.
+
+BNDP002 analyzes `ObjectCreation` and `TypeParameterObjectCreation` operations. A View is any type implementing the exact `Bindings.IView` interface, including `IView<T>` and inherited interfaces. Lexically nested helper types are treated as View-owned code; the nearest enclosing View type is named in the diagnostic. A constructed type is a ViewModel only if it implements `Bindings.IViewModel` (including inherited implementations). `[ViewModel]` alone is not used for this rule: normal source generation adds IViewModel before analyzer execution, and an existing user implementation remains valid when the generated partial declaration also lists the interface. Type-parameter construction is checked when interface or base-class constraints establish IViewModel membership, including transitive type-parameter constraints; cyclic error constraints are handled without recursion failure.
+
+Each construction reports one BNDP002 at the complete creation expression. Field/property initializers, constructors and constructor initializers, static methods, property accessors, lambdas, local functions, explicit `new Type(...)`, and target-typed `new(...)` are included. Generated code is excluded. ViewModel construction outside Views, ordinary object creation, array allocation, collection allocation without element construction, and `default` are not diagnosed. Factory calls and reflection are not constructor operations and are outside this rule's scope. Type names or namespaces that merely resemble Bindings types do not match. Missing metadata types and error symbols must not cause analyzer exceptions. BNDP002 does not stop source generation, but defaults to Error and fails compilation unless fixed, suppressed, or reconfigured. There is no Code Fix because selecting the external owner and injection strategy requires an architectural decision.
 
 ## 4. 生成ルール：ViewModel (`{FullyQualifiedViewModelName}.g.cs`)
 

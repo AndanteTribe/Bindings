@@ -8,6 +8,7 @@ namespace Bindings;
 internal static class DiagnosticDescriptors
 {
     private const string Category = "Bindings";
+    private const string PracticesCategory = "Bindings.Practices";
 
     /// <summary>
     /// BND001: emitted when a [ViewModel] class/struct name does not contain "ViewModel".
@@ -87,6 +88,28 @@ internal static class DiagnosticDescriptors
         title: "Schema fields must be accessed through generated properties",
         messageFormat: "Field '{0}' is annotated with [Schema]. Access the generated property '{1}' instead of the field.",
         category: Category,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// BNDP001: requires the generated helper for equivalent self-rebind requests by default.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bndp001 = new(
+        id: "BNDP001",
+        title: "Use the generated self-rebind helper",
+        messageFormat: "Use PublishRebindMessage() instead of directly publishing a rebind message for '{0}'",
+        category: PracticesCategory,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    /// <summary>
+    /// BNDP002: requires Views to receive ViewModels instead of constructing them.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bndp002 = new(
+        id: "BNDP002",
+        title: "Views must not construct ViewModels",
+        messageFormat: "View '{0}' constructs ViewModel '{1}'. Construct the ViewModel outside the View and pass it in instead.",
+        category: PracticesCategory,
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 }

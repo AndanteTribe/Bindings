@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 
 namespace Bindings;
@@ -47,7 +48,10 @@ internal static class SymbolExtensions
         return false;
     }
 
-    public static bool ImplementsInterface(this INamedTypeSymbol type, INamedTypeSymbol? interfaceType)
+    /// <summary>
+    /// Checks interface membership, resolving type-parameter constraints when necessary.
+    /// </summary>
+    public static bool ImplementsInterface(this ITypeSymbol type, INamedTypeSymbol? interfaceType)
     {
         if (interfaceType == null)
         {
@@ -62,6 +66,54 @@ internal static class SymbolExtensions
             }
         }
 
+        // Resolve type-parameter constraints explicitly; AllInterfaces can be empty for them.
+        return type is ITypeParameterSymbol parameter &&
+            HasInterfaceConstraint(parameter, interfaceType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default));
+    }
+
+    private static bool HasInterfaceConstraint(ITypeParameterSymbol parameter, INamedTypeSymbol interfaceType, HashSet<ITypeSymbol> visited)
+    {
+        if (!visited.Add(parameter))
+        {
+            return false;
+        }
+
+        foreach (var constraint in parameter.ConstraintTypes)
+        {
+            if (SymbolEqualityComparer.Default.Equals(constraint.OriginalDefinition, interfaceType))
+            {
+                return true;
+            }
+
+            if (constraint is ITypeParameterSymbol nested)
+            {
+                if (HasInterfaceConstraint(nested, interfaceType, visited))
+                {
+                    return true;
+                }
+            }
+            else if (constraint.ImplementsInterface(interfaceType))
+            {
+                return true;
+            }
+        }
+
         return false;
+    }
+
+    /// <summary>
+    /// Finds the nearest containing type implementing an interface, including lexical outer types.
+    /// </summary>
+    public static INamedTypeSymbol? GetContainingTypeImplementingInterface(this ISymbol symbol, INamedTypeSymbol? interfaceType)
+    {
+        for (var type = symbol.ContainingType; type != null; type = type.ContainingType)
+        {
+            if (type.ImplementsInterface(interfaceType))
+            {
+                return type;
+            }
+        }
+
+        return null;
     }
 }

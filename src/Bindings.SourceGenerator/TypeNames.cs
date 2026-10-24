@@ -11,6 +11,8 @@ internal static class TypeNames
     public const string SerializableAttribute = "System.SerializableAttribute";
     public const string InjectAttribute = "VContainer.InjectAttribute";
     public const string ViewAbstraction = "Bindings.IView";
+    public const string ViewModelAbstraction = "Bindings.IViewModel";
+    public const string PublisherAbstraction = "Bindings.IMvvmPublisher";
     public const string SerializeField = "UnityEngine.SerializeField";
     public const string SerializeReference = "UnityEngine.SerializeReference";
     public const string MonoBehaviour = "UnityEngine.MonoBehaviour";
