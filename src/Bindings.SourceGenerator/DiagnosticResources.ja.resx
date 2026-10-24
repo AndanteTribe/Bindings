@@ -62,4 +62,10 @@
     <data name="Bndp003Message" xml:space="preserve">
         <value>ViewModel '{0}' は子 ViewModel メンバー '{1}' を保持または公開するだけです。所有する ViewModel 自身の処理で利用しないのであれば、所有をこの ViewModel の外へ移してください。</value>
     </data>
+    <data name="Bndp004Title" xml:space="preserve">
+        <value>生成された Schema プロパティへの代入をラッパーメソッドにしないでください</value>
+    </data>
+    <data name="Bndp004Message" xml:space="preserve">
+        <value>メソッド '{0}' は引数を公開された書き込み可能な Schema プロパティにそのまま代入するだけです。プロパティへ直接代入してください。</value>
+    </data>
 </root>

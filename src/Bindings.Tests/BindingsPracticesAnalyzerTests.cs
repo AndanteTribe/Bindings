@@ -36,7 +36,7 @@ public class BindingsPracticesAnalyzerTests
     public void PracticeRulesAreEnabledErrorsInTheirOwnCategory()
     {
         var descriptors = new BindingsPracticesAnalyzer().SupportedDiagnostics;
-        Assert.Equal(new[] { "BNDP001", "BNDP002", "BNDP003" }, descriptors.Select(static descriptor => descriptor.Id));
+        Assert.Equal(new[] { "BNDP001", "BNDP002", "BNDP003", "BNDP004" }, descriptors.Select(static descriptor => descriptor.Id));
         Assert.All(descriptors, static descriptor =>
         {
             Assert.Equal("Bindings.Practices", descriptor.Category);

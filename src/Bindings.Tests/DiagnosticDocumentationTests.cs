@@ -124,6 +124,7 @@ public class DiagnosticDocumentationTests
     [InlineData("Bndp001", "Use the generated self-rebind helper", "Use PublishRebindMessage() instead of directly publishing a rebind message for '{0}'")]
     [InlineData("Bndp002", "Views must not construct ViewModels", "View '{0}' constructs ViewModel '{1}'. Construct the ViewModel outside the View and pass it in instead.")]
     [InlineData("Bndp003", "ViewModels must not merely aggregate other ViewModels", "ViewModel '{0}' only stores or exposes child ViewModel member '{1}'. If it is not used in the owning ViewModel's logic, move ownership outside this ViewModel.")]
+    [InlineData("Bndp004", "Do not wrap generated Schema property assignments", "Method '{0}' only assigns its parameters directly to publicly writable Schema properties. Assign the properties directly instead.")]
     public void ResourceMigrationPreservesDiagnosticText(string fieldName, string title, string message)
     {
         var descriptor = (DiagnosticDescriptor)typeof(ViewModelGenerator).Assembly.GetType("Bindings.DiagnosticDescriptors")!

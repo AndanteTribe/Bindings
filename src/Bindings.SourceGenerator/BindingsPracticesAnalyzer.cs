@@ -16,7 +16,7 @@ namespace Bindings;
 public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(DiagnosticDescriptors.Bndp001, DiagnosticDescriptors.Bndp002, DiagnosticDescriptors.Bndp003);
+        ImmutableArray.Create(DiagnosticDescriptors.Bndp001, DiagnosticDescriptors.Bndp002, DiagnosticDescriptors.Bndp003, DiagnosticDescriptors.Bndp004);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -29,6 +29,20 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
             var viewModelInterface = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAbstraction);
             var viewModelAttribute = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute);
             var publisherInterface = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.PublisherAbstraction);
+            var schemaAttribute = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.SchemaAttribute);
+
+            compilationContext.RegisterOperationAction(operationContext =>
+            {
+                if (operationContext.ContainingSymbol is IMethodSymbol method
+                    && method.ContainingType.ImplementsInterface(viewModelInterface)
+                    && IsSchemaAssignmentWrapper(method, (IMethodBodyOperation)operationContext.Operation, schemaAttribute))
+                {
+                    var location = operationContext.Operation.Syntax is MethodDeclarationSyntax declaration
+                        ? declaration.Identifier.GetLocation()
+                        : operationContext.Operation.Syntax.GetLocation();
+                    operationContext.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bndp004, location, method.Name));
+                }
+            }, OperationKind.MethodBody);
 
             compilationContext.RegisterSymbolStartAction(symbolContext =>
             {
@@ -96,6 +110,86 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
                 }
             }, OperationKind.ObjectCreation, OperationKind.TypeParameterObjectCreation);
         });
+    }
+
+    private static bool IsSchemaAssignmentWrapper(
+        IMethodSymbol method,
+        IMethodBodyOperation body,
+        INamedTypeSymbol? schemaAttribute)
+    {
+        if (method is not { MethodKind: MethodKind.Ordinary, ReturnsVoid: true, IsStatic: false, IsAsync: false, IsOverride: false }
+            || method.Parameters.Length == 0
+            || method.HasAttribute(schemaAttribute)
+            || method.PartialDefinitionPart?.HasAttribute(schemaAttribute) == true
+            || method.IsInterfaceImplementation())
+        {
+            return false;
+        }
+
+        var block = body.BlockBody ?? body.ExpressionBody;
+        if (block == null)
+        {
+            return false;
+        }
+
+        var count = block.Operations.Length;
+        if (count > 0 && block.Operations[count - 1] is IReturnOperation { IsImplicit: true, ReturnedValue: null })
+        {
+            count--;
+        }
+
+        if (count != method.Parameters.Length)
+        {
+            return false;
+        }
+
+        var parameters = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+        var properties = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
+        for (var index = 0; index < count; index++)
+        {
+            if (GetDirectSchemaCopy(block.Operations[index], method, schemaAttribute) is not { } copy
+                || !parameters.Add(copy.Parameter)
+                || !properties.Add(copy.Property))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static (IParameterSymbol Parameter, IPropertySymbol Property)? GetDirectSchemaCopy(
+        IOperation statement,
+        IMethodSymbol method,
+        INamedTypeSymbol? schemaAttribute)
+    {
+        if (statement is not IExpressionStatementOperation { Operation: ISimpleAssignmentOperation assignment }
+            || assignment.Target is not IPropertyReferenceOperation
+            {
+                Instance: IInstanceReferenceOperation { ReferenceKind: InstanceReferenceKind.ContainingTypeInstance },
+                Property: { IsStatic: false, IsIndexer: false, DeclaredAccessibility: Accessibility.Public, SetMethod: { DeclaredAccessibility: Accessibility.Public, IsInitOnly: false } } property
+            }
+            || !property.IsSchemaProperty(schemaAttribute))
+        {
+            return null;
+        }
+
+        var value = assignment.Value;
+        while (value is IParenthesizedOperation parenthesized)
+        {
+            value = parenthesized.Operand;
+        }
+
+        // Even identity casts are processing; never unwrap a conversion operation.
+        if (value is not IParameterReferenceOperation { Parameter: { RefKind: RefKind.None } parameter }
+            || !SymbolEqualityComparer.Default.Equals(parameter.ContainingSymbol, method)
+            || parameter.Type.TypeKind == TypeKind.Error
+            || !SymbolEqualityComparer.IncludeNullability.Equals(parameter.Type, property.Type))
+        {
+            return null;
+        }
+
+        return (parameter, property);
     }
 
     private static void CollectRebindCalls(

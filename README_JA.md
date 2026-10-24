@@ -407,15 +407,18 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 ### ベストプラクティス診断
 
-`BNDP` はライブラリの利用制約を扱う `BND` とは分けて、ライブラリ作者が推奨する設計へ誘導する診断です。`BindingsPracticesAnalyzer` が `Bindings.Practices` カテゴリーで報告し、ソース生成は中止しません。重大度は設定で変更でき、BNDP001・BNDP002・BNDP003 はデフォルトが Error のため、修正または設定変更するまでコンパイルは失敗します。
+`BNDP` はライブラリの利用制約を扱う `BND` とは分けて、ライブラリ作者が推奨する設計へ誘導する診断です。`BindingsPracticesAnalyzer` が `Bindings.Practices` カテゴリーで報告し、ソース生成は中止しません。重大度は設定で変更でき、BNDP001〜BNDP004 はデフォルトが Error のため、修正または設定変更するまでコンパイルは失敗します。
 
 | ID | レベル | 推奨事項 |
 |----|--------|----------|
 | `BNDP001` | エラー | `[ViewModel]` 内の等価な `_publisher.PublishRebindMessage<自分のViewModel型>()` の代わりに、`PublishRebindMessage()` を使用する。デフォルトで有効。重大度は設定で変更できる。 |
 | `BNDP002` | エラー | `IView` 実装内で ViewModel を直接生成している。View 外で生成して受け渡す。ViewModel は `IViewModel` の実装関係だけで判定する。 |
 | `BNDP003` | エラー | ViewModel が子 ViewModel を保持・公開するだけで、自身の処理で利用していない。自身の処理で利用しないのであれば、所有を親 ViewModel の外へ移す。 |
+| `BNDP004` | エラー | ViewModel のメソッドが、各引数を型変換や加工なしで、自分自身の外部から代入可能な別々の Schema プロパティへ代入するだけになっている。プロパティへ直接代入する。 |
 
 BNDP003 は `IViewModel` 型やその実装型（継承・型パラメーター制約を含む）を保持するインスタンスフィールド・自動プロパティを検査します。単純な getter/setter による公開や、手書き・`[Required]` 生成コンストラクターでの代入は利用とみなしません。メソッド呼び出し、子の状態へのアクセス、他の処理への引数渡しは手書き・生成を問わず利用とし、値の加工までは要求しません。生成 Schema プロパティを含む単純な公開プロパティの連鎖を追跡し、重複・誤検知を防ぎます。静的メンバー、コレクションは対象外です。未利用の保持メンバーごとに報告します。所有関係の変更には設計判断が必要なため、Code Fix は提供しません。
+
+BNDP004 は `IViewModel` 実装型の `void` インスタンスメソッドを、公開範囲にかかわらず検査します。各引数を同じ型の別々のプロパティへ1回ずつ代入するだけの実装が対象です。対象のプロパティは `[Schema]` フィールドに対応する、自分自身の public プロパティかつ public の通常 setter を持つものに限定し、子・他インスタンスへの代入や、それ以外の公開プロパティは除外します。キャスト（同じ型へのキャストも含む）、暗黙の型変換、演算、追加の文、`ref`／`in`／`out` 引数があるものは対象外です。`[Schema]` 付きメソッド・override・インターフェイス実装も除外しますが、デリゲートとして使うことは除外理由になりません。
 
 個別の診断の重大度・有効／無効は、`.editorconfig`（推奨）またはコード分析ルールセットファイル（`.ruleset`）で設定できます。`.ruleset` はコンパイラに明示的に指定する必要があります。カテゴリー全体の設定には `.editorconfig` を使用します。以下は `.editorconfig` の設定例です。
 
@@ -424,6 +427,7 @@ BNDP003 は `IViewModel` 型やその実装型（継承・型パラメーター�
 dotnet_diagnostic.BNDP001.severity = error
 dotnet_diagnostic.BNDP002.severity = error
 dotnet_diagnostic.BNDP003.severity = error
+dotnet_diagnostic.BNDP004.severity = error
 # IDE の提案に留める場合は suggestion を指定する。
 # Bindings のベストプラクティス診断をすべて無効にする場合:
 # dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none

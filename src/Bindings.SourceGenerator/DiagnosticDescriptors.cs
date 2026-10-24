@@ -145,4 +145,16 @@ internal static class DiagnosticDescriptors
         isEnabledByDefault: true,
         helpLinkUri: PracticesHelpLink,
         customTags: [PracticesCategory]);
+    /// <summary>
+    /// BNDP004: rejects methods that only copy parameters to publicly writable Schema properties.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bndp004 = new(
+        id: "BNDP004",
+        title: new LocalizableResourceString("Bndp004Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+        messageFormat: new LocalizableResourceString("Bndp004Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+        category: PracticesCategory,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        helpLinkUri: PracticesHelpLink,
+        customTags: [PracticesCategory]);
 }

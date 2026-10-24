@@ -1,10 +1,11 @@
 using System.Collections.Generic;
+using Bindings.GeneratorCore;
 using Microsoft.CodeAnalysis;
 
 namespace Bindings;
 
 /// <summary>
-/// Shared symbol identity and type relationship checks.
+/// Shared symbol identity, type relationship, and Schema property mapping checks.
 /// Missing metadata types never match unresolved symbols.
 /// </summary>
 internal static class SymbolExtensions
@@ -22,6 +23,54 @@ internal static class SymbolExtensions
         foreach (var attribute in symbol.GetAttributes())
         {
             if (attribute.IsAttribute(attributeType))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks whether a method implements an interface method in its declaring type.
+    /// Explicit/partial implementations, inherited interfaces, and constructed generic interfaces are supported.
+    /// Interfaces introduced only by a derived type are outside this declaring-type check.
+    /// </summary>
+    public static bool IsInterfaceImplementation(this IMethodSymbol method)
+    {
+        var definition = method.PartialDefinitionPart ?? method;
+        if (!definition.ExplicitInterfaceImplementations.IsEmpty)
+        {
+            return true;
+        }
+
+        foreach (var contract in definition.ContainingType.AllInterfaces)
+        {
+            foreach (var member in contract.GetMembers(definition.Name))
+            {
+                if (definition.ContainingType.FindImplementationForInterfaceMember(member) is IMethodSymbol implementation
+                    && SymbolEqualityComparer.Default.Equals(implementation.PartialDefinitionPart ?? implementation, definition))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Checks whether a property matches a Schema field by generated name and type.
+    /// This Bindings-specific mapping does not establish accessibility or source provenance.
+    /// </summary>
+    public static bool IsSchemaProperty(this IPropertySymbol property, INamedTypeSymbol? schemaAttribute)
+    {
+        foreach (var member in property.ContainingType.GetMembers())
+        {
+            if (member is IFieldSymbol field
+                && field.HasAttribute(schemaAttribute)
+                && TemplateHelpers.ToPropertyName(field.Name) == property.Name
+                && SymbolEqualityComparer.IncludeNullability.Equals(field.Type, property.Type))
             {
                 return true;
             }

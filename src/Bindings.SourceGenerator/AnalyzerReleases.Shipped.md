@@ -17,3 +17,4 @@ BND007  | Bindings | Error    | SchemaFieldMustBeAccessedThroughProperty
 BNDP001 | Bindings.Practices | Error | UseGeneratedSelfRebindHelper
 BNDP002 | Bindings.Practices | Error | ViewMustNotConstructViewModel
 BNDP003 | Bindings.Practices | Error | ViewModelMustNotMerelyAggregateViewModels
+BNDP004 | Bindings.Practices | Error | DoNotWrapSchemaPropertyAssignments

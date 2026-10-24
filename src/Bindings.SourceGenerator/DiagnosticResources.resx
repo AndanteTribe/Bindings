@@ -62,4 +62,10 @@
     <data name="Bndp003Message" xml:space="preserve">
         <value>ViewModel '{0}' only stores or exposes child ViewModel member '{1}'. If it is not used in the owning ViewModel's logic, move ownership outside this ViewModel.</value>
     </data>
+    <data name="Bndp004Title" xml:space="preserve">
+        <value>Do not wrap generated Schema property assignments</value>
+    </data>
+    <data name="Bndp004Message" xml:space="preserve">
+        <value>Method '{0}' only assigns its parameters directly to publicly writable Schema properties. Assign the properties directly instead.</value>
+    </data>
 </root>
