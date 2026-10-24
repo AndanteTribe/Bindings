@@ -45,8 +45,16 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     return;
                 }
 
-                EmitViewModelSource(ctx, data);
-                EmitViewSource(ctx, data);
+                ctx.AddSource(GetHintName(data, data.ClassName), CreateViewModelSource(data));
+
+                var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) = BuildComponentFieldAssignments(data);
+                foreach (var fieldName in conflictingTooltipFields)
+                {
+                    ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
+                }
+
+                var viewClassName = data.ClassName.Replace("ViewModel", "View");
+                ctx.AddSource(GetHintName(data, viewClassName), CreateViewSource(data, fieldAssignments, methodAssignments, orderedFields));
             });
     }
 
@@ -660,10 +668,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   - Constructor ([Required] fields in declaration order, then publisher)
     ///   - NotifyCompletedBind / OnPostBind / PublishRebindMessage helpers
     /// </summary>
-    private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext context)
+    private static SourceText CreateViewModelSource(GenerationContext context)
     {
         var template = new ViewModelTemplate(context);
-        ctx.AddSource(GetHintName(context, context.ClassName), SourceText.From(template.TransformText(), Encoding.UTF8));
+        return SourceText.From(template.TransformText(), Encoding.UTF8);
     }
 
     // -------------------------------------------------------------------------
@@ -682,19 +690,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   - partial void OnPostBind
     ///   - Debug subscriber block (#if UNITY_EDITOR || ... )
     /// </summary>
-    private static void EmitViewSource(SourceProductionContext ctx, GenerationContext context)
+    private static SourceText CreateViewSource(
+        GenerationContext context,
+        string[] fieldAssignments,
+        string[] methodAssignments,
+        List<(string TypePart, string FieldName, string Tooltip)> orderedFields)
     {
-        var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) =
-            BuildComponentFieldAssignments(context);
-
-        // BND003: report a warning for each View field that has conflicting tooltip values
-        foreach (var fieldName in conflictingTooltipFields)
-        {
-            ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
-        }
-
-        var viewClassName = context.ClassName.Replace("ViewModel", "View");
         var template = new ViewTemplate(context, fieldAssignments, methodAssignments, orderedFields.ToArray());
-        ctx.AddSource(GetHintName(context, viewClassName), SourceText.From(template.TransformText(), Encoding.UTF8));
+        return SourceText.From(template.TransformText(), Encoding.UTF8);
     }
 }

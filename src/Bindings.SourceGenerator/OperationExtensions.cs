@@ -13,13 +13,13 @@ internal static class OperationExtensions
     private const string RebindHelperName = "PublishRebindMessage";
 
     /// <summary>
-    /// Returns the equivalent self-rebind helper, without constructing replacement syntax.
+    /// Returns an unambiguous self-rebind helper candidate. Its body must be checked separately.
     /// </summary>
-    public static IMethodSymbol? GetEquivalentRebindHelper(
+    public static IMethodSymbol? GetSelfRebindHelper(
         this IInvocationOperation invocation,
         ISymbol? enclosingSymbol,
-        Compilation compilation,
-        CancellationToken cancellationToken)
+        INamedTypeSymbol? viewModelAttribute,
+        INamedTypeSymbol? publisherType)
     {
         if (invocation.TargetMethod.Name != RebindHelperName || invocation.TargetMethod.Arity != 1)
         {
@@ -27,15 +27,16 @@ internal static class OperationExtensions
         }
 
         var type = enclosingSymbol?.ContainingType;
-        var publisherType = compilation.GetTypeByMetadataName(TypeNames.PublisherAbstraction);
-        if (type == null || !type.HasAttribute(compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute)) ||
-            invocation.Syntax is not InvocationExpressionSyntax syntax || syntax.ContainsDirectives ||
-            !IsSelfRebind(invocation, type, publisherType))
+        if (type == null
+            || !type.HasAttribute(viewModelAttribute)
+            || invocation.Syntax is not InvocationExpressionSyntax syntax
+            || syntax.ContainsDirectives
+            || !IsSelfRebind(invocation, type, publisherType))
         {
             return null;
         }
 
-        // Ignore helpers that are missing, ambiguous, or have different behavior.
+        // Ignore helpers that are missing or ambiguous.
         IMethodSymbol? helper = null;
         foreach (var member in type.GetMembers(RebindHelperName))
         {
@@ -52,9 +53,7 @@ internal static class OperationExtensions
             helper = method;
         }
 
-        if (helper == null
-            || SymbolEqualityComparer.Default.Equals(enclosingSymbol, helper)
-            || !HasEquivalentBody(helper, type, publisherType, compilation, cancellationToken))
+        if (SymbolEqualityComparer.Default.Equals(enclosingSymbol, helper))
         {
             return null;
         }
@@ -62,7 +61,10 @@ internal static class OperationExtensions
         return helper;
     }
 
-    private static bool IsSelfRebind(IInvocationOperation invocation, INamedTypeSymbol type, INamedTypeSymbol? publisherType)
+    private static bool IsSelfRebind(
+        IInvocationOperation invocation,
+        INamedTypeSymbol type,
+        INamedTypeSymbol? publisherType)
     {
         return publisherType != null
                && invocation is { TargetMethod: { Name: RebindHelperName, Arity: 1, Parameters.Length: 0, ReturnsVoid: true }, Arguments.Length: 0 }
@@ -80,10 +82,22 @@ internal static class OperationExtensions
                && SymbolEqualityComparer.Default.Equals(field.ContainingType, type);
     }
 
-    private static bool HasEquivalentBody(
-        IMethodSymbol helper, INamedTypeSymbol type, INamedTypeSymbol? publisherType,
-        Compilation compilation, CancellationToken cancellationToken)
+    /// <summary>
+    /// Checks a resolved invocation against the helper's complete, single-call body.
+    /// The caller supplies operations from analysis callbacks or a document semantic model.
+    /// </summary>
+    public static bool IsEquivalentRebindHelperBody(
+        this IInvocationOperation invocation,
+        IMethodSymbol helper,
+        INamedTypeSymbol? publisherType,
+        CancellationToken cancellationToken)
     {
+        if (helper is not { Name: RebindHelperName, IsStatic: false, Arity: 0, Parameters.Length: 0, ReturnsVoid: true }
+            || !IsSelfRebind(invocation, helper.ContainingType, publisherType))
+        {
+            return false;
+        }
+
         foreach (var reference in helper.DeclaringSyntaxReferences)
         {
             if (reference.GetSyntax(cancellationToken) is not MethodDeclarationSyntax declaration)
@@ -98,8 +112,8 @@ internal static class OperationExtensions
             }
 
             if (expression != null
-                && compilation.GetSemanticModel(declaration.SyntaxTree).GetOperation(expression, cancellationToken) is IInvocationOperation operation
-                && IsSelfRebind(operation, type, publisherType))
+                && expression.SyntaxTree == invocation.Syntax.SyntaxTree
+                && expression.Span == invocation.Syntax.Span)
             {
                 return true;
             }

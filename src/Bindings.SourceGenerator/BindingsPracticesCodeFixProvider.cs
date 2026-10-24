@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Composition;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CodeActions;
@@ -40,14 +41,19 @@ public sealed class BindingsPracticesCodeFixProvider : CodeFixProvider
         var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
         var model = await context.Document.GetSemanticModelAsync(context.CancellationToken).ConfigureAwait(false);
         var invocation = root?.FindNode(context.Span, getInnermostNodeForTie: true).FirstAncestorOrSelf<InvocationExpressionSyntax>();
-        if (model == null || invocation == null || model.GetOperation(invocation, context.CancellationToken) is not IInvocationOperation operation)
+        if (model == null
+            || invocation == null
+            || model.GetOperation(invocation, context.CancellationToken) is not IInvocationOperation operation)
         {
             return;
         }
 
-        var helper = operation.GetEquivalentRebindHelper(
-            model.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken), model.Compilation, context.CancellationToken);
-        if (helper == null)
+        var helper = operation.GetSelfRebindHelper(
+            model.GetEnclosingSymbol(invocation.SpanStart, context.CancellationToken),
+            model.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute),
+            model.Compilation.GetTypeByMetadataName(TypeNames.PublisherAbstraction));
+        if (helper == null
+            || !await HasEquivalentHelperBodyAsync(context.Document, helper, context.CancellationToken).ConfigureAwait(false))
         {
             return;
         }
@@ -64,10 +70,44 @@ public sealed class BindingsPracticesCodeFixProvider : CodeFixProvider
         context.RegisterCodeFix(CodeAction.Create(
             "Use PublishRebindMessage()",
             _ => Task.FromResult(context.Document.WithSyntaxRoot(root!.ReplaceNode(invocation, replacement))),
-            diagnostic.Id), diagnostic);
+            equivalenceKey: DiagnosticDescriptors.Bndp001.Id), diagnostic);
     }
 
-    private static InvocationExpressionSyntax? CreateHelperInvocation(InvocationExpressionSyntax invocation, IMethodSymbol helper, SemanticModel model)
+    private static async Task<bool> HasEquivalentHelperBodyAsync(
+        Document document,
+        IMethodSymbol helper,
+        CancellationToken cancellationToken)
+    {
+        foreach (var reference in helper.DeclaringSyntaxReferences)
+        {
+            if (await reference.GetSyntaxAsync(cancellationToken).ConfigureAwait(false) is not MethodDeclarationSyntax declaration)
+            {
+                continue;
+            }
+
+            var expression = declaration.ExpressionBody?.Expression;
+            if (declaration.Body is { Statements.Count: 1 } body && body.Statements[0] is ExpressionStatementSyntax statement)
+            {
+                expression = statement.Expression;
+            }
+
+            var helperDocument = document.Project.Solution.GetDocument(declaration.SyntaxTree);
+            var model = helperDocument == null ? null : await helperDocument.GetSemanticModelAsync(cancellationToken).ConfigureAwait(false);
+            if (expression != null
+                && model?.GetOperation(expression, cancellationToken) is IInvocationOperation invocation
+                && invocation.IsEquivalentRebindHelperBody(helper, model.Compilation.GetTypeByMetadataName(TypeNames.PublisherAbstraction), cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static InvocationExpressionSyntax? CreateHelperInvocation(
+        InvocationExpressionSyntax invocation,
+        IMethodSymbol helper,
+        SemanticModel model)
     {
         var replacement = SyntaxFactory.InvocationExpression(SyntaxFactory.IdentifierName(helper.Name), invocation.ArgumentList);
         if (BindsToHelper(model, invocation.SpanStart, replacement, helper))
@@ -81,7 +121,11 @@ public sealed class BindingsPracticesCodeFixProvider : CodeFixProvider
         return BindsToHelper(model, invocation.SpanStart, replacement, helper) ? replacement : null;
     }
 
-    private static bool BindsToHelper(SemanticModel model, int position, InvocationExpressionSyntax replacement, IMethodSymbol helper) =>
+    private static bool BindsToHelper(
+        SemanticModel model,
+        int position,
+        InvocationExpressionSyntax replacement,
+        IMethodSymbol helper) =>
         SymbolEqualityComparer.Default.Equals(
             model.GetSpeculativeSymbolInfo(position, replacement, SpeculativeBindingOption.BindAsExpression).Symbol, helper);
 }

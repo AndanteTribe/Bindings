@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="Bindings Roslyn component rules" ToolsVersion="16.0">
+    <Rules AnalyzerId="Microsoft.CodeAnalysis.Analyzers" RuleNamespace="Microsoft.CodeAnalysis.Analyzers">
+        <Rule Id="RS1001" Action="Error" />
+        <Rule Id="RS1002" Action="Error" />
+        <Rule Id="RS1003" Action="Error" />
+        <Rule Id="RS1004" Action="Error" />
+        <Rule Id="RS1005" Action="Error" />
+        <Rule Id="RS1006" Action="Error" />
+        <Rule Id="RS1007" Action="Error" />
+        <Rule Id="RS1008" Action="Error" />
+        <Rule Id="RS1009" Action="Error" />
+        <Rule Id="RS1010" Action="Error" />
+        <Rule Id="RS1011" Action="Error" />
+        <Rule Id="RS1012" Action="Error" />
+        <Rule Id="RS1013" Action="Error" />
+        <Rule Id="RS1014" Action="Error" />
+        <Rule Id="RS1015" Action="Error" />
+        <Rule Id="RS1016" Action="Error" />
+        <Rule Id="RS1017" Action="Error" />
+        <Rule Id="RS1018" Action="Error" />
+        <Rule Id="RS1019" Action="Error" />
+        <Rule Id="RS1020" Action="Error" />
+        <Rule Id="RS1021" Action="Error" />
+        <Rule Id="RS1022" Action="Error" />
+        <Rule Id="RS1023" Action="Error" />
+        <Rule Id="RS1024" Action="Error" />
+        <Rule Id="RS1025" Action="Error" />
+        <Rule Id="RS1026" Action="Error" />
+        <Rule Id="RS1027" Action="Error" />
+        <Rule Id="RS1028" Action="Error" />
+        <Rule Id="RS1029" Action="Error" />
+        <Rule Id="RS1030" Action="Error" />
+        <Rule Id="RS1031" Action="Error" />
+        <Rule Id="RS1032" Action="Error" />
+        <Rule Id="RS1033" Action="Error" />
+        <Rule Id="RS1034" Action="Error" />
+        <Rule Id="RS1035" Action="Error" />
+        <Rule Id="RS1036" Action="Error" />
+        <Rule Id="RS1037" Action="Error" />
+        <Rule Id="RS2000" Action="Error" />
+        <Rule Id="RS2001" Action="Error" />
+        <Rule Id="RS2002" Action="Error" />
+        <Rule Id="RS2003" Action="Error" />
+        <Rule Id="RS2004" Action="Error" />
+        <Rule Id="RS2005" Action="Error" />
+        <Rule Id="RS2006" Action="Error" />
+        <Rule Id="RS2007" Action="Error" />
+        <Rule Id="RS2008" Action="Error" />
+    </Rules>
+</RuleSet>

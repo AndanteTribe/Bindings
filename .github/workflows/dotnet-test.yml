@@ -6,11 +6,13 @@ on:
             - synchronize
         paths:
             - 'src/**'
+            - '.github/workflows/dotnet-test.yml'
     push:
         branches:
             - main
         paths:
             - 'src/**'
+            - '.github/workflows/dotnet-test.yml'
     workflow_dispatch: {}
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
@@ -30,7 +32,9 @@ jobs:
             # ghasec-ignore: unpinned-action
             - uses: AndanteTribe/Actions/actions/setup-dotnet@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
               with:
-                  dotnet-version: '8.0.x'
+                  dotnet-version: |
+                      8.0.x
+                      10.0.x
             - run: dotnet restore src/Bindings.Tests/Bindings.Tests.csproj
             - run: dotnet build src/Bindings.Tests/Bindings.Tests.csproj --configuration Release --no-restore
             - run: dotnet test src/Bindings.Tests/Bindings.Tests.csproj --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory TestResults

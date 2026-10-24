@@ -52,6 +52,15 @@ Source Generator の診断を追加または変更するときは、実装だけ
 - `DiagnosticDocumentationTests` が全 `DiagnosticDescriptor` と英語・日本語READMEの記載を照合するため、READMEを更新せずにテスト側の期待値を弱めない。
 - Releaseビルドで analyzer release tracking を含む警告が0件であることと、Release構成の全テストが成功することを確認する。
 
+## Roslyn の検査が有効になる実装構造
+
+- `src/Bindings.SourceGenerator/Roslyn.ruleset` で、使用中の `Microsoft.CodeAnalysis.Analyzers` の全 RS ルールを Error にしている。警告抑制や対象外の補助クラスへの移動で回避せず、検査対象になる形で実装する。
+- `Initialize` に解析設定とコールバックの登録フローを明記する。登録を別メソッドへ委譲しない。コールバックから呼ぶ判定用の private メソッドは利用してよいが、診断報告は Analyzer 自身の型に置き、報告する `DiagnosticDescriptors` のフィールドを明示する。
+- コンパイル・シンボル単位の状態は、それぞれの Start コールバックのローカルに閉じ込める。Analyzer や共有ヘルパーのインスタンスフィールド・static フィールドに Compilation、SemanticModel、シンボル、操作を保持しない。
+- 共有の拡張メソッドには解決済みのシンボル・操作・値を渡す。Compilation や解析 Context を渡して情報取得・登録・診断報告を隠さない。Code Fix の Document API 呼び出しと CodeAction 生成は CodeFixProvider 内に置く。
+- 診断定義は `DiagnosticDescriptors.cs` のフィールドで直接生成する。不透明なファクトリーを介さず、文言は `DiagnosticResources.resx` の LocalizableResourceString、ヘルプリンク、カテゴリーを示す customTags を指定する。英語の既存文言は意図せず変更しない。
+- 診断 ID・カテゴリーを追加する際は `DiagnosticCategoryAndIdRanges.txt` も更新する。リリース表と `.resx` は使用中の公式 Analyzer パッケージが AdditionalFiles に追加するため、csproj で二重登録しない。
+
 ## Source Generator の Release ビルドと Unity への DLL 配置
 
 Source Generator は次のコマンドで Release ビルドする。

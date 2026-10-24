@@ -393,6 +393,8 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 ## アナライザー診断
 
+診断のタイトルとメッセージは DLL に埋め込まれたローカライズ可能なリソース（現在は英語へのフォールバック）です。各診断にドキュメントへのリンクとカテゴリータグを付与しています。これらのメタデータによって、診断 ID・重大度・設定変更可否は変わりません。
+
 | ID | レベル | 条件 |
 |----|--------|------|
 | `BND001` | エラー | `[ViewModel]` を付与したクラス名に `"ViewModel"` が含まれていない。ViewModel と View のどちらも生成しない。 |

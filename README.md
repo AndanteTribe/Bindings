@@ -393,6 +393,8 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 ## Analyzer Diagnostics
 
+Diagnostic titles and messages are embedded localizable resources (currently English fallback). Every diagnostic includes a documentation link and a category tag. These metadata do not change diagnostic IDs, severities, or configurability.
+
 | ID | Level | Condition |
 |----|-------|-----------|
 | `BND001` | Error | `[ViewModel]` class name does not contain `"ViewModel"`; neither ViewModel nor View source is generated. |
