@@ -223,7 +223,7 @@ namespace VContainer
             .Replace("public partial struct TestViewModel", "[Bindings.ViewModel] public partial struct TestViewModel")
             .Replace("public abstract partial class TestViewModel", "[Bindings.ViewModel] public abstract partial class TestViewModel");
         var (source, _) = RunGenerator(code + VContainerStubs, out var result);
-        Assert.Empty(result.Diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.Empty(result.Diagnostics.Where(static d => d.Severity == DiagnosticSeverity.Error));
         Assert.NotNull(source);
         // Namespace declarations in the user source must not enclose the VContainer stubs.
         if (ns.Length > 0)
@@ -237,7 +237,7 @@ namespace VContainer
         {
             var tree = CSharpSyntaxTree.ParseText(source);
             var injector = tree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>()
-                .Single(c => c.Identifier.ValueText == "__BindingsInjector");
+                .Single(static c => c.Identifier.ValueText == "__BindingsInjector");
             Assert.Equal("TestViewModel", Assert.IsType<ClassDeclarationSyntax>(injector.Parent).Identifier.ValueText);
             Assert.Contains("[global::VContainer.Preserve]", source);
             Assert.Contains("\"publisher\", parameters)", source);
@@ -350,7 +350,7 @@ namespace VContainer
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         return finalCompilation.GetDiagnostics()
-            .Where(d => d.Severity == DiagnosticSeverity.Error)
+            .Where(static d => d.Severity == DiagnosticSeverity.Error)
             .ToArray();
     }
 
@@ -377,7 +377,7 @@ namespace VContainer
 
         var tree = CSharpSyntaxTree.ParseText(viewSource, new CSharpParseOptions(preprocessorSymbols: symbols));
         var hasSubscriber = tree.GetRoot().DescendantNodes().OfType<ClassDeclarationSyntax>()
-            .Any(declaration => declaration.BaseList?.Types.Any(type =>
+            .Any(static declaration => declaration.BaseList?.Types.Any(static type =>
                 type.Type.ToString().Contains("IMvvmSubscriber<global::Bindings.DebugBindMessage>")) == true);
         Assert.Equal(expected, hasSubscriber);
     }
@@ -401,7 +401,7 @@ namespace VContainer
         // type symbol to exercise the generator's defensive diagnostic path directly.
         var method = typeof(ViewModelGenerator)
             .GetMethods(BindingFlags.NonPublic | BindingFlags.Static)
-            .Single(candidate =>
+            .Single(static candidate =>
                 candidate.Name == "GetAccessibilityKeyword"
                 && candidate.GetParameters().Length == 4
                 && candidate.GetParameters()[0].ParameterType == typeof(INamedTypeSymbol));
@@ -444,8 +444,8 @@ namespace Bindings.Sample
         RunGenerator(userCode, out var runResult, out var compilation);
         var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
 
-        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
-        var diagnostic = Assert.Single(diagnostics, candidate => candidate.Id == "BND005");
+        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
+        var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("Bindings.Sample.CountViewModelSerialized", diagnostic.GetMessage());
@@ -455,8 +455,8 @@ namespace Bindings.Sample
         Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewModelSerialized.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewSerialized.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewModelSerialized.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewSerialized.g.cs"));
     }
 
     [Fact]
@@ -495,8 +495,8 @@ public sealed class ViewModelHost
         RunGenerator(userCode, out var runResult, out var compilation);
         var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
 
-        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
-        var diagnostic = Assert.Single(diagnostics, candidate => candidate.Id == "BND005");
+        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
+        var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("CountViewModelReference", diagnostic.GetMessage());
@@ -506,8 +506,8 @@ public sealed class ViewModelHost
         Assert.Equal("UnityEngine.SerializeReference", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewModelReference.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, tree => tree.FilePath.EndsWith("CountViewReference.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountViewModelReference.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountViewReference.g.cs"));
     }
 
     [Fact]
@@ -832,7 +832,7 @@ namespace Bindings.Sample
         var runResult = driver.RunGenerators(compilation).GetRunResult();
 
         // BND003 should be reported
-        var bnd003 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND003");
+        var bnd003 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND003");
         Assert.NotNull(bnd003);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd003.Severity);
         Assert.Contains("_incrementButton", bnd003.GetMessage());
@@ -870,7 +870,7 @@ namespace Bindings.Sample
         // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
         // [Serializable] alone can be used by custom serializers and must not report BND005.
-        Assert.DoesNotContain(runResult.Diagnostics, candidate => candidate.Id == "BND005");
+        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
     }
 
     // -------------------------------------------------------------------------
@@ -910,7 +910,7 @@ namespace Bindings.Sample
         var runResult = driver.RunGenerators(compilation).GetRunResult();
 
         // BND001 must be reported as an Error
-        var bnd001 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND001");
+        var bnd001 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND001");
         Assert.NotNull(bnd001);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd001.Severity);
         Assert.Contains("CountModel", bnd001.GetMessage());
@@ -964,7 +964,7 @@ namespace Bindings.Sample
         var runResult = driver.RunGenerators(compilation).GetRunResult();
 
         // BND002 must be reported as an Error
-        var bnd002 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND002");
+        var bnd002 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND002");
         Assert.NotNull(bnd002);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd002.Severity);
         Assert.Contains("-2", bnd002.GetMessage());
@@ -1264,9 +1264,9 @@ namespace Second
 
         RunGenerator(userCode, out var runResult);
 
-        Assert.DoesNotContain(runResult.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(runResult.Diagnostics, static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var hintNames = runResult.GeneratedTrees
-            .Select(tree => System.IO.Path.GetFileName(tree.FilePath))
+            .Select(static tree => System.IO.Path.GetFileName(tree.FilePath))
             .ToArray();
 
         Assert.Equal(4, hintNames.Length);
@@ -1300,9 +1300,9 @@ namespace Common
 
         RunGenerator(userCode, out var runResult);
 
-        Assert.DoesNotContain(runResult.Diagnostics, diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(runResult.Diagnostics, static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var hintNames = runResult.GeneratedTrees
-            .Select(tree => System.IO.Path.GetFileName(tree.FilePath))
+            .Select(static tree => System.IO.Path.GetFileName(tree.FilePath))
             .ToArray();
 
         Assert.Equal(4, hintNames.Length);
@@ -1466,7 +1466,7 @@ namespace Bindings.Sample
 
         var runResult = driver.RunGenerators(compilation).GetRunResult();
 
-        var bnd002 = runResult.Diagnostics.FirstOrDefault(d => d.Id == "BND002");
+        var bnd002 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND002");
         Assert.NotNull(bnd002);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd002.Severity);
         Assert.Contains("-3", bnd002.GetMessage());
@@ -1832,14 +1832,14 @@ namespace Bindings.Sample
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         var generatedSources = driver.RunGenerators(compilation).GetRunResult().GeneratedTrees
-            .Select(tree => tree.GetText().ToString())
+            .Select(static tree => tree.GetText().ToString())
             .ToArray();
 
-        Assert.Contains(generatedSources, source =>
+        Assert.Contains(generatedSources, static source =>
             source.Contains("internal partial class InternalOuter")
             && source.Contains("public partial class PublicMiddle")
             && source.Contains("internal partial class CountViewModelInternal : global::Bindings.IViewModel"));
-        Assert.Contains(generatedSources, source =>
+        Assert.Contains(generatedSources, static source =>
             source.Contains("public partial class PublicOuter")
             && source.Contains("internal partial class InternalMiddle")
             && source.Contains("public partial class CountViewModelPublic : global::Bindings.IViewModel"));

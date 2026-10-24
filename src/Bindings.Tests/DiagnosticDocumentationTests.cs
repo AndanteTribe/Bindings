@@ -19,9 +19,9 @@ public class DiagnosticDocumentationTests
 
         var descriptors = descriptorType
             .GetFields(BindingFlags.Public | BindingFlags.Static)
-            .Where(field => field.FieldType == typeof(DiagnosticDescriptor))
-            .Select(field => Assert.IsType<DiagnosticDescriptor>(field.GetValue(null)))
-            .OrderBy(descriptor => descriptor.Id)
+            .Where(static field => field.FieldType == typeof(DiagnosticDescriptor))
+            .Select(static field => Assert.IsType<DiagnosticDescriptor>(field.GetValue(null)))
+            .OrderBy(static descriptor => descriptor.Id)
             .ToArray();
         Assert.NotEmpty(descriptors);
 
@@ -47,7 +47,7 @@ public class DiagnosticDocumentationTests
         var descriptorType = assembly.GetType("Bindings.DiagnosticDescriptors")!;
         var resources = new ResourceManager("Bindings.DiagnosticResources", assembly);
         var culture = CultureInfo.GetCultureInfo(cultureName);
-        foreach (var field in descriptorType.GetFields(BindingFlags.Public | BindingFlags.Static).Where(field => field.FieldType == typeof(DiagnosticDescriptor)))
+        foreach (var field in descriptorType.GetFields(BindingFlags.Public | BindingFlags.Static).Where(static field => field.FieldType == typeof(DiagnosticDescriptor)))
         {
             var descriptor = (DiagnosticDescriptor)field.GetValue(null)!;
             var title = resources.GetString(field.Name + "Title", culture);
@@ -83,8 +83,8 @@ public class DiagnosticDocumentationTests
         var english = resources.GetResourceSet(CultureInfo.InvariantCulture, true, false)!;
         var japanese = resources.GetResourceSet(CultureInfo.GetCultureInfo("ja"), true, false)!;
         Assert.NotNull(japanese);
-        var englishKeys = english.Cast<System.Collections.DictionaryEntry>().Select(entry => (string)entry.Key).OrderBy(key => key).ToArray();
-        var japaneseKeys = japanese.Cast<System.Collections.DictionaryEntry>().Select(entry => (string)entry.Key).OrderBy(key => key).ToArray();
+        var englishKeys = english.Cast<System.Collections.DictionaryEntry>().Select(static entry => (string)entry.Key).OrderBy(static key => key).ToArray();
+        var japaneseKeys = japanese.Cast<System.Collections.DictionaryEntry>().Select(static entry => (string)entry.Key).OrderBy(static key => key).ToArray();
         Assert.Equal(englishKeys, japaneseKeys);
         foreach (var key in englishKeys)
         {
@@ -92,9 +92,9 @@ public class DiagnosticDocumentationTests
             var japaneseText = japanese.GetString(key)!;
             Assert.False(string.IsNullOrWhiteSpace(japaneseText));
             var englishArguments = System.Text.RegularExpressions.Regex.Matches(englishText, @"\{\d+\}")
-                .Select(match => match.Value).OrderBy(value => value).ToArray();
+                .Select(static match => match.Value).OrderBy(static value => value).ToArray();
             var japaneseArguments = System.Text.RegularExpressions.Regex.Matches(japaneseText, @"\{\d+\}")
-                .Select(match => match.Value).OrderBy(value => value).ToArray();
+                .Select(static match => match.Value).OrderBy(static value => value).ToArray();
             Assert.Equal(englishArguments, japaneseArguments);
             Assert.DoesNotContain("{", string.Format(CultureInfo.GetCultureInfo("ja"), japaneseText, "first", "second", "third"));
         }
@@ -123,12 +123,25 @@ public class DiagnosticDocumentationTests
     [InlineData("Bnd007", "Schema fields must be accessed through generated properties", "Field '{0}' is annotated with [Schema]. Access the generated property '{1}' instead of the field.")]
     [InlineData("Bndp001", "Use the generated self-rebind helper", "Use PublishRebindMessage() instead of directly publishing a rebind message for '{0}'")]
     [InlineData("Bndp002", "Views must not construct ViewModels", "View '{0}' constructs ViewModel '{1}'. Construct the ViewModel outside the View and pass it in instead.")]
+    [InlineData("Bndp003", "ViewModels must not merely aggregate other ViewModels", "ViewModel '{0}' only stores or exposes child ViewModel member '{1}'. If it is not used in the owning ViewModel's logic, move ownership outside this ViewModel.")]
     public void ResourceMigrationPreservesDiagnosticText(string fieldName, string title, string message)
     {
         var descriptor = (DiagnosticDescriptor)typeof(ViewModelGenerator).Assembly.GetType("Bindings.DiagnosticDescriptors")!
             .GetField(fieldName, BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
         Assert.Equal(title, descriptor.Title.ToString(CultureInfo.InvariantCulture));
         Assert.Equal(message, descriptor.MessageFormat.ToString(CultureInfo.InvariantCulture));
+    }
+
+    [Theory]
+    [InlineData("en-US", "ViewModel 'Parent' only stores or exposes child ViewModel member 'Child'. If it is not used in the owning ViewModel's logic, move ownership outside this ViewModel.")]
+    [InlineData("ja", "ViewModel 'Parent' は子 ViewModel メンバー 'Child' を保持または公開するだけです。所有する ViewModel 自身の処理で利用しないのであれば、所有をこの ViewModel の外へ移してください。")]
+    [InlineData("ja-JP", "ViewModel 'Parent' は子 ViewModel メンバー 'Child' を保持または公開するだけです。所有する ViewModel 自身の処理で利用しないのであれば、所有をこの ViewModel の外へ移してください。")]
+    public void AggregationDiagnosticUsesConditionalOwnershipGuidance(string cultureName, string expected)
+    {
+        var descriptor = (DiagnosticDescriptor)typeof(ViewModelGenerator).Assembly.GetType("Bindings.DiagnosticDescriptors")!
+            .GetField("Bndp003", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
+        var diagnostic = Diagnostic.Create(descriptor, Location.None, "Parent", "Child");
+        Assert.Equal(expected, diagnostic.GetMessage(CultureInfo.GetCultureInfo(cultureName)));
     }
 
     private static string FindRepositoryRoot()

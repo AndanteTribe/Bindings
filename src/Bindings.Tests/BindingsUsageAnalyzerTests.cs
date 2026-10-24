@@ -30,7 +30,7 @@ public class BindingsUsageAnalyzerTests
     [Fact]
     public void SupportedDiagnosticsAreUsageRulesOnly()
     {
-        Assert.Equal(new[] { "BND005", "BND006", "BND007" }, new BindingsUsageAnalyzer().SupportedDiagnostics.Select(descriptor => descriptor.Id));
+        Assert.Equal(new[] { "BND005", "BND006", "BND007" }, new BindingsUsageAnalyzer().SupportedDiagnostics.Select(static descriptor => descriptor.Id));
     }
 
     [Theory]
@@ -64,7 +64,7 @@ public class BindingsUsageAnalyzerTests
             """));
 
         Assert.Equal(4, diagnostics.Length);
-        Assert.All(diagnostics, diagnostic => Assert.Equal("BND005", diagnostic.Id));
+        Assert.All(diagnostics, static diagnostic => Assert.Equal("BND005", diagnostic.Id));
     }
 
     [Fact]
@@ -132,7 +132,7 @@ public class BindingsUsageAnalyzerTests
             """));
 
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, diagnostic => Assert.Equal("BND006", diagnostic.Id));
+        Assert.All(diagnostics, static diagnostic => Assert.Equal("BND006", diagnostic.Id));
     }
 
     [Fact]
@@ -149,7 +149,7 @@ public class BindingsUsageAnalyzerTests
             }
             """);
 
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var diagnostic = Assert.Single(await AnalyzeAsync(compilation));
         Assert.Equal("BND006", diagnostic.Id);
         Assert.Contains("Container.BadView<T>", diagnostic.GetMessage());
@@ -212,7 +212,7 @@ public class BindingsUsageAnalyzerTests
             }
             """);
 
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var diagnostic = Assert.Single(await AnalyzeAsync(compilation));
         Assert.Equal("BND007", diagnostic.Id);
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
@@ -258,7 +258,7 @@ public class BindingsUsageAnalyzerTests
             """));
 
         Assert.Equal(expectedCount, diagnostics.Length);
-        Assert.All(diagnostics, diagnostic => Assert.Equal("BND007", diagnostic.Id));
+        Assert.All(diagnostics, static diagnostic => Assert.Equal("BND007", diagnostic.Id));
     }
 
     [Fact]
@@ -351,10 +351,10 @@ public class BindingsUsageAnalyzerTests
         var driver = CSharpGeneratorDriver.Create(new ViewModelGenerator())
             .RunGeneratorsAndUpdateCompilation(compilation, out var output, out _);
 
-        Assert.DoesNotContain(output.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var diagnostics = await AnalyzeAsync(output);
         Assert.Equal(expectedCount, diagnostics.Length);
-        Assert.All(diagnostics, diagnostic =>
+        Assert.All(diagnostics, static diagnostic =>
         {
             Assert.Equal("BND007", diagnostic.Id);
             Assert.Equal("User.cs", diagnostic.Location.SourceTree!.FilePath);

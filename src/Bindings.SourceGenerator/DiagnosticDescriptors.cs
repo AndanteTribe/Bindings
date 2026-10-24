@@ -133,4 +133,16 @@ internal static class DiagnosticDescriptors
         helpLinkUri: PracticesHelpLink,
         customTags: [PracticesCategory]);
 
+    /// <summary>
+    /// BNDP003: rejects child ViewModels that are only stored or exposed.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bndp003 = new(
+        id: "BNDP003",
+        title: new LocalizableResourceString("Bndp003Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+        messageFormat: new LocalizableResourceString("Bndp003Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+        category: PracticesCategory,
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true,
+        helpLinkUri: PracticesHelpLink,
+        customTags: [PracticesCategory]);
 }

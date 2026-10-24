@@ -56,4 +56,10 @@
     <data name="Bndp002Message" xml:space="preserve">
         <value>View '{0}' が ViewModel '{1}' を構築しています。ViewModel は View の外で構築し、View に渡してください。</value>
     </data>
+    <data name="Bndp003Title" xml:space="preserve">
+        <value>ViewModel は他の ViewModel を集約するだけにしないでください</value>
+    </data>
+    <data name="Bndp003Message" xml:space="preserve">
+        <value>ViewModel '{0}' は子 ViewModel メンバー '{1}' を保持または公開するだけです。所有する ViewModel 自身の処理で利用しないのであれば、所有をこの ViewModel の外へ移してください。</value>
+    </data>
 </root>

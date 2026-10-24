@@ -28,7 +28,7 @@ public class BindingsPracticesAnalyzerTests
         var driver = CSharpGeneratorDriver.Create(new ViewModelGenerator())
             .RunGeneratorsAndUpdateCompilation(compilation, out var output, out _);
         Assert.Empty(driver.GetRunResult().Diagnostics);
-        Assert.DoesNotContain(output.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         return output;
     }
 
@@ -36,8 +36,8 @@ public class BindingsPracticesAnalyzerTests
     public void PracticeRulesAreEnabledErrorsInTheirOwnCategory()
     {
         var descriptors = new BindingsPracticesAnalyzer().SupportedDiagnostics;
-        Assert.Equal(new[] { "BNDP001", "BNDP002" }, descriptors.Select(descriptor => descriptor.Id));
-        Assert.All(descriptors, descriptor =>
+        Assert.Equal(new[] { "BNDP001", "BNDP002", "BNDP003" }, descriptors.Select(static descriptor => descriptor.Id));
+        Assert.All(descriptors, static descriptor =>
         {
             Assert.Equal("Bindings.Practices", descriptor.Category);
             Assert.Equal(DiagnosticSeverity.Error, descriptor.DefaultSeverity);
@@ -134,9 +134,9 @@ public class BindingsPracticesAnalyzerTests
         compilation = compilation.RemoveAllSyntaxTrees().AddSyntaxTrees(trees);
         var diagnostics = await AnalyzeAsync(compilation);
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, diagnostic => Assert.Equal("BNDP001", diagnostic.Id));
-        Assert.Contains(diagnostics, diagnostic => diagnostic.Location.SourceTree!.FilePath == "User.cs");
-        Assert.Contains(diagnostics, diagnostic => diagnostic.Location.SourceTree!.FilePath == "Helper.g.cs");
+        Assert.All(diagnostics, static diagnostic => Assert.Equal("BNDP001", diagnostic.Id));
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Location.SourceTree!.FilePath == "User.cs");
+        Assert.Contains(diagnostics, static diagnostic => diagnostic.Location.SourceTree!.FilePath == "Helper.g.cs");
     }
 
     [Fact]
@@ -166,9 +166,12 @@ public class BindingsPracticesAnalyzerTests
     public async Task AnalyzerInstanceDoesNotShareStateAcrossConcurrentCompilations()
     {
         var analyzer = new BindingsPracticesAnalyzer();
+        const string child = "public class Child : Bindings.IViewModel { public void Update() { } } ";
+        var unused = BindingsUsageAnalyzerTests.CreateCompilation(child + "public class Parent : Bindings.IViewModel { public Child Child { get; set; } }");
+        var used = BindingsUsageAnalyzerTests.CreateCompilation(child + "public class Parent : Bindings.IViewModel { public Child Child { get; set; } public void Update() => Child.Update(); }");
         var equivalent = Generate(Header + "public void Update() => _publisher.PublishRebindMessage<TestViewModel>(); }");
         var inequivalent = BindingsUsageAnalyzerTests.CreateCompilation("[Bindings.ViewModel] public class TestViewModel : Bindings.IViewModel { private Bindings.IMvvmPublisher _publisher; private void PublishRebindMessage() { } public void Update() => _publisher.PublishRebindMessage<TestViewModel>(); }");
-        var compilations = new Compilation[] { equivalent, inequivalent };
+        var compilations = new Compilation[] { unused, used, equivalent, inequivalent };
         var tasks = Enumerable.Range(0, 12).Select(index => compilations[index % compilations.Length]
             .WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(analyzer)).GetAnalyzerDiagnosticsAsync()).ToArray();
         var results = await Task.WhenAll(tasks);
@@ -177,6 +180,9 @@ public class BindingsPracticesAnalyzerTests
             switch (index % compilations.Length)
             {
                 case 0:
+                    Assert.Equal("BNDP003", Assert.Single(results[index]).Id);
+                    break;
+                case 2:
                     Assert.Equal("BNDP001", Assert.Single(results[index]).Id);
                     break;
                 default:
@@ -258,9 +264,9 @@ public class BindingsPracticesAnalyzerTests
         var operations = await action.GetOperationsAsync(CancellationToken.None);
         var changed = Assert.Single(operations.OfType<ApplyChangesOperation>()).ChangedSolution.GetDocument(document.Id)!;
         var root = (await changed.GetSyntaxRootAsync())!;
-        var body = root.DescendantNodes().OfType<MethodDeclarationSyntax>().Single(method => method.Identifier.ValueText == "Update").Body!;
+        var body = root.DescendantNodes().OfType<MethodDeclarationSyntax>().Single(static method => method.Identifier.ValueText == "Update").Body!;
         Assert.Equal(SyntaxFactory.ParseStatement("{\n" + expected + "\n}").NormalizeWhitespace().ToFullString(), body.NormalizeWhitespace().ToFullString());
-        Assert.DoesNotContain((await changed.Project.GetCompilationAsync())!.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain((await changed.Project.GetCompilationAsync())!.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         Assert.Empty(await AnalyzeAsync((await changed.Project.GetCompilationAsync())!));
     }
 
@@ -278,7 +284,7 @@ public class BindingsPracticesAnalyzerTests
         var text = (await changed.GetTextAsync()).ToString();
         Assert.Contains("/* receiver */", text);
         Assert.Contains("/* type */", text);
-        Assert.DoesNotContain((await changed.Project.GetCompilationAsync())!.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain((await changed.Project.GetCompilationAsync())!.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
     [Fact]
@@ -305,7 +311,7 @@ public class BindingsPracticesAnalyzerTests
         foreach (var candidate in document.Project.Documents)
         {
             var root = (await candidate.GetSyntaxRootAsync())!;
-            var helper = root.DescendantNodes().OfType<MethodDeclarationSyntax>().FirstOrDefault(method =>
+            var helper = root.DescendantNodes().OfType<MethodDeclarationSyntax>().FirstOrDefault(static method =>
                 method.Identifier.ValueText == "PublishRebindMessage"
                 && method.TypeParameterList == null
                 && method.Body != null);
@@ -339,7 +345,7 @@ public class BindingsPracticesAnalyzerTests
         var project = Assert.Single(operations.OfType<ApplyChangesOperation>()).ChangedSolution.GetProject(document.Project.Id)!;
         var compilation = (await project.GetCompilationAsync())!;
         Assert.Empty(await AnalyzeAsync(compilation));
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
     private sealed class PracticeDiagnosticProvider : FixAllContext.DiagnosticProvider
@@ -367,7 +373,7 @@ public class BindingsPracticesAnalyzerTests
         var document = CreateDocument(workspace, Header + "public void Update() { " + (expression == "42" ? "var value = 42" : expression) + "; } }");
         var text = (await document.GetTextAsync()).ToString();
         var span = new TextSpan(text.IndexOf(expression, StringComparison.Ordinal), expression.Length);
-        var descriptor = Assert.Single(new BindingsPracticesAnalyzer().SupportedDiagnostics, descriptor => descriptor.Id == "BNDP001");
+        var descriptor = Assert.Single(new BindingsPracticesAnalyzer().SupportedDiagnostics, static descriptor => descriptor.Id == "BNDP001");
         var tree = (await document.GetSyntaxTreeAsync())!;
         var diagnostic = Diagnostic.Create(descriptor, Location.Create(tree, span), reason);
         var actions = new List<CodeAction>();

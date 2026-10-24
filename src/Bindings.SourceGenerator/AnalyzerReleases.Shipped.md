@@ -16,3 +16,4 @@ BND006  | Bindings | Error    | ViewMustNotDeriveFromMonoBehaviour
 BND007  | Bindings | Error    | SchemaFieldMustBeAccessedThroughProperty
 BNDP001 | Bindings.Practices | Error | UseGeneratedSelfRebindHelper
 BNDP002 | Bindings.Practices | Error | ViewMustNotConstructViewModel
+BNDP003 | Bindings.Practices | Error | ViewModelMustNotMerelyAggregateViewModels

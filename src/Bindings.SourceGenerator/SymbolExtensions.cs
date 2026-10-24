@@ -49,6 +49,12 @@ internal static class SymbolExtensions
     }
 
     /// <summary>
+    /// Checks whether a type is the specified interface itself or implements it.
+    /// </summary>
+    public static bool IsOrImplementsInterface(this ITypeSymbol type, INamedTypeSymbol? interfaceType) =>
+        interfaceType != null && (SymbolEqualityComparer.Default.Equals(type, interfaceType) || type.ImplementsInterface(interfaceType));
+
+    /// <summary>
     /// Checks interface membership, resolving type-parameter constraints when necessary.
     /// </summary>
     public static bool ImplementsInterface(this ITypeSymbol type, INamedTypeSymbol? interfaceType)

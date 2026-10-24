@@ -13,6 +13,17 @@ internal static class OperationExtensions
     private const string RebindHelperName = "PublishRebindMessage";
 
     /// <summary>
+    /// Returns the field or property accessed directly through an instance-reference operation.
+    /// Static accesses and accesses through locals, parameters, or other expressions do not match.
+    /// </summary>
+    public static ISymbol? GetReferencedInstanceMember(this IOperation? operation) => operation switch
+    {
+        IFieldReferenceOperation { Instance: IInstanceReferenceOperation } field => field.Field,
+        IPropertyReferenceOperation { Instance: IInstanceReferenceOperation } property => property.Property,
+        _ => null,
+    };
+
+    /// <summary>
     /// Returns an unambiguous self-rebind helper candidate. Its body must be checked separately.
     /// </summary>
     public static IMethodSymbol? GetSelfRebindHelper(

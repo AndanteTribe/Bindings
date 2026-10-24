@@ -51,7 +51,7 @@ public class ViewModelConstructionAnalyzerTests
     public async Task ReportsConstructorCallsThroughoutAView(string member, string expectedLocation)
     {
         var compilation = CreateCompilation(ViewWith(member));
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var diagnostic = Assert.Single(await AnalyzeAsync(compilation));
         Assert.Equal("BNDP002", diagnostic.Id);
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
@@ -68,7 +68,7 @@ public class ViewModelConstructionAnalyzerTests
     public async Task IncludesGenericAndInheritedViewInterfaces(string declaration, string expectedViewName)
     {
         var compilation = CreateCompilation(Model + declaration + BindMethod + " public void Build() { var model = new TestViewModel(); } }");
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var diagnostic = Assert.Single(await AnalyzeAsync(compilation));
         Assert.Equal("BNDP002", diagnostic.Id);
         Assert.Contains("View '" + expectedViewName + "'", diagnostic.GetMessage());
@@ -115,7 +115,7 @@ public class ViewModelConstructionAnalyzerTests
     {
         var source = ViewWith("public T Build<T" + extraTypeParameter + ">() where T : " + constraint + ", new()" + extraConstraint + " => new T();");
         var compilation = CreateCompilation(source);
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var diagnostic = Assert.Single(await AnalyzeAsync(compilation));
         Assert.Equal("BNDP002", diagnostic.Id);
         Assert.Contains("ViewModel 'T'", diagnostic.GetMessage());
@@ -125,7 +125,7 @@ public class ViewModelConstructionAnalyzerTests
     public async Task IncludesStructConstrainedTypeParameterConstruction()
     {
         var compilation = CreateCompilation(ViewWith("public T Build<T>() where T : struct, Bindings.IViewModel => new T();"));
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         Assert.Equal("BNDP002", Assert.Single(await AnalyzeAsync(compilation)).Id);
     }
 
@@ -158,7 +158,7 @@ public class ViewModelConstructionAnalyzerTests
                 public void Build() { var model = new TestViewModel(); }
             }
             """);
-        Assert.DoesNotContain(compilation.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         Assert.Empty(await AnalyzeAsync(compilation));
     }
 
@@ -177,7 +177,7 @@ public class ViewModelConstructionAnalyzerTests
         var driver = CSharpGeneratorDriver.Create(new ViewModelGenerator()).RunGeneratorsAndUpdateCompilation(compilation, out var output, out _);
         Assert.Empty(driver.GetRunResult().Diagnostics);
         Assert.Equal(2, driver.GetRunResult().GeneratedTrees.Length);
-        Assert.DoesNotContain(output.GetDiagnostics(), diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var diagnostic = Assert.Single(await AnalyzeAsync(output));
         Assert.Equal("BNDP002", diagnostic.Id);
         Assert.Equal("User.cs", diagnostic.Location.SourceTree!.FilePath);
@@ -259,7 +259,7 @@ public class ViewModelConstructionAnalyzerTests
         document = document.Project.AddDocument("Stubs.cs", SourceText.From(ViewModelGeneratorTests.AttributeStubs)).Project.GetDocument(document.Id)!;
         var diagnostics = await AnalyzeAsync((await document.Project.GetCompilationAsync())!);
         Assert.Equal(2, diagnostics.Length);
-        Assert.All(diagnostics, diagnostic => Assert.Equal("BNDP002", diagnostic.Id));
+        Assert.All(diagnostics, static diagnostic => Assert.Equal("BNDP002", diagnostic.Id));
         var provider = new BindingsPracticesCodeFixProvider();
         Assert.DoesNotContain("BNDP002", provider.FixableDiagnosticIds);
         var actions = new List<CodeAction>();

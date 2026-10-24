@@ -56,4 +56,10 @@
     <data name="Bndp002Message" xml:space="preserve">
         <value>View '{0}' constructs ViewModel '{1}'. Construct the ViewModel outside the View and pass it in instead.</value>
     </data>
+    <data name="Bndp003Title" xml:space="preserve">
+        <value>ViewModels must not merely aggregate other ViewModels</value>
+    </data>
+    <data name="Bndp003Message" xml:space="preserve">
+        <value>ViewModel '{0}' only stores or exposes child ViewModel member '{1}'. If it is not used in the owning ViewModel's logic, move ownership outside this ViewModel.</value>
+    </data>
 </root>
