@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -215,8 +216,8 @@ public class BindingsUsageAnalyzerTests
         var diagnostic = Assert.Single(await AnalyzeAsync(compilation));
         Assert.Equal("BND007", diagnostic.Id);
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
-        Assert.Contains("Field '_count' is annotated with [Schema]", diagnostic.GetMessage());
-        Assert.Contains("generated property 'Count'", diagnostic.GetMessage());
+        Assert.Contains("Field '_count' is annotated with [Schema]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Contains("generated property 'Count'", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Equal(expectedLocation, diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan));
     }
 
@@ -238,7 +239,7 @@ public class BindingsUsageAnalyzerTests
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("BND007", diagnostic.Id);
-        Assert.Contains($"generated property '{propertyName}'", diagnostic.GetMessage());
+        Assert.Contains($"generated property '{propertyName}'", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 
     [Theory]
@@ -287,7 +288,7 @@ public class BindingsUsageAnalyzerTests
 
         var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("BND007", diagnostic.Id);
-        Assert.Contains("generated property 'Position'", diagnostic.GetMessage());
+        Assert.Contains("generated property 'Position'", diagnostic.GetMessage(CultureInfo.InvariantCulture));
     }
 
     [Fact]

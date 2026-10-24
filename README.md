@@ -393,7 +393,7 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 ## Analyzer Diagnostics
 
-Diagnostic titles and messages are embedded localizable resources (currently English fallback). Every diagnostic includes a documentation link and a category tag. These metadata do not change diagnostic IDs, severities, or configurability.
+Diagnostic titles and messages support Japanese (`ja`/`ja-JP`) with English fallback for other UI cultures. Japanese resources are shipped in `ja/Bindings.SourceGenerator.resources.dll` alongside the analyzer DLL. Every diagnostic includes a documentation link and a category tag. Localization does not change diagnostic IDs, severities, or configurability.
 
 | ID | Level | Condition |
 |----|-------|-----------|

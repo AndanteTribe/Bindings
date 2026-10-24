@@ -4,5 +4,6 @@
         <Message Text="OutputPath : $(OutputPath)" Importance="high" />
         <Message Text="MSBuildThisFileDirectory : $(MSBuildThisFileDirectory)" Importance="high" />
         <Copy SourceFiles="$(OutputPath)/Bindings.SourceGenerator.dll" DestinationFolder="$(MSBuildThisFileDirectory)../Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(OutputPath)/ja/Bindings.SourceGenerator.resources.dll" DestinationFolder="$(MSBuildThisFileDirectory)../Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/ja" SkipUnchangedFiles="true" Condition="Exists('$(OutputPath)/ja/Bindings.SourceGenerator.resources.dll')" />
     </Target>
 </Project>

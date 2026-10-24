@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -449,8 +450,8 @@ namespace Bindings.Sample
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("Bindings.Sample.CountViewModelSerialized", diagnostic.GetMessage());
         Assert.Contains("[SerializeField]", diagnostic.GetMessage());
-        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage());
-        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage());
+        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
@@ -500,8 +501,8 @@ public sealed class ViewModelHost
         Assert.Contains("_viewModel", diagnostic.GetMessage());
         Assert.Contains("CountViewModelReference", diagnostic.GetMessage());
         Assert.Contains("[SerializeReference]", diagnostic.GetMessage());
-        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage());
-        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage());
+        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Equal("UnityEngine.SerializeReference", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
@@ -913,7 +914,7 @@ namespace Bindings.Sample
         Assert.NotNull(bnd001);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd001.Severity);
         Assert.Contains("CountModel", bnd001.GetMessage());
-        Assert.Contains("No source will be generated for this ViewModel", bnd001.GetMessage());
+        Assert.Contains("No source will be generated for this ViewModel", bnd001.GetMessage(CultureInfo.InvariantCulture));
 
         // No View should be generated for this type
         var viewSource = runResult.GeneratedTrees

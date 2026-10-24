@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
@@ -56,7 +57,7 @@ public class ViewModelConstructionAnalyzerTests
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("View 'TestView'", diagnostic.GetMessage());
         Assert.Contains("ViewModel 'TestViewModel'", diagnostic.GetMessage());
-        Assert.Contains("outside the View", diagnostic.GetMessage());
+        Assert.Contains("outside the View", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Equal(expectedLocation, diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan));
     }
 

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+    <resheader name="version"><value>2.0</value></resheader>
+    <data name="Bnd001Title" xml:space="preserve">
+        <value>ViewModel の型名に "ViewModel" が必要です</value>
+    </data>
+    <data name="Bnd001Message" xml:space="preserve">
+        <value>型 '{0}' に [ViewModel] が付与されていますが、型名に "ViewModel" が含まれていません。この ViewModel のソースは生成されません。</value>
+    </data>
+    <data name="Bnd002Title" xml:space="preserve">
+        <value>[Schema] の id 値が無効です</value>
+    </data>
+    <data name="Bnd002Message" xml:space="preserve">
+        <value>[Schema] の id 値 {0} は無効です。明示的にグループ化する場合は 0 以上を指定し、自動採番する場合は id を省略してください（既定値は -1）。</value>
+    </data>
+    <data name="Bnd003Title" xml:space="preserve">
+        <value>同じ View フィールドのツールチップが競合しています</value>
+    </data>
+    <data name="Bnd003Message" xml:space="preserve">
+        <value>同じ id を持つ複数の [Schema] により、View フィールド '{0}' のツールチップが競合しています。最初のツールチップのみが使用されます。</value>
+    </data>
+    <data name="Bnd004Title" xml:space="preserve">
+        <value>型のアクセシビリティがサポートされていません</value>
+    </data>
+    <data name="Bnd004Message" xml:space="preserve">
+        <value>型 '{0}' のアクセシビリティ '{1}' はサポートされていません。ViewModel '{2}' のソースは生成されません。</value>
+    </data>
+    <data name="Bnd005Title" xml:space="preserve">
+        <value>Unity のデシリアライズ後に ViewModel の状態が未初期化になる可能性があります</value>
+    </data>
+    <data name="Bnd005Message" xml:space="preserve">
+        <value>フィールド '{0}' は ViewModel 型 '{1}' に [{2}] を使用しています。型に [Serializable] が付与されていても、Unity のデシリアライズ後に生成されたランタイム状態が未初期化になる可能性があります。ViewModel は実行時に構築または代入してください。</value>
+    </data>
+    <data name="Bnd006Title" xml:space="preserve">
+        <value>View の実装は MonoBehaviour を継承できません</value>
+    </data>
+    <data name="Bnd006Message" xml:space="preserve">
+        <value>型 '{0}' は Bindings.IView を実装し、UnityEngine.MonoBehaviour を継承しています。View の実装は MonoBehaviour を継承できません。</value>
+    </data>
+    <data name="Bnd007Title" xml:space="preserve">
+        <value>Schema フィールドには生成されたプロパティを通じてアクセスしてください</value>
+    </data>
+    <data name="Bnd007Message" xml:space="preserve">
+        <value>フィールド '{0}' には [Schema] が付与されています。フィールドではなく、生成されたプロパティ '{1}' にアクセスしてください。</value>
+    </data>
+    <data name="Bndp001Title" xml:space="preserve">
+        <value>生成された自身への再バインド用ヘルパーを使用してください</value>
+    </data>
+    <data name="Bndp001Message" xml:space="preserve">
+        <value>'{0}' の再バインドメッセージを直接発行する代わりに、PublishRebindMessage() を使用してください</value>
+    </data>
+    <data name="Bndp002Title" xml:space="preserve">
+        <value>View 内で ViewModel を構築しないでください</value>
+    </data>
+    <data name="Bndp002Message" xml:space="preserve">
+        <value>View '{0}' が ViewModel '{1}' を構築しています。ViewModel は View の外で構築し、View に渡してください。</value>
+    </data>
+</root>

@@ -38,6 +38,7 @@ public class DiagnosticDocumentationTests
 
     [Theory]
     [InlineData("en-US")]
+    [InlineData("ja")]
     [InlineData("ja-JP")]
     [InlineData("tr-TR")]
     public void DiagnosticResourcesAndMetadataAreComplete(string cultureName)
@@ -49,20 +50,67 @@ public class DiagnosticDocumentationTests
         foreach (var field in descriptorType.GetFields(BindingFlags.Public | BindingFlags.Static).Where(field => field.FieldType == typeof(DiagnosticDescriptor)))
         {
             var descriptor = (DiagnosticDescriptor)field.GetValue(null)!;
-            var title = resources.GetString(field.Name + "Title", CultureInfo.InvariantCulture);
-            var message = resources.GetString(field.Name + "Message", CultureInfo.InvariantCulture);
+            var title = resources.GetString(field.Name + "Title", culture);
+            var message = resources.GetString(field.Name + "Message", culture);
             Assert.False(string.IsNullOrWhiteSpace(title));
             Assert.False(string.IsNullOrWhiteSpace(message));
             Assert.IsType<LocalizableResourceString>(descriptor.Title);
             Assert.IsType<LocalizableResourceString>(descriptor.MessageFormat);
             Assert.Equal(title, descriptor.Title.ToString(culture));
             Assert.Equal(message, descriptor.MessageFormat.ToString(culture));
+            if (culture.TwoLetterISOLanguageName == "ja")
+            {
+                Assert.NotEqual(resources.GetString(field.Name + "Title", CultureInfo.InvariantCulture), title);
+                Assert.NotEqual(resources.GetString(field.Name + "Message", CultureInfo.InvariantCulture), message);
+            }
+            else
+            {
+                Assert.Equal(resources.GetString(field.Name + "Title", CultureInfo.InvariantCulture), title);
+                Assert.Equal(resources.GetString(field.Name + "Message", CultureInfo.InvariantCulture), message);
+            }
             Assert.Contains(descriptor.Category, descriptor.CustomTags);
             Assert.Equal(
                 "https://github.com/AndanteTribe/Bindings/blob/main/README.md#" +
                 (descriptor.Category == "Bindings.Practices" ? "best-practice-diagnostics" : "analyzer-diagnostics"),
                 descriptor.HelpLinkUri);
         }
+    }
+
+    [Fact]
+    public void JapaneseResourcesHaveEveryKeyAndPreserveFormatArguments()
+    {
+        var resources = new ResourceManager("Bindings.DiagnosticResources", typeof(ViewModelGenerator).Assembly);
+        var english = resources.GetResourceSet(CultureInfo.InvariantCulture, true, false)!;
+        var japanese = resources.GetResourceSet(CultureInfo.GetCultureInfo("ja"), true, false)!;
+        Assert.NotNull(japanese);
+        var englishKeys = english.Cast<System.Collections.DictionaryEntry>().Select(entry => (string)entry.Key).OrderBy(key => key).ToArray();
+        var japaneseKeys = japanese.Cast<System.Collections.DictionaryEntry>().Select(entry => (string)entry.Key).OrderBy(key => key).ToArray();
+        Assert.Equal(englishKeys, japaneseKeys);
+        foreach (var key in englishKeys)
+        {
+            var englishText = english.GetString(key)!;
+            var japaneseText = japanese.GetString(key)!;
+            Assert.False(string.IsNullOrWhiteSpace(japaneseText));
+            var englishArguments = System.Text.RegularExpressions.Regex.Matches(englishText, @"\{\d+\}")
+                .Select(match => match.Value).OrderBy(value => value).ToArray();
+            var japaneseArguments = System.Text.RegularExpressions.Regex.Matches(japaneseText, @"\{\d+\}")
+                .Select(match => match.Value).OrderBy(value => value).ToArray();
+            Assert.Equal(englishArguments, japaneseArguments);
+            Assert.DoesNotContain("{", string.Format(CultureInfo.GetCultureInfo("ja"), japaneseText, "first", "second", "third"));
+        }
+    }
+
+    [Theory]
+    [InlineData("ja")]
+    [InlineData("ja-JP")]
+    public void JapaneseDiagnosticFormatsArguments(string cultureName)
+    {
+        var descriptor = (DiagnosticDescriptor)typeof(ViewModelGenerator).Assembly.GetType("Bindings.DiagnosticDescriptors")!
+            .GetField("Bnd007", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
+        var diagnostic = Diagnostic.Create(descriptor, Location.None, "_count", "Count");
+        Assert.Equal(
+            "フィールド '_count' には [Schema] が付与されています。フィールドではなく、生成されたプロパティ 'Count' にアクセスしてください。",
+            diagnostic.GetMessage(CultureInfo.GetCultureInfo(cultureName)));
     }
 
     [Theory]

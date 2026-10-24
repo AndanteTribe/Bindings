@@ -74,6 +74,8 @@ dotnet build src/Bindings.SourceGenerator/Bindings.SourceGenerator.csproj --conf
 - コピー元: `src/Bindings.SourceGenerator/bin/Release/netstandard2.0/Bindings.SourceGenerator.dll`
 - コピー先: `src/Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/Bindings.SourceGenerator.dll`
 
+日本語診断用のサテライト DLL も、`src/Bindings.SourceGenerator/bin/Release/netstandard2.0/ja/Bindings.SourceGenerator.resources.dll` から `src/Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/ja/Bindings.SourceGenerator.resources.dll` へコピーする。日本語リソースは `DiagnosticResources.ja.resx` に定義し、英語リソースとキー・書式引数を揃える。
+
 PDB や依存 DLL はこのターゲットのコピー対象ではない。Source Generator を変更した場合は、T4 の再生成後に Release ビルドを実行し、Unity 側の DLL が更新されたかを `git diff` または `git status` で確認する。リリース時の一連の処理については `.github/workflows/release.yml` を正とする。
 
 ## テストと検証
