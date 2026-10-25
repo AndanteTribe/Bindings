@@ -40,7 +40,7 @@ namespace Bindings
         {
             cancellationToken.ThrowIfCancellationRequested();
             var viewModel = _viewModel;
-            var publishers = viewModel.Publishers;
+            var publishers = viewModel._publishers;
             if (_scrollRect.vertical == _scrollRect.horizontal)
             {
                 throw new InvalidOperationException("Enable exactly one ScrollRect direction: Vertical or Horizontal.");

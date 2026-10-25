@@ -16,10 +16,7 @@ namespace Bindings
 #endif
     public sealed class SingleAxisVirtualScrollViewModel : IViewModel
     {
-        /// <summary>
-        /// The publishers for the scroll items, in display order.
-        /// </summary>
-        public readonly ReadOnlyMemory<ScrollItemMvvmPublisher> Publishers;
+        internal readonly ReadOnlyMemory<ScrollItemMvvmPublisher> _publishers;
         private float _scrollRatio;
         private readonly IMvvmPublisher _publisher;
 
@@ -32,7 +29,7 @@ namespace Bindings
             ReadOnlyMemory<ScrollItemMvvmPublisher> publishers, IMvvmPublisher publisher)
         {
             _publisher = publisher;
-            Publishers = publishers;
+            _publishers = publishers;
         }
 
         /// <summary>
