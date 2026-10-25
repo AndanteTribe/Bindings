@@ -379,7 +379,24 @@ VContainer による登録にも対応しています。詳しくは [VContainer
 3. **Scroll View** を選択し、`ScrollRect` コンポーネントの **Viewport** に子の **Viewport** の `RectTransform`、**Content** にその下の **Content** の `RectTransform` を設定します。標準メニューから作成した場合は通常、設定済みです。同じ `ScrollRect` の **Vertical** または **Horizontal** のどちらか一方だけを有効にします。
 4. リスト全体を管理する外側の Binder の **Views** に `SingleAxisVirtualScrollView` を追加します。
 5. Binder の Inspector で、その `SingleAxisVirtualScrollView` の **Item Prefab** に項目用 Binder プレハブを、**Scroll Rect** にシーン内の **Scroll View** の `ScrollRect` コンポーネントを割り当てます。`ScrollRect` を項目プレハブへ追加するわけではありません。
-6. 必要に応じて **Spacing** で項目間隔を指定します。Content のサイズと項目の位置は View が設定するため、それらを上書きする `LayoutGroup` や `ContentSizeFitter` との併用は避けてください。
+
+#### 設定項目
+
+| 設定項目 | 説明 |
+| --- | --- |
+| **Item Prefab** | 項目 ViewModel に対応する View を登録した、項目用の Binder プレハブです。 |
+| **Spacing** | スクロール方向の項目間隔です。 |
+| **Lane Count** | 縦スクロール時の列数、横スクロール時の行数です。既定値の1では従来のリスト表示になります。 |
+| **Lane Spacing** | スクロールと直交する方向の列間隔／行間隔です。 |
+| **Scroll Rect** | シーン内の Scroll View の `ScrollRect` です。Viewport と Content を設定し、スクロール方向は一方だけを有効にしてください。 |
+
+#### レイアウト上の注意
+
+- スクロール方向の Content のサイズと項目の位置は View が設定するため、それらを上書きする `LayoutGroup` や `ContentSizeFitter` との併用は避けてください。
+- グリッドでは、項目プレハブの両軸に正の固定サイズを設定し、Content の幅／高さには全列／全行が収まる値を設定してください。グリッドはスクロールと直交する方向の中央に配置されます。
+- 縦スクロールでは左から右へ埋めて次の行へ、横スクロールでは上から下へ埋めて次の列へ進みます。
+- 末尾の行／列に空きがある場合も、各項目の列／行位置は変わりません。
+- Bind 後はレイアウトのサイズや列数／行数が変わらない前提です。変更する場合は、再度 Bind してください。
 
 ### 2. 項目を作成して ViewModel を関連付ける
 

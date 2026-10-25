@@ -379,7 +379,24 @@ VContainer registration is also supported. See [VContainer Support: Registering 
 3. Select **Scroll View**. On its `ScrollRect` component, assign the child **Viewport**'s `RectTransform` to **Viewport**, and the nested **Content**'s `RectTransform` to **Content**. The standard menu normally assigns these references automatically. Enable exactly one direction on this `ScrollRect`: **Vertical** or **Horizontal**.
 4. Add `SingleAxisVirtualScrollView` to the **Views** list of the outer Binder that manages the list.
 5. In the Binder Inspector, assign the item Binder prefab to that `SingleAxisVirtualScrollView` entry's **Item Prefab**, and the scene's **Scroll View** `ScrollRect` component to its **Scroll Rect** field. Do not add a `ScrollRect` to the item prefab.
-6. Set **Spacing** as needed. The View sizes Content and positions items automatically; avoid `LayoutGroup` or `ContentSizeFitter` components that overwrite those values.
+
+#### Settings
+
+| Field | Description |
+| --- | --- |
+| **Item Prefab** | Item Binder prefab with Views registered for the item ViewModels. |
+| **Spacing** | Gap between items along the scroll axis. |
+| **Lane Count** | Number of columns for vertical scrolling or rows for horizontal scrolling. The default of 1 displays a single list. |
+| **Lane Spacing** | Gap between columns or rows perpendicular to the scroll axis. |
+| **Scroll Rect** | The scene's Scroll View `ScrollRect`, with Viewport and Content assigned and exactly one scroll direction enabled. |
+
+#### Layout Notes
+
+- The View sizes Content along the scroll axis and positions items automatically. Avoid `LayoutGroup` or `ContentSizeFitter` components that overwrite those values.
+- For a grid, give the item prefab a positive fixed size on both axes and ensure Content is wide/tall enough for all lanes. The grid is centered perpendicular to the scroll axis.
+- Items fill left-to-right before advancing down for vertical scrolling, or top-to-bottom before advancing right for horizontal scrolling.
+- Items retain the same lane positions even when the final row/column is incomplete.
+- Layout sizes and the lane count are assumed to remain fixed after binding. Bind again if you change them.
 
 ### 2. Create Items and Connect the ViewModel
 
