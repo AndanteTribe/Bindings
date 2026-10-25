@@ -9,11 +9,12 @@ using UnityEngine.UI;
 namespace Bindings
 {
     /// <summary>
-    /// Displays a single-axis list by reusing item Binders as items enter and leave the viewport.
+    /// Displays a single-axis list or grid by reusing item Binders as items enter and leave the viewport.
     /// </summary>
     /// <remarks>
     /// Add this view to a Binder and configure its item Binder prefab, spacing, and ScrollRect in the Inspector.
     /// Enable exactly one ScrollRect direction and use a prefab with a positive size along that axis.
+    /// Lane Count specifies columns for vertical scrolling or rows for horizontal scrolling.
     /// </remarks>
     [Serializable]
     public sealed class SingleAxisVirtualScrollView : IView<SingleAxisVirtualScrollViewModel>, IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>
@@ -22,6 +23,10 @@ namespace Bindings
         private Binder _itemPrefab = null!;
         [SerializeField, Min(0)]
         private float _spacing;
+        [SerializeField, Min(1), Tooltip("Columns for vertical scrolling, or rows for horizontal scrolling.")]
+        private int _laneCount = 1;
+        [SerializeField, Min(0), Tooltip("Spacing between columns or rows perpendicular to the scroll axis.")]
+        private float _laneSpacing;
         [SerializeField]
         private ScrollRect _scrollRect = null!;
 
@@ -51,12 +56,18 @@ namespace Bindings
             {
                 throw new InvalidOperationException("The scroll item prefab must have a positive size along the scroll axis.");
             }
+            if (_laneCount > 1 && ((RectTransform)_itemPrefab.transform).rect.size[1 - (int)_axis] <= 0)
+            {
+                throw new InvalidOperationException("The grid item prefab must have a positive size perpendicular to the scroll axis.");
+            }
 
             ResetBindings();
             var pitch = _itemSize + _spacing;
-            var count = Mathf.Min(publishers.Length, Mathf.CeilToInt(_scrollRect.viewport.rect.size[(int)_axis] / pitch) + 1);
+            var stepCount = publishers.IsEmpty ? 0 : (publishers.Length - 1) / _laneCount + 1;
+            var visibleSteps = Mathf.Min(stepCount, Mathf.CeilToInt(_scrollRect.viewport.rect.size[(int)_axis] / pitch) + 1);
+            var count = (int)Math.Min(publishers.Length, (long)visibleSteps * _laneCount);
             var content = _scrollRect.content;
-            var length = Mathf.Max(0, publishers.Length * pitch - _spacing);
+            var length = Mathf.Max(0, stepCount * pitch - _spacing);
             content.SetSizeWithCurrentAnchors(_axis, length);
 
             await ResizeItemsAsync(count, cancellationToken);
@@ -144,8 +155,11 @@ namespace Bindings
             var offset = _axis == RectTransform.Axis.Vertical ? contentRect.yMax - viewportStart.y : viewportStart.x - contentRect.xMin;
             var length = viewport.rect.size[(int)_axis];
             var pitch = _itemSize + _spacing;
-            var first = Mathf.Clamp(Mathf.FloorToInt((offset - _itemSize) / pitch) + 1, 0, _boundPublishers.Length);
-            var end = Mathf.Clamp(Mathf.CeilToInt((offset + length) / pitch), first, _boundPublishers.Length);
+            var stepCount = _boundPublishers.IsEmpty ? 0 : (_boundPublishers.Length - 1) / _laneCount + 1;
+            var firstStep = Mathf.Clamp(Mathf.FloorToInt((offset - _itemSize) / pitch) + 1, 0, stepCount);
+            var endStep = Mathf.Clamp(Mathf.CeilToInt((offset + length) / pitch), firstStep, stepCount);
+            var first = (int)Math.Min(_boundPublishers.Length, (long)firstStep * _laneCount);
+            var end = (int)Math.Min(_boundPublishers.Length, (long)endStep * _laneCount);
             var count = end - first;
             if (_firstIndex == first && _visibleCount == count)
             {
@@ -182,13 +196,17 @@ namespace Bindings
                 }
                 var item = items[(_visibleStart + i) % items.Length];
                 var rect = (RectTransform)item.transform;
+                var step = index / _laneCount;
+                var lane = index % _laneCount;
+                var laneSize = rect.rect.size[1 - (int)_axis];
+                var laneOffset = (lane - (_laneCount - 1) * 0.5f) * (laneSize + _laneSpacing);
                 rect.localPosition = _axis == RectTransform.Axis.Vertical
                     ? new Vector3(
-                        contentRect.center.x + (rect.pivot.x - 0.5f) * rect.rect.width,
-                        contentRect.yMax - index * pitch - (1 - rect.pivot.y) * _itemSize, 0)
+                        contentRect.center.x + laneOffset + (rect.pivot.x - 0.5f) * rect.rect.width,
+                        contentRect.yMax - step * pitch - (1 - rect.pivot.y) * _itemSize, 0)
                     : new Vector3(
-                        contentRect.xMin + index * pitch + rect.pivot.x * _itemSize,
-                        contentRect.center.y + (rect.pivot.y - 0.5f) * rect.rect.height, 0);
+                        contentRect.xMin + step * pitch + rect.pivot.x * _itemSize,
+                        contentRect.center.y - laneOffset + (rect.pivot.y - 0.5f) * rect.rect.height, 0);
                 _boundPublishers.Span[index].Binder = item;
                 item.gameObject.SetActive(true);
             }
