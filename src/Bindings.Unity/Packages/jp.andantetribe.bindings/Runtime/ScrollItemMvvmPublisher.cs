@@ -8,6 +8,9 @@ namespace Bindings
     /// Routes an individual virtual scroll item's ViewModel messages to its currently assigned Binder.
     /// </summary>
     /// <remarks>Messages are ignored while no Binder is assigned to the item.</remarks>
+#if ENABLE_VCONTAINER
+    [VContainer.InjectIgnore]
+#endif
     public sealed class ScrollItemMvvmPublisher : IMvvmPublisher
     {
         internal readonly List<IViewModel> _viewModels;

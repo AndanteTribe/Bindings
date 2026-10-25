@@ -18,14 +18,14 @@ namespace Bindings.Sample
 
         public void AnimateTo(uint current)
         {
-            if (_current == current)
+            if (Current == current)
             {
                 // 同じ値なら何もしない.
                 return;
             }
 
-            var previous = _current;
-            _current = current;
+            var previous = Current;
+            Current = current;
             _publisher.Publish(new GaugeAnimationMessage(previous));
         }
     }

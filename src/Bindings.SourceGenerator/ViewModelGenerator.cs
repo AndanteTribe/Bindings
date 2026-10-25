@@ -16,12 +16,6 @@ namespace Bindings;
 [Generator]
 public sealed class ViewModelGenerator : IIncrementalGenerator
 {
-    private const string ViewModelAttributeFullName = nameof(Bindings) + ".ViewModelAttribute";
-    private const string RequiredAttributeFullName = nameof(Bindings) + ".RequiredAttribute";
-    private const string SchemaAttributeFullName = nameof(Bindings) + ".SchemaAttribute";
-    private const string SerializableAttributeFullName = nameof(System) + "." + nameof(System.SerializableAttribute);
-    private const string SerializeFieldAttributeFullName = "UnityEngine.SerializeField";
-    private const string SerializeReferenceAttributeFullName = "UnityEngine.SerializeReference";
     private static readonly SymbolDisplayFormat s_fullyQualifiedNullableFormat =
         SymbolDisplayFormat.FullyQualifiedFormat.AddMiscellaneousOptions(
             SymbolDisplayMiscellaneousOptions.IncludeNullableReferenceTypeModifier);
@@ -31,23 +25,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         // Efficiently find all classes/structs annotated with [ViewModel]
         var viewModelTypes = context.SyntaxProvider
             .ForAttributeWithMetadataName(
-                ViewModelAttributeFullName,
+                TypeNames.ViewModelAttribute,
                 predicate: static (node, _) => node is ClassDeclarationSyntax or StructDeclarationSyntax,
                 transform: static (ctx, ct) => CollectGenerationContext(ctx, ct));
-
-        // Find fields that attempt to serialize a [ViewModel] type through Unity.
-        // These fields are analyzed separately because they can be declared anywhere
-        // in the user's compilation, not only inside a ViewModel.
-        var serializeFieldViewModelFields = context.SyntaxProvider
-            .ForAttributeWithMetadataName(
-                SerializeFieldAttributeFullName,
-                predicate: static (_, _) => true,
-                transform: static (ctx, ct) => CollectSerializationDiagnostic(ctx, ct));
-        var serializeReferenceViewModelFields = context.SyntaxProvider
-            .ForAttributeWithMetadataName(
-                SerializeReferenceAttributeFullName,
-                predicate: static (_, _) => true,
-                transform: static (ctx, ct) => CollectSerializationDiagnostic(ctx, ct));
 
         // Generate partial ViewModel type and sealed partial View type for each annotated type
         context.RegisterSourceOutput(
@@ -57,7 +37,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 // Report all diagnostics collected during the transform phase.
                 foreach (var (descriptor, location, args) in data.Diagnostics)
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(descriptor, location, args));
+                    ctx.ReportDiagnostic(Diagnostic.Create(descriptor, location, [.. args]));
                 }
 
                 if (!data.CanGenerate)
@@ -65,66 +45,19 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     return;
                 }
 
-                EmitViewModelSource(ctx, data);
-                EmitViewSource(ctx, data);
+                ctx.AddSource(GetHintName(data, data.ClassName), CreateViewModelSource(data));
+
+                var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) = BuildComponentFieldAssignments(data);
+                foreach (var fieldName in conflictingTooltipFields)
+                {
+                    ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
+                }
+
+                var viewClassName = data.ClassName.Replace("ViewModel", "View");
+                ctx.AddSource(
+                    GetHintName(data, viewClassName),
+                    CreateViewSource(data, fieldAssignments, methodAssignments, orderedFields));
             });
-
-        context.RegisterSourceOutput(
-            serializeFieldViewModelFields,
-            static (ctx, data) => ReportSerializationDiagnostic(ctx, data));
-        context.RegisterSourceOutput(
-            serializeReferenceViewModelFields,
-            static (ctx, data) => ReportSerializationDiagnostic(ctx, data));
-    }
-
-    /// <summary>
-    /// Reports BND005 for a Unity serialization attribute applied to a [ViewModel] field.
-    /// </summary>
-    private static void ReportSerializationDiagnostic(
-        SourceProductionContext ctx,
-        (Location Location, string FieldName, string ViewModelTypeName, string SerializationAttributeName)? data)
-    {
-        if (data is not { } diagnostic)
-        {
-            return;
-        }
-
-        ctx.ReportDiagnostic(Diagnostic.Create(
-            DiagnosticDescriptors.Bnd005,
-            diagnostic.Location,
-            diagnostic.FieldName,
-            diagnostic.ViewModelTypeName,
-            diagnostic.SerializationAttributeName));
-    }
-
-    /// <summary>
-    /// Returns diagnostic data when [SerializeField] or [SerializeReference] is applied to a
-    /// field whose type is annotated with [ViewModel]. Other field types and non-field
-    /// attribute targets are ignored.
-    /// </summary>
-    private static (Location Location, string FieldName, string ViewModelTypeName, string SerializationAttributeName)? CollectSerializationDiagnostic(
-        GeneratorAttributeSyntaxContext ctx,
-        CancellationToken ct)
-    {
-        if (ctx.TargetSymbol is not IFieldSymbol field || field.Type is not INamedTypeSymbol fieldType)
-        {
-            return null;
-        }
-
-        foreach (var attr in fieldType.GetAttributes())
-        {
-            if (attr.AttributeClass?.ToDisplayString() != ViewModelAttributeFullName)
-            {
-                continue;
-            }
-
-            var location = ctx.Attributes[0].ApplicationSyntaxReference?.GetSyntax(ct).GetLocation()
-                ?? ctx.TargetNode.GetLocation();
-            var serializationAttributeName = ctx.Attributes[0].AttributeClass?.Name ?? string.Empty;
-            return (location, field.Name, fieldType.ToDisplayString(), serializationAttributeName);
-        }
-
-        return null;
     }
 
     /// <summary>
@@ -135,6 +68,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         CancellationToken ct)
     {
         var typeSymbol = (INamedTypeSymbol)ctx.TargetSymbol;
+        var compilation = ctx.SemanticModel.Compilation;
+        var requiredAttribute = compilation.GetTypeByMetadataName(TypeNames.RequiredAttribute);
+        var schemaAttribute = compilation.GetTypeByMetadataName(TypeNames.SchemaAttribute);
         var isStruct = typeSymbol.TypeKind == TypeKind.Struct;
         var typeLocation = ctx.TargetNode.GetLocation();
 
@@ -143,15 +79,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var requireBind = viewModelAttr.ConstructorArguments.Length > 0 && viewModelAttr.ConstructorArguments[0].Value is true;
 
         // 2. Check whether [System.Serializable] is already applied to the type
-        var alreadySerializable = false;
-        foreach (var attr in typeSymbol.GetAttributes())
-        {
-            if (attr.AttributeClass?.ToDisplayString() == SerializableAttributeFullName)
-            {
-                alreadySerializable = true;
-                break;
-            }
-        }
+        var alreadySerializable = typeSymbol.HasAttribute(compilation.GetTypeByMetadataName(TypeNames.SerializableAttribute));
 
         // 3. Namespace (empty string when the type is in the global namespace)
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : typeSymbol.ContainingNamespace.ToDisplayString();
@@ -176,7 +104,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         // 6. Validate the ViewModel class name
         if (!typeSymbol.Name.Contains("ViewModel"))
         {
-            diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, new[] { typeSymbol.Name }));
+            diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, [typeSymbol.Name]));
             canGenerate = false;
         }
 
@@ -196,22 +124,21 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 {
                     foreach (var attr in field.GetAttributes())
                     {
-                        var attrName = attr.AttributeClass?.ToDisplayString();
-                        if (attrName == RequiredAttributeFullName)
+                        if (attr.IsAttribute(requiredAttribute))
                         {
                             requiredFields.Add((
                                 TypeFullName: field.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
                                 FieldName: field.Name,
                                 TypeOfName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
                         }
-                        else if (attrName == SchemaAttributeFullName)
+                        else if (attr.IsAttribute(schemaAttribute))
                         {
                             var id = GetSchemaId(attr);
                             // BND002: id < -1 is invalid
                             if (id < -1)
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
-                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
+                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, [id.ToString()]));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaFields.Add((
@@ -230,7 +157,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 {
                     foreach (var attr in prop.GetAttributes())
                     {
-                        if (attr.AttributeClass?.ToDisplayString() == RequiredAttributeFullName)
+                        if (attr.IsAttribute(requiredAttribute))
                         {
                             requiredFields.Add((
                                 TypeFullName: prop.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
@@ -240,19 +167,18 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     }
                     break;
                 }
-                case IMethodSymbol method
-                    when method.MethodKind == MethodKind.Ordinary && !method.IsImplicitlyDeclared:
+                case IMethodSymbol { MethodKind: MethodKind.Ordinary, IsImplicitlyDeclared: false } method:
                 {
                     foreach (var attr in method.GetAttributes())
                     {
-                        if (attr.AttributeClass?.ToDisplayString() == SchemaAttributeFullName)
+                        if (attr.IsAttribute(schemaAttribute))
                         {
                             var id = GetSchemaId(attr);
                             // BND002: id < -1 is invalid
                             if (id < -1)
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
-                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, new[] { id.ToString() }));
+                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, [id.ToString()]));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaMethods.Add((
@@ -281,20 +207,30 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             schemaFields: schemaFields.ToArray(),
             schemaMethods: schemaMethods.ToArray(),
             diagnostics: diagnostics.ToArray(),
-            generateVContainerInjector: CanGenerateVContainerInjector(ctx.SemanticModel.Compilation, typeSymbol));
+            generateVContainerInjector: CanGenerateVContainerInjector(compilation, typeSymbol));
     }
 
     private static bool CanGenerateVContainerInjector(Compilation compilation, INamedTypeSymbol type)
     {
         // Do not replace reflection injection when user-defined injection behavior is present.
-        if (type.TypeKind != TypeKind.Class || type.IsAbstract || type.IsStatic || type.IsGenericType ||
-            type.ContainingType != null || type.BaseType?.SpecialType != SpecialType.System_Object)
+        if (type.TypeKind != TypeKind.Class
+            || type.IsAbstract
+            || type.IsStatic
+            || type.IsGenericType
+            || type.ContainingType != null
+            || type.BaseType?.SpecialType != SpecialType.System_Object)
         {
             return false;
         }
 
-        foreach (var name in new[] { "VContainer.IInjector", "VContainer.IObjectResolver", "VContainer.IInjectParameter",
-                     "VContainer.IObjectResolverExtensions", "VContainer.PreserveAttribute" })
+        foreach (var name in new[]
+                 {
+                     "VContainer.IInjector",
+                     "VContainer.IObjectResolver",
+                     "VContainer.IInjectParameter",
+                     "VContainer.IObjectResolverExtensions",
+                     "VContainer.PreserveAttribute"
+                 })
         {
             if (compilation.GetTypeByMetadataName(name) == null)
             {
@@ -302,6 +238,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             }
         }
 
+        var injectAttribute = compilation.GetTypeByMetadataName(TypeNames.InjectAttribute);
         foreach (var member in type.GetMembers())
         {
             if (member is IMethodSymbol { MethodKind: MethodKind.Constructor, IsImplicitlyDeclared: false })
@@ -309,12 +246,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 return false;
             }
 
-            foreach (var attribute in member.GetAttributes())
+            if (member.HasAttribute(injectAttribute))
             {
-                if (attribute.AttributeClass?.ToDisplayString() == "VContainer.InjectAttribute")
-                {
-                    return false;
-                }
+                return false;
             }
         }
 
@@ -360,12 +294,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         diagnostics.Add((
             DiagnosticDescriptors.Bnd004,
             location,
-            new[]
-            {
+            [
                 typeSymbol.ToDisplayString(),
                 typeSymbol.DeclaredAccessibility.ToString(),
                 viewModelName,
-            }));
+            ]));
         return (string.Empty, false);
     }
 
@@ -416,7 +349,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         // String overload: first argument is the binding path string
         var firstArg = attr.ConstructorArguments[0];
-        if (firstArg.Kind == TypedConstantKind.Primitive && firstArg.Value is string path)
+        if (firstArg is { Kind: TypedConstantKind.Primitive, Value: string path })
         {
             return path;
         }
@@ -462,24 +395,19 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Splits a binding path and returns the component type part and member path.
-    /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
+    /// Extracts the component type part of a binding path.
+    /// e.g. "TMPro.TMP_Text.text" → "TMPro.TMP_Text"
     /// The nested RectTransform.rect.size path is normalized to the RectTransform component type.
     /// </summary>
-    private static (string TypePart, string MemberName) SplitBindingPath(string path)
+    private static string GetComponentTypePart(string path)
     {
         if (path == "UnityEngine.RectTransform.rect.size")
         {
-            return ("UnityEngine.RectTransform", "rect.size");
+            return "UnityEngine.RectTransform";
         }
 
         var lastDot = path.LastIndexOf('.');
-        if (lastDot < 0)
-        {
-            return (path, string.Empty);
-        }
-
-        return (path.Substring(0, lastDot), path.Substring(lastDot + 1));
+        return lastDot < 0 ? path : path.Substring(0, lastDot);
     }
 
     /// <summary>
@@ -544,12 +472,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var methodTypeParts = new string[methodCount];
         for (var i = 0; i < fieldCount; i++)
         {
-            (fieldTypeParts[i], _) = SplitBindingPath(data.SchemaFields[i].BindingPath);
+            fieldTypeParts[i] = GetComponentTypePart(data.SchemaFields[i].BindingPath);
         }
 
         for (var i = 0; i < methodCount; i++)
         {
-            (methodTypeParts[i], _) = SplitBindingPath(data.SchemaMethods[i].BindingPath);
+            methodTypeParts[i] = GetComponentTypePart(data.SchemaMethods[i].BindingPath);
         }
 
         // Build an ordered list of unique type parts (fields first, then methods)
@@ -671,11 +599,11 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                if (!fieldTooltips.ContainsKey(fieldName))
+                if (!fieldTooltips.TryGetValue(fieldName, out var existingTooltip))
                 {
                     fieldTooltips[fieldName] = tooltip;
                 }
-                else if (fieldTooltips[fieldName] != tooltip)
+                else if (existingTooltip != tooltip)
                 {
                     // HashSet.Add is a no-op when the element already exists
                     conflictingTooltipFields.Add(fieldName);
@@ -745,10 +673,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   - Constructor ([Required] fields in declaration order, then publisher)
     ///   - NotifyCompletedBind / OnPostBind / PublishRebindMessage helpers
     /// </summary>
-    private static void EmitViewModelSource(SourceProductionContext ctx, GenerationContext context)
+    private static SourceText CreateViewModelSource(GenerationContext context)
     {
         var template = new ViewModelTemplate(context);
-        ctx.AddSource(GetHintName(context, context.ClassName), SourceText.From(template.TransformText(), Encoding.UTF8));
+        return SourceText.From(template.TransformText(), Encoding.UTF8);
     }
 
     // -------------------------------------------------------------------------
@@ -767,19 +695,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     ///   - partial void OnPostBind
     ///   - Debug subscriber block (#if UNITY_EDITOR || ... )
     /// </summary>
-    private static void EmitViewSource(SourceProductionContext ctx, GenerationContext context)
+    private static SourceText CreateViewSource(
+        GenerationContext context,
+        string[] fieldAssignments,
+        string[] methodAssignments,
+        List<(string TypePart, string FieldName, string Tooltip)> orderedFields)
     {
-        var (fieldAssignments, methodAssignments, orderedFields, conflictingTooltipFields) =
-            BuildComponentFieldAssignments(context);
-
-        // BND003: report a warning for each View field that has conflicting tooltip values
-        foreach (var fieldName in conflictingTooltipFields)
-        {
-            ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
-        }
-
-        var viewClassName = context.ClassName.Replace("ViewModel", "View");
         var template = new ViewTemplate(context, fieldAssignments, methodAssignments, orderedFields.ToArray());
-        ctx.AddSource(GetHintName(context, viewClassName), SourceText.From(template.TransformText(), Encoding.UTF8));
+        return SourceText.From(template.TransformText(), Encoding.UTF8);
     }
 }

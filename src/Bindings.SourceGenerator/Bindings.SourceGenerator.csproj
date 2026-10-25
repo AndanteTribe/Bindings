@@ -7,11 +7,12 @@
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IsRoslynComponent>true</IsRoslynComponent>
         <RootNamespace>Bindings</RootNamespace>
+        <CodeAnalysisRuleSet>Roslyn.ruleset</CodeAnalysisRuleSet>
     </PropertyGroup>
 
     <ItemGroup>
-        <AdditionalFiles Include="AnalyzerReleases.Shipped.md" />
-        <AdditionalFiles Include="AnalyzerReleases.Unshipped.md" />
+        <!-- The analyzer package already adds release tracking and embedded .resx files. -->
+        <AdditionalFiles Include="DiagnosticCategoryAndIdRanges.txt" />
     </ItemGroup>
 
     <ItemGroup>

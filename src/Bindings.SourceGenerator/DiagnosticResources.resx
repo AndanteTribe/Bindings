@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+    <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+    <resheader name="version"><value>2.0</value></resheader>
+    <data name="Bnd001Title" xml:space="preserve">
+        <value>ViewModel type name must contain "ViewModel"</value>
+    </data>
+    <data name="Bnd001Message" xml:space="preserve">
+        <value>Type '{0}' is annotated with [ViewModel] but its name does not contain "ViewModel". No source will be generated for this ViewModel.</value>
+    </data>
+    <data name="Bnd002Title" xml:space="preserve">
+        <value>Invalid [Schema] id value</value>
+    </data>
+    <data name="Bnd002Message" xml:space="preserve">
+        <value>[Schema] id value {0} is invalid. Use id &gt;= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.</value>
+    </data>
+    <data name="Bnd003Title" xml:space="preserve">
+        <value>Conflicting tooltip values for the same View field</value>
+    </data>
+    <data name="Bnd003Message" xml:space="preserve">
+        <value>View field '{0}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.</value>
+    </data>
+    <data name="Bnd004Title" xml:space="preserve">
+        <value>Unsupported type accessibility</value>
+    </data>
+    <data name="Bnd004Message" xml:space="preserve">
+        <value>Type '{0}' has unsupported accessibility '{1}'. No source will be generated for ViewModel '{2}'.</value>
+    </data>
+    <data name="Bnd005Title" xml:space="preserve">
+        <value>Unity deserialization may leave ViewModel state uninitialized</value>
+    </data>
+    <data name="Bnd005Message" xml:space="preserve">
+        <value>Field '{0}' uses [{2}] with ViewModel type '{1}'. Unity deserialization may leave generated runtime state uninitialized, even when the type is marked [Serializable]. Construct or assign the ViewModel at runtime instead.</value>
+    </data>
+    <data name="Bnd006Title" xml:space="preserve">
+        <value>View implementations must not derive from MonoBehaviour</value>
+    </data>
+    <data name="Bnd006Message" xml:space="preserve">
+        <value>Type '{0}' implements Bindings.IView and derives from UnityEngine.MonoBehaviour. View implementations must not derive from MonoBehaviour.</value>
+    </data>
+    <data name="Bnd007Title" xml:space="preserve">
+        <value>Schema fields must be accessed through generated properties</value>
+    </data>
+    <data name="Bnd007Message" xml:space="preserve">
+        <value>Field '{0}' is annotated with [Schema]. Access the generated property '{1}' instead of the field.</value>
+    </data>
+    <data name="Bndp001Title" xml:space="preserve">
+        <value>Use the generated self-rebind helper</value>
+    </data>
+    <data name="Bndp001Message" xml:space="preserve">
+        <value>Use PublishRebindMessage() instead of directly publishing a rebind message for '{0}'</value>
+    </data>
+    <data name="Bndp002Title" xml:space="preserve">
+        <value>Views must not construct ViewModels</value>
+    </data>
+    <data name="Bndp002Message" xml:space="preserve">
+        <value>View '{0}' constructs ViewModel '{1}'. Construct the ViewModel outside the View and pass it in instead.</value>
+    </data>
+    <data name="Bndp003Title" xml:space="preserve">
+        <value>ViewModels must not merely aggregate other ViewModels</value>
+    </data>
+    <data name="Bndp003Message" xml:space="preserve">
+        <value>ViewModel '{0}' only stores or exposes child ViewModel member '{1}'. If it is not used in the owning ViewModel's logic, move ownership outside this ViewModel.</value>
+    </data>
+    <data name="Bndp004Title" xml:space="preserve">
+        <value>Do not wrap generated Schema property assignments</value>
+    </data>
+    <data name="Bndp004Message" xml:space="preserve">
+        <value>Method '{0}' only assigns its parameters directly to publicly writable Schema properties. Assign the properties directly instead.</value>
+    </data>
+</root>

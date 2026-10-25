@@ -69,6 +69,7 @@ jobs:
             src/Bindings.SourceGenerator/GeneratorCore/ViewModelTemplate.cs \
             src/Bindings.SourceGenerator/GeneratorCore/ViewTemplate.cs \
             src/Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/Bindings.SourceGenerator.dll \
+            src/Bindings.Unity/Packages/jp.andantetribe.bindings/Runtime/ja/Bindings.SourceGenerator.resources.dll \
             src/Bindings.Unity/Packages/jp.andantetribe.bindings/package.json
           git commit -m "chore: bump version to ${VERSION}"
           git push "$AUTH_REMOTE" "HEAD:${BRANCH}"

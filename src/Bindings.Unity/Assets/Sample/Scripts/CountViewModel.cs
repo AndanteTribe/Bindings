@@ -19,20 +19,18 @@ namespace Bindings.Sample
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            _publisher.PublishRebindMessage<CountViewModel>();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            _publisher.PublishRebindMessage<CountViewModel>();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
+            _model.Count = Count;
         }
     }
 
