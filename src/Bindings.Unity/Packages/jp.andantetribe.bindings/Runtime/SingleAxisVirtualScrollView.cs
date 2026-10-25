@@ -40,7 +40,7 @@ namespace Bindings
         {
             cancellationToken.ThrowIfCancellationRequested();
             var viewModel = _viewModel;
-            var publishers = viewModel.Publishers;
+            var publishers = viewModel._publishers;
             if (_scrollRect.vertical == _scrollRect.horizontal)
             {
                 throw new InvalidOperationException("Enable exactly one ScrollRect direction: Vertical or Horizontal.");
@@ -63,7 +63,6 @@ namespace Bindings
             _boundPublishers = publishers;
             _scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
             ScrollTo(viewModel.ScrollRatio);
-            OnScrollValueChanged(default);
         }
 
         void IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>.OnReceivedMessage(
@@ -86,6 +85,7 @@ namespace Bindings
             {
                 _scrollRect.horizontalNormalizedPosition = ratio;
             }
+            OnScrollValueChanged(_scrollRect.normalizedPosition);
         }
 
         private async ValueTask ResizeItemsAsync(int count, CancellationToken cancellationToken)
@@ -129,6 +129,8 @@ namespace Bindings
 
         private void OnScrollValueChanged(Vector2 position)
         {
+            _viewModel._scrollRatio = Mathf.Clamp01(_axis == RectTransform.Axis.Vertical ? 1 - position.y : position.x);
+
             var items = _items.Span;
             if (items.IsEmpty)
             {

@@ -49,20 +49,18 @@ namespace MyApp
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            PublishRebindMessage();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            PublishRebindMessage();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
+            _model.Count = Count;
         }
     }
 }
@@ -192,6 +190,21 @@ namespace MyApp
 2. Inspector で、生成された `CounterView` インスタンスを **Views** リストに割り当てます。
 3. `binder.Initialize(viewModel)` で ViewModel を関連付け、`binder.Run()` を呼び出す（または **Run On Start** を有効にする）と UI がバインドされます。
 
+```csharp
+public class GameEntry : MonoBehaviour
+{
+    [SerializeField] private Binder _binder;
+
+    private void Start()
+    {
+        var model = new CounterModel();
+        var publisher = _binder; // Binder は IMvvmPublisher を実装しています
+        var viewModel = new CounterViewModel(model, publisher);
+        _binder.Initialize(viewModel);
+    }
+}
+```
+
 #### Binder Inspector の使い方
 
 `Binder` コンポーネントにはカスタム Unity Inspector が付属しており、コードを書かずに View を登録できます。
@@ -219,85 +232,6 @@ namespace MyApp
 **Add View** ボタンの下にある **Preview** ボタンをクリックすると、登録されている各 View に紐づく ViewModel オブジェクトが表示されます。Inspector から直接値を入力し、**Invoke** ボタンを押すとバインドが適用されるので、UI が想定通りに更新されるか検証できます。
 
 ![Preview と Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
-
-```csharp
-public class GameEntry : MonoBehaviour
-{
-    [SerializeField] private Binder _binder;
-
-    private void Start()
-    {
-        var model = new CounterModel();
-        var publisher = _binder; // Binder は IMvvmPublisher を実装しています
-        var viewModel = new CounterViewModel(model, publisher);
-        _binder.Initialize(viewModel);
-    }
-}
-```
-
-#### VContainer サポート
-
-[VContainer](https://github.com/hadashiA/VContainer) がインストールされている環境では、`Binder` は自動的に DI インジェクションをサポートします。追加の設定は不要です。コンテナに ViewModel と `Binder` を登録するだけで、VContainer が `Initialize(IReadOnlyList<IViewModel>)` を自動的に呼び出すため、手動での `Initialize` 呼び出しは不要です。
-
-```csharp
-public class GameLifetimeScope : LifetimeScope
-{
-    [SerializeField] private Binder _binder;
-
-    protected override void Configure(IContainerBuilder builder)
-    {
-        var model = new CounterModel();
-        builder.RegisterInstance(model);
-        builder.RegisterViewModel<CounterViewModel>(_binder);
-        builder.RegisterComponent(_binder);
-    }
-}
-```
-
-## 単軸仮想スクロール
-
-`SingleAxisVirtualScrollView` は、表示範囲に出入りする項目に合わせて少数の項目Binderを再利用し、縦または横方向のリストを表示します。スクロールViewModel自体のソース生成も不要です。
-
-### Inspector の設定
-
-1. 外側のBinderの **Views** 一覧に `SingleAxisVirtualScrollView` を追加します。
-2. viewportとcontentを設定した **Scroll Rect** を割り当て、**Vertical** または **Horizontal** のどちらか一方だけを有効にします。
-3. 項目ViewModelに対応するViewを登録したBinderプレハブを **Item Prefab** に割り当てます。RectTransformにはスクロール軸方向に正の固定サイズを設定してください。
-4. 必要に応じて **Spacing** を設定します。contentのサイズと項目の位置はViewが設定するため、それらを上書きするレイアウトコンポーネントとの併用は避けてください。
-
-### 項目の生成
-
-論理的な項目ごとに `ScrollItemMvvmPublisher` を作成し、返されたコンテナへ項目ViewModelを登録します。各項目ViewModelのコンストラクタには、外側のBinderではなく、その項目のPublisherを渡します。
-
-```csharp
-// models is a CounterModel[] in display order; binder is the outer Binder.
-var publishers = new ScrollItemMvvmPublisher[models.Length];
-for (var i = 0; i < models.Length; i++)
-{
-    var publisher = ScrollItemMvvmPublisher.Create(out var item);
-    item.Regist(new CounterViewModel(models[i], publisher));
-    publishers[i] = publisher;
-}
-
-var scrollViewModel = new SingleAxisVirtualScrollViewModel(publishers, binder);
-binder.Initialize(scrollViewModel);
-binder.Run();
-
-scrollViewModel.ScrollRatio = 0.5f;
-```
-
-1項目に複数のViewModelを持たせる場合は `Regist` を複数回呼び出します。外側のBinderはスクロールViewModelだけで初期化してください。項目ViewModelは再利用される項目Binderへ自動的に割り当てられます。
-
-### 公開API
-
-| API | 説明 |
-|-----|------|
-| `SingleAxisVirtualScrollViewModel.Publishers` | 表示順に並べた項目Publisher。 |
-| `SingleAxisVirtualScrollViewModel.ScrollRatio` | 最後に要求した位置。0が上端／左端、1が下端／右端です。代入値はこの範囲に制限され、`NaN` は `ArgumentOutOfRangeException` になります。ユーザー操作によるスクロールでは更新されません。 |
-| `ScrollItemMvvmPublisher.Create(out ViewModelContainer)` | 項目Publisherを生成し、ViewModel登録用コンテナを返します。 |
-| `ScrollItemMvvmPublisher.ViewModelContainer.Register(IViewModel)` | 項目へViewModelを追加します。 |
-
-項目Publisherがメッセージや再バインド要求を転送するのは、その項目にBinderが割り当てられている間だけです。非表示中のメッセージは無視されるため、表示時に再バインドできるよう、保持すべきUI状態は項目ViewModelに保存してください。
 
 ## 属性一覧
 
@@ -393,45 +327,163 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 ## アナライザー診断
 
-診断のタイトルとメッセージは日本語（`ja`／`ja-JP`）に対応し、それ以外の UI カルチャでは英語へフォールバックします。日本語リソースは Analyzer DLL と併せて `ja/Bindings.SourceGenerator.resources.dll` に同梱しています。各診断にドキュメントへのリンクとカテゴリータグを付与しています。ローカライズによって、診断 ID・重大度・設定変更可否は変わりません。
+誤った使い方を検出し、修正すべき箇所をコンパイル時に報告します。
 
 | ID | レベル | 条件 |
 |----|--------|------|
-| `BND001` | エラー | `[ViewModel]` を付与したクラス名に `"ViewModel"` が含まれていない。ViewModel と View のどちらも生成しない。 |
+| `BND001` | エラー | `[ViewModel]` を付与した型の名前に `ViewModel` が含まれていない。名前に `ViewModel` を含める。 |
 | `BND002` | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
 | `BND003` | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
 | `BND004` | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
-| `BND005` | 警告 | `[ViewModel]` 型のフィールドに Unity の `[SerializeField]` または `[SerializeReference]` が付与されている。型に `[Serializable]` が付与されていても、Unity のデシリアライズ後に生成されたランタイム状態が未初期化になる可能性があるため、ViewModel は実行時に構築または代入する。独自シリアライズ用途を許容するため、ViewModel への `[Serializable]` の付与だけではこの診断を報告しない。 |
-| `BND006` | エラー | `Bindings.IView`（`IView<T>` や継承したインターフェイスも含む）を実装するクラスが、直接または間接的に `UnityEngine.MonoBehaviour` を継承している。View は MonoBehaviour コンポーネントではなく、通常の C# オブジェクトとして実装する。 |
-| `BND007` | エラー | `[ViewModel]` 型に宣言された `[Schema]` フィールドをユーザーコードが直接読み書きしている。生成されるプロパティを使用する。生成コード、フィールド宣言・初期値の指定、`nameof` は対象外。 |
+| `BND005` | 警告 | `[ViewModel]` 型のフィールドに `[SerializeField]` または `[SerializeReference]` が付与されている。ViewModel は Unity のデシリアライズに任せず、実行時に生成・代入する。 |
+| `BND006` | エラー | `IView` を実装するクラスが `MonoBehaviour` を継承している。View は通常の C# クラスとして実装する。 |
+| `BND007` | エラー | `[ViewModel]` 型の `[Schema]` フィールドを直接読み書きしている。生成されるプロパティを使用する。 |
 
 ### ベストプラクティス診断
 
-`BNDP` はライブラリの利用制約を扱う `BND` とは分けて、ライブラリ作者が推奨する設計へ誘導する診断です。`BindingsPracticesAnalyzer` が `Bindings.Practices` カテゴリーで報告し、ソース生成は中止しません。重大度は設定で変更でき、BNDP001〜BNDP004 はデフォルトが Error のため、修正または設定変更するまでコンパイルは失敗します。
+`BNDP` は Bindings の作者が推奨する設計・書き方を示す診断です。既定ではエラーです。プロジェクトの方針に合わせて重大度を変更してください。
 
 | ID | レベル | 推奨事項 |
 |----|--------|----------|
-| `BNDP001` | エラー | `[ViewModel]` 内の等価な `_publisher.PublishRebindMessage<自分のViewModel型>()` の代わりに、`PublishRebindMessage()` を使用する。デフォルトで有効。重大度は設定で変更できる。 |
-| `BNDP002` | エラー | `IView` 実装内で ViewModel を直接生成している。View 外で生成して受け渡す。ViewModel は `IViewModel` の実装関係だけで判定する。 |
-| `BNDP003` | エラー | ViewModel が子 ViewModel を保持・公開するだけで、自身の処理で利用していない。自身の処理で利用しないのであれば、所有を親 ViewModel の外へ移す。 |
-| `BNDP004` | エラー | ViewModel のメソッドが、各引数を型変換や加工なしで、自分自身の外部から代入可能な別々の Schema プロパティへ代入するだけになっている。プロパティへ直接代入する。 |
+| `BNDP001` | エラー | 自分自身への再バインド要求には、等価な `_publisher.PublishRebindMessage<T>()` ではなく、生成された `PublishRebindMessage()` を使用する。 |
+| `BNDP002` | エラー | View 内で ViewModel を直接生成せず、View の外で生成して受け渡す。 |
+| `BNDP003` | エラー | 子 ViewModel を保持・公開するだけで自身の処理に使わない場合、その所有を親 ViewModel の外へ移す。 |
+| `BNDP004` | エラー | 引数を自分自身の公開 Schema プロパティへそのまま代入するだけのメソッドを作らず、プロパティへ直接代入する。 |
 
-BNDP003 は `IViewModel` 型やその実装型（継承・型パラメーター制約を含む）を保持するインスタンスフィールド・自動プロパティを検査します。単純な getter/setter による公開や、手書き・`[Required]` 生成コンストラクターでの代入は利用とみなしません。メソッド呼び出し、子の状態へのアクセス、他の処理への引数渡しは手書き・生成を問わず利用とし、値の加工までは要求しません。生成 Schema プロパティを含む単純な公開プロパティの連鎖を追跡し、重複・誤検知を防ぎます。静的メンバー、コレクションは対象外です。未利用の保持メンバーごとに報告します。所有関係の変更には設計判断が必要なため、Code Fix は提供しません。
+### 重大度の設定
 
-BNDP004 は `IViewModel` 実装型の `void` インスタンスメソッドを、公開範囲にかかわらず検査します。各引数を同じ型の別々のプロパティへ1回ずつ代入するだけの実装が対象です。対象のプロパティは `[Schema]` フィールドに対応する、自分自身の public プロパティかつ public の通常 setter を持つものに限定し、子・他インスタンスへの代入や、それ以外の公開プロパティは除外します。キャスト（同じ型へのキャストも含む）、暗黙の型変換、演算、追加の文、`ref`／`in`／`out` 引数があるものは対象外です。`[Schema]` 付きメソッド・override・インターフェイス実装も除外しますが、デリゲートとして使うことは除外理由になりません。
-
-個別の診断の重大度・有効／無効は、`.editorconfig`（推奨）またはコード分析ルールセットファイル（`.ruleset`）で設定できます。`.ruleset` はコンパイラに明示的に指定する必要があります。カテゴリー全体の設定には `.editorconfig` を使用します。以下は `.editorconfig` の設定例です。
+`.editorconfig`（推奨）またはコード分析ルールセットファイル（`.ruleset`）で、診断ごとに重大度を設定します。`.ruleset` はコンパイラに明示的に指定する必要があります。例えば `.editorconfig` で `BNDP001` を IDE の提案に留める場合は、次のように指定します。
 
 ```ini
 [*.cs]
-dotnet_diagnostic.BNDP001.severity = error
-dotnet_diagnostic.BNDP002.severity = error
-dotnet_diagnostic.BNDP003.severity = error
-dotnet_diagnostic.BNDP004.severity = error
-# IDE の提案に留める場合は suggestion を指定する。
-# Bindings のベストプラクティス診断をすべて無効にする場合:
-# dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none
+dotnet_diagnostic.BNDP001.severity = suggestion
 ```
+
+無効にする場合は `none` を指定します。ベストプラクティス診断をまとめて無効にするには、`dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none` を指定してください。
+
+## 単軸仮想スクロール
+
+`SingleAxisVirtualScrollViewModel` と `SingleAxisVirtualScrollView` を組み合わせて、固定サイズの項目を縦または横方向に並べたリストを表示できます。表示に必要な数の項目 Binder だけを生成・再利用するため、項目数が多いリストに適しています。
+
+- **`SingleAxisVirtualScrollViewModel`**：表示する項目とその順序を受け取り、コードからスクロール位置を指定します。
+- **`SingleAxisVirtualScrollView`**：`ScrollRect` と項目プレハブを使い、表示範囲に応じて項目 Binder を再利用します。
+
+この2つは組み込みの型なので、スクロール用の `[ViewModel]` クラスを定義する必要はありません。各項目には、通常の ViewModel と View を使用できます。
+
+VContainer による登録にも対応しています。詳しくは [VContainer サポート：単軸仮想スクロールの登録](#単軸仮想スクロールの登録)を参照してください。
+
+### 1. 項目プレハブとスクロール領域を設定する
+
+1. 項目用の Binder プレハブを作成し、**Views** に項目 ViewModel に対応する View を登録します。プレハブの `RectTransform` には、スクロール軸方向に正の固定サイズを設定してください。
+2. シーンの Canvas 配下に、Unity 標準の **UI > Scroll View** でスクロール領域を作成します。ルートの **Scroll View** に `ScrollRect` コンポーネントがあり、その下に **Viewport > Content** があります。
+3. **Scroll View** を選択し、`ScrollRect` コンポーネントの **Viewport** に子の **Viewport** の `RectTransform`、**Content** にその下の **Content** の `RectTransform` を設定します。標準メニューから作成した場合は通常、設定済みです。同じ `ScrollRect` の **Vertical** または **Horizontal** のどちらか一方だけを有効にします。
+4. リスト全体を管理する外側の Binder の **Views** に `SingleAxisVirtualScrollView` を追加します。
+5. Binder の Inspector で、その `SingleAxisVirtualScrollView` の **Item Prefab** に項目用 Binder プレハブを、**Scroll Rect** にシーン内の **Scroll View** の `ScrollRect` コンポーネントを割り当てます。`ScrollRect` を項目プレハブへ追加するわけではありません。
+6. 必要に応じて **Spacing** で項目間隔を指定します。Content のサイズと項目の位置は View が設定するため、それらを上書きする `LayoutGroup` や `ContentSizeFitter` との併用は避けてください。
+
+### 2. 項目を作成して ViewModel を関連付ける
+
+表示順に項目を作成し、`SingleAxisVirtualScrollViewModel` に渡します。各項目には専用の Publisher を用意し、その Publisher を渡して生成した項目 ViewModel を `Register` します。外側の Binder を項目 ViewModel に直接渡さないでください。
+
+```csharp
+// models is a CounterModel[] in display order; binder is the outer Binder.
+var publishers = new ScrollItemMvvmPublisher[models.Length];
+for (var i = 0; i < models.Length; i++)
+{
+    var publisher = ScrollItemMvvmPublisher.Create(out var container);
+    container.Register(new CounterViewModel(models[i], publisher));
+    publishers[i] = publisher;
+}
+
+var scrollViewModel = new SingleAxisVirtualScrollViewModel(publishers, binder);
+binder.Initialize(scrollViewModel);
+binder.Run();
+```
+
+1項目に複数の ViewModel を持たせる場合は、その項目の `container` に対して `Register` を複数回呼び出します。項目 ViewModel を外側の Binder に登録する必要はありません。表示時に項目 Binder へ自動的に割り当てられます。
+
+### 3. コードからスクロールする
+
+`ScrollRatio` に代入すると、指定位置へのスクロールを要求できます。0 が上端／左端、1 が下端／右端です。
+
+```csharp
+scrollViewModel.ScrollRatio = 0.5f; // Scroll to the middle.
+```
+
+値は 0〜1 に制限され、`NaN` は指定できません。取得時はユーザー操作によるスクロールも含め、View から反映された現在位置を返します。View をバインドする前は、最後に要求した位置を保持します。
+
+### 非表示の項目の扱い
+
+項目が非表示になると項目 Binder は別の項目に再利用されますが、項目 ViewModel は保持されます。非表示中のメッセージは配信されないため、再表示時にバインドで復元したい状態は項目 ViewModel に保存してください。
+
+## VContainer サポート
+
+[VContainer](https://github.com/hadashiA/VContainer) を使用する場合は、`RegisterBinder` で Binder と ViewModel をまとめて登録できます。`Initialize` は自動呼び出しされますが、`Binder.Run()` は利用側で呼ぶか、**Run On Start** を有効にしてください。
+
+`WithViewModel<T>()` による登録では、Bindings 側の Source Generator が生成したコードにより、`VContainer.SourceGenerator.dll` 利用時と同様にコンストラクターを直接呼び出す最適化も行います。VContainer の Source Generator を別途導入する必要はありません。対象条件などは [WithViewModel の生成コードによる最適化](#withviewmodel-の生成コードによる最適化)を参照してください。
+
+### Binder と ViewModel の登録
+
+```csharp
+public class GameLifetimeScope : LifetimeScope
+{
+    [SerializeField] private Binder _binder;
+
+    protected override void Configure(IContainerBuilder builder)
+    {
+        builder.RegisterInstance(new CounterModel());
+        using (var registration = builder.RegisterBinder(_binder))
+        {
+            registration.WithViewModel<CounterViewModel>().AsSelf();
+            // Add more ViewModels to this same registration scope as needed.
+        }
+    }
+}
+```
+
+`WithViewModel<T>()` は同じスコープに複数回呼べます。Binder は、そのスコープに追加した ViewModel だけを追加順に受け取り、各 ViewModel には Binder が `IMvvmPublisher` として渡されます。
+
+- 戻り値は VContainer の `RegistrationBuilder` です。`AsSelf`・`As<IViewModel>`・`Keyed`・`WithParameter` などを使用できます。サービスのインターフェイスは自動追加されません。
+- ViewModel の Lifetime は既定で `Lifetime.Scoped` です。`WithViewModel<T>(lifetime)` で変更できます。
+- **コンテナを Build する前に `using` ブロックを終了**してください。登録はブロック終了時に確定し、例外で抜けた場合もロールバックしません。登録スコープのコピー・ボックス化・`default` での作成・二重破棄は避けてください。
+- 複数の Binder を同じコンテナに登録する場合は、`RegisterBinder(binder, keyed: true)` で Binder 自身をキーにできます（VContainer 1.19.0 以降）。
+
+### 単軸仮想スクロールの登録
+
+`WithScrollViewModel<TItem>(getItems, configureItem)` で、`SingleAxisVirtualScrollViewModel` と各項目の ViewModel をまとめて登録できます。Inspector の設定は[単軸仮想スクロール](#単軸仮想スクロール)と同じです。
+
+```csharp
+// In LifetimeScope.Configure; _binder is the outer scroll Binder.
+builder.RegisterInstance<CounterModel[]>(models);
+using (var registration = builder.RegisterBinder(_binder))
+{
+    registration.WithScrollViewModel<CounterModel>(
+        resolver => resolver.Resolve<CounterModel[]>(),
+        (itemRegistration, model) =>
+        {
+            itemRegistration.WithViewModel<CounterViewModel>()
+                .WithParameter(model);
+        })
+        .AsSelf();
+}
+```
+
+- **`getItems`**：スクロール ViewModel の生成時にコンテナから呼び出され、表示順の `IReadOnlyList<TItem>` を返します。
+- **`configureItem`**：各項目の登録を行います。`itemRegistration.WithViewModel<T>()` に `WithParameter` などで項目データを渡します。1項目に複数の ViewModel を登録することもできます。
+
+項目ごとに子コンテナと専用 Publisher が自動作成されるため、`ScrollItemMvvmPublisher.Create` や項目 ViewModel の手動生成は不要です。コールバックへ渡された `itemRegistration` の確定・破棄はライブラリが行うため、利用側で `using` や `Dispose` を追加しないでください。
+
+子コンテナは項目が画面外へ出ても保持され、所有するコンテナの破棄時にまとめて破棄されます。仮想化されるのは項目の表示用 Binder であり、項目 ViewModel の生成ではありません。`AsSelf()` を指定すると、コンテナから `SingleAxisVirtualScrollViewModel` を解決して `ScrollRatio` を操作できます。
+
+### WithViewModel の生成コードによる最適化
+
+Bindings の Source Generator は、ViewModel のコンストラクターを直接呼び出すコードを生成します。`WithViewModel<T>()` による登録ではこの生成コードを使用し、`VContainer.SourceGenerator.dll` 利用時と同様に、コンストラクターをリフレクションで呼び出す処理を省きます。VContainer の Source Generator 自体は不要です。
+
+この最適化は **`WithViewModel<T>()` による登録に限って適用**されます。VContainer の通常の `Register<T>()` などには自動適用されません。
+
+対象は `[ViewModel]` 付きのトップレベルの非ジェネリックな具象クラスで、独自の基底クラス・明示的なコンストラクター・`[Inject]` メンバーを持たない型です。対象外の型は VContainer 標準の生成・インジェクション処理を使用します。
+
+VContainer の Source Generator を併用すると、Bindings の生成コンストラクターが見えず、不正なコンストラクター呼び出しが生成される場合があります。その場合は、ユーザー側の ViewModel 宣言に `[VContainer.InjectIgnore]` を付与してください。
 
 ## ライセンス
 このライブラリは MIT ライセンスで公開しています。

@@ -49,20 +49,18 @@ namespace MyApp
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
         {
-            _count += 1;
-            PublishRebindMessage();
+            Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Decrement()
         {
-            _count -= 1;
-            PublishRebindMessage();
+            Count -= 1;
         }
 
         partial void OnPostBind()
         {
-            _model.Count = _count;
+            _model.Count = Count;
         }
     }
 }
@@ -192,6 +190,21 @@ namespace MyApp
 2. In the Inspector, assign the generated `CounterView` instance to the **Views** list.
 3. Call `binder.Initialize(viewModel)` to associate the ViewModel, then call `binder.Run()` (or enable **Run On Start**) to bind the UI.
 
+```csharp
+public class GameEntry : MonoBehaviour
+{
+    [SerializeField] private Binder _binder;
+
+    private void Start()
+    {
+        var model = new CounterModel();
+        var publisher = _binder; // Binder implements IMvvmPublisher
+        var viewModel = new CounterViewModel(model, publisher);
+        _binder.Initialize(viewModel);
+    }
+}
+```
+
 #### Using the Binder Inspector
 
 The `Binder` component comes with a custom Unity Inspector that makes it easy to register Views without writing any setup code.
@@ -219,85 +232,6 @@ The selected View is now registered in the **Views** list. Each `[SerializeField
 Click the **Preview** button below **Add View** to reveal the ViewModel associated with each registered View. Fill in values directly in the Inspector and click **Invoke** to apply the bindings and verify that the UI updates as expected.
 
 ![Preview and Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
-
-```csharp
-public class GameEntry : MonoBehaviour
-{
-    [SerializeField] private Binder _binder;
-
-    private void Start()
-    {
-        var model = new CounterModel();
-        var publisher = _binder; // Binder implements IMvvmPublisher
-        var viewModel = new CounterViewModel(model, publisher);
-        _binder.Initialize(viewModel);
-    }
-}
-```
-
-#### VContainer Support
-
-When [VContainer](https://github.com/hadashiA/VContainer) is installed, `Binder` automatically supports DI injection — no extra setup is required. Simply register your ViewModels and the `Binder` in the container. VContainer will call `Initialize(IReadOnlyList<IViewModel>)` automatically, so no manual `Initialize` call is needed.
-
-```csharp
-public class GameLifetimeScope : LifetimeScope
-{
-    [SerializeField] private Binder _binder;
-
-    protected override void Configure(IContainerBuilder builder)
-    {
-        var model = new CounterModel();
-        builder.RegisterInstance(model);
-        builder.RegisterViewModel<CounterViewModel>(_binder);
-        builder.RegisterComponent(_binder);
-    }
-}
-```
-
-## Single-Axis Virtual Scrolling
-
-`SingleAxisVirtualScrollView` displays a vertical or horizontal list while reusing a limited number of item Binders as items enter and leave the viewport. Source generation is not required for the scroll ViewModel itself.
-
-### Inspector Setup
-
-1. Add `SingleAxisVirtualScrollView` to the outer Binder's **Views** list.
-2. Assign **Scroll Rect**, with a viewport and content configured, and enable exactly one direction: **Vertical** or **Horizontal**.
-3. Assign **Item Prefab**, a Binder prefab whose Views accept the item ViewModels. Give its RectTransform a positive, fixed size along the scroll axis.
-4. Set **Spacing** as needed. The view sizes the content and positions items automatically; avoid layout components that overwrite those values.
-
-### Creating Items
-
-Create one `ScrollItemMvvmPublisher` per logical item and register that item's ViewModels with the returned container. Pass the item's publisher—not the outer Binder—to each item ViewModel's constructor.
-
-```csharp
-// models is a CounterModel[] in display order; binder is the outer Binder.
-var publishers = new ScrollItemMvvmPublisher[models.Length];
-for (var i = 0; i < models.Length; i++)
-{
-    var publisher = ScrollItemMvvmPublisher.Create(out var item);
-    item.Register(new CounterViewModel(models[i], publisher));
-    publishers[i] = publisher;
-}
-
-var scrollViewModel = new SingleAxisVirtualScrollViewModel(publishers, binder);
-binder.Initialize(scrollViewModel);
-binder.Run();
-
-scrollViewModel.ScrollRatio = 0.5f;
-```
-
-Call `Regist` multiple times when an item has multiple ViewModels. Only initialize the outer Binder with the scroll ViewModel; item ViewModels are assigned to the reused item Binders automatically.
-
-### Public API
-
-| API | Description |
-|-----|-------------|
-| `SingleAxisVirtualScrollViewModel.Publishers` | Item publishers in display order. |
-| `SingleAxisVirtualScrollViewModel.ScrollRatio` | Last requested position: 0 is the top/left, 1 is the bottom/right. Assignments are clamped to this range; `NaN` throws `ArgumentOutOfRangeException`. User scrolling does not update this value. |
-| `ScrollItemMvvmPublisher.Create(out ViewModelContainer)` | Creates an item publisher and returns a container for registering its ViewModels. |
-| `ScrollItemMvvmPublisher.ViewModelContainer.Register(IViewModel)` | Adds a ViewModel to the item. |
-
-Item publishers forward messages and rebind requests only while their item has an assigned Binder. Messages sent while the item is not displayed are ignored; keep persistent UI state in the item ViewModels so it can be rebound when the item becomes visible.
 
 ## Attributes
 
@@ -393,45 +327,163 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 ## Analyzer Diagnostics
 
-Diagnostic titles and messages support Japanese (`ja`/`ja-JP`) with English fallback for other UI cultures. Japanese resources are shipped in `ja/Bindings.SourceGenerator.resources.dll` alongside the analyzer DLL. Every diagnostic includes a documentation link and a category tag. Localization does not change diagnostic IDs, severities, or configurability.
+Bindings detects incorrect usage at compile time and reports what needs to be fixed.
 
 | ID | Level | Condition |
 |----|-------|-----------|
-| `BND001` | Error | `[ViewModel]` class name does not contain `"ViewModel"`; neither ViewModel nor View source is generated. |
+| `BND001` | Error | A type annotated with `[ViewModel]` does not contain `ViewModel` in its name. Include `ViewModel` in the name. |
 | `BND002` | Error | `[Schema]` `id` is less than `-1`. |
 | `BND003` | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
 | `BND004` | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
-| `BND005` | Warning | A field whose type is annotated with `[ViewModel]` is marked with Unity's `[SerializeField]` or `[SerializeReference]`. Unity deserialization may leave generated runtime state uninitialized even when the type is marked `[Serializable]`; construct or assign the ViewModel at runtime instead. Applying `[Serializable]` to a ViewModel by itself does not report this diagnostic, allowing custom serialization scenarios. |
-| `BND006` | Error | A class implementing `Bindings.IView` (including `IView<T>` and inherited interfaces) derives directly or indirectly from `UnityEngine.MonoBehaviour`. Views must be plain C# objects, not MonoBehaviour components. |
-| `BND007` | Error | User code directly reads or writes a `[Schema]` field declared in a `[ViewModel]` type. Use its generated property instead. Generated code, field declarations/initial values, and `nameof` are excluded. |
+| `BND005` | Warning | A field of a `[ViewModel]` type is marked with `[SerializeField]` or `[SerializeReference]`. Construct or assign ViewModels at runtime instead of relying on Unity deserialization. |
+| `BND006` | Error | A class implementing `IView` derives from `MonoBehaviour`. Implement Views as plain C# classes instead. |
+| `BND007` | Error | Code directly reads or writes a `[Schema]` field in a `[ViewModel]` type. Use its generated property instead. |
 
 ### Best-practice diagnostics
 
-`BNDP` rules identify library-author best practices separately from the `BND` usage diagnostics. They are reported by `BindingsPracticesAnalyzer`, use the `Bindings.Practices` category, and never stop source generation. Severity is configurable; BNDP001–BNDP004 are Errors by default and therefore fail compilation until fixed or reconfigured.
+`BNDP` rules describe design and coding practices recommended by the author of Bindings. They are errors by default; adjust their severity to suit your project's policy.
 
 | ID | Level | Recommendation |
 |----|-------|----------------|
-| `BNDP001` | Error | Inside a `[ViewModel]`, use `PublishRebindMessage()` instead of an equivalent `_publisher.PublishRebindMessage<ThisViewModel>()` call. Enabled by default; severity is configurable. |
-| `BNDP002` | Error | Code inside an `IView` implementation directly constructs a ViewModel. Construct it outside the View and pass it in instead. ViewModels are identified only by their `IViewModel` implementation. |
-| `BNDP003` | Error | A ViewModel only stores or exposes a child ViewModel without using it in its own logic. If the child is not used in the parent's logic, move ownership outside the parent. |
-| `BNDP004` | Error | A ViewModel method only copies each parameter, without conversion or processing, to a distinct publicly writable Schema property on its own instance. Assign the properties directly instead. |
+| `BNDP001` | Error | For self-rebind requests, use the generated `PublishRebindMessage()` instead of an equivalent `_publisher.PublishRebindMessage<T>()` call. |
+| `BNDP002` | Error | Construct ViewModels outside the View and pass them in, rather than constructing them inside the View. |
+| `BNDP003` | Error | If a child ViewModel is only stored or exposed without being used in the parent's logic, move ownership outside the parent. |
+| `BNDP004` | Error | Assign public Schema properties directly instead of writing methods that only copy arguments unchanged to those properties on the current instance. |
 
-BNDP003 checks instance fields and auto-properties holding an `IViewModel`, including inherited implementations and constrained types. Simple getter/setter exposure and constructor assignments (handwritten or generated by `[Required]`) are not behavioral use. Calls, state access, or passing the child to another operation count, whether handwritten or generated; value transformation is not required. Transparent property aliases, including generated Schema properties, are followed to avoid duplicate or false diagnostics. Static members and collections are excluded. Each unused storage member is reported independently. No Code Fix is offered because ownership is an architectural decision.
+### Configuring Severity
 
-BNDP004 checks instance `void` methods in `IViewModel` implementations, regardless of method visibility. Each parameter must be assigned exactly once, with the same type, to a different public property with a public non-init setter corresponding to a `[Schema]` field. Only assignments on the current instance count; child/other-instance assignments and unrelated public properties are excluded. Casts (even identity casts), implicit conversions, arithmetic, additional statements, and `ref`/`in`/`out` parameters are excluded. `[Schema]` methods, overrides, and interface implementations are also excluded. Using a method as a delegate does not exempt it.
-
-Configure individual diagnostic severities, including disabling diagnostics, with `.editorconfig` (recommended) or a code analysis rule set file (`.ruleset`). Rule set files must be explicitly passed to the compiler. Use `.editorconfig` to configure an entire diagnostic category. The following example uses `.editorconfig`:
+Configure diagnostic severity with `.editorconfig` (recommended) or a code analysis rule set file (`.ruleset`). Rule set files must be explicitly supplied to the compiler. For example, to make `BNDP001` an IDE suggestion with `.editorconfig`:
 
 ```ini
 [*.cs]
-dotnet_diagnostic.BNDP001.severity = error
-dotnet_diagnostic.BNDP002.severity = error
-dotnet_diagnostic.BNDP003.severity = error
-dotnet_diagnostic.BNDP004.severity = error
-# Use 'suggestion' to make BNDP001 an IDE suggestion instead.
-# To disable every Bindings best-practice diagnostic:
-# dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none
+dotnet_diagnostic.BNDP001.severity = suggestion
 ```
+
+Use `none` to disable a diagnostic. To disable all best-practice diagnostics, set `dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none`.
+
+## Single-Axis Virtual Scrolling
+
+Use `SingleAxisVirtualScrollViewModel` together with `SingleAxisVirtualScrollView` to display a vertical or horizontal list of fixed-size items. Only enough item Binders for the visible area are created and reused, making this suitable for large lists.
+
+- **`SingleAxisVirtualScrollViewModel`** receives the items in display order and lets you request a scroll position from code.
+- **`SingleAxisVirtualScrollView`** uses a `ScrollRect` and an item prefab to reuse item Binders as the visible range changes.
+
+Both are built-in types; you do not need to define a `[ViewModel]` class for the scroll itself. Each item can use ordinary ViewModels and Views.
+
+VContainer registration is also supported. See [VContainer Support: Registering a Virtual Scroll](#registering-a-virtual-scroll) for details.
+
+### 1. Configure the Item Prefab and Scroll Area
+
+1. Create an item Binder prefab and register Views matching the item ViewModels in its **Views** list. Give the prefab's `RectTransform` a positive, fixed size along the scroll axis.
+2. Create a scroll area under the scene's Canvas using Unity's standard **UI > Scroll View** menu. The root **Scroll View** has a `ScrollRect` component and contains **Viewport > Content**.
+3. Select **Scroll View**. On its `ScrollRect` component, assign the child **Viewport**'s `RectTransform` to **Viewport**, and the nested **Content**'s `RectTransform` to **Content**. The standard menu normally assigns these references automatically. Enable exactly one direction on this `ScrollRect`: **Vertical** or **Horizontal**.
+4. Add `SingleAxisVirtualScrollView` to the **Views** list of the outer Binder that manages the list.
+5. In the Binder Inspector, assign the item Binder prefab to that `SingleAxisVirtualScrollView` entry's **Item Prefab**, and the scene's **Scroll View** `ScrollRect` component to its **Scroll Rect** field. Do not add a `ScrollRect` to the item prefab.
+6. Set **Spacing** as needed. The View sizes Content and positions items automatically; avoid `LayoutGroup` or `ContentSizeFitter` components that overwrite those values.
+
+### 2. Create Items and Connect the ViewModel
+
+Create items in display order and pass them to `SingleAxisVirtualScrollViewModel`. Each item needs its own publisher: pass it to the item ViewModel's constructor and call `Register` on the returned container. Do not pass the outer Binder directly to item ViewModels.
+
+```csharp
+// models is a CounterModel[] in display order; binder is the outer Binder.
+var publishers = new ScrollItemMvvmPublisher[models.Length];
+for (var i = 0; i < models.Length; i++)
+{
+    var publisher = ScrollItemMvvmPublisher.Create(out var container);
+    container.Register(new CounterViewModel(models[i], publisher));
+    publishers[i] = publisher;
+}
+
+var scrollViewModel = new SingleAxisVirtualScrollViewModel(publishers, binder);
+binder.Initialize(scrollViewModel);
+binder.Run();
+```
+
+Call `Register` on that item's `container` multiple times when an item has multiple ViewModels. You do not need to register item ViewModels with the outer Binder; they are assigned to item Binders automatically when displayed.
+
+### 3. Scroll from Code
+
+Assign `ScrollRatio` to request a position. Zero is the top/left edge; one is the bottom/right edge.
+
+```csharp
+scrollViewModel.ScrollRatio = 0.5f; // Scroll to the middle.
+```
+
+Values are clamped to 0–1; `NaN` is not accepted. Reading this property returns the current position reported by the View, including user scrolling. Before the View is bound, it holds the last requested position.
+
+### Items Outside the Visible Area
+
+When an item leaves the visible area, its Binder can be reused for another item, but its ViewModels are retained. Messages are not delivered while the item is hidden. Keep state that should be restored on redisplay in the item ViewModels so binding can restore it.
+
+## VContainer Support
+
+When using [VContainer](https://github.com/hadashiA/VContainer), use `RegisterBinder` to register a Binder and its ViewModels together. `Initialize` is called automatically; call `Binder.Run()` yourself or enable **Run On Start**.
+
+Registrations made with `WithViewModel<T>()` also use code generated by the Bindings Source Generator to call constructors directly, similarly to `VContainer.SourceGenerator.dll`. You do not need to install VContainer's Source Generator separately. See [Generated-Code Optimization with WithViewModel](#generated-code-optimization-with-withviewmodel) for supported types and scope.
+
+### Registering a Binder and ViewModels
+
+```csharp
+public class GameLifetimeScope : LifetimeScope
+{
+    [SerializeField] private Binder _binder;
+
+    protected override void Configure(IContainerBuilder builder)
+    {
+        builder.RegisterInstance(new CounterModel());
+        using (var registration = builder.RegisterBinder(_binder))
+        {
+            registration.WithViewModel<CounterViewModel>().AsSelf();
+            // Add more ViewModels to this same registration scope as needed.
+        }
+    }
+}
+```
+
+Call `WithViewModel<T>()` multiple times on the same scope. The Binder receives only that scope's ViewModels, in addition order, and is supplied to each ViewModel as `IMvvmPublisher`.
+
+- Each call returns VContainer's `RegistrationBuilder`, supporting `AsSelf`, `As<IViewModel>`, `Keyed`, and `WithParameter`. Service interfaces are not added automatically.
+- The default ViewModel lifetime is `Lifetime.Scoped`. Change it with `WithViewModel<T>(lifetime)`.
+- **End the `using` block before building the container.** Registrations commit when the block ends, including exception unwinding; this is not a rollback transaction. Do not copy, box, default-construct, or dispose the registration scope twice.
+- For multiple Binders in one container, `RegisterBinder(binder, keyed: true)` uses the Binder instance as its key (requires VContainer 1.19.0 or later).
+
+### Registering a Virtual Scroll
+
+Use `WithScrollViewModel<TItem>(getItems, configureItem)` to register `SingleAxisVirtualScrollViewModel` and its item ViewModels together. Inspector setup is the same as for [Single-Axis Virtual Scrolling](#single-axis-virtual-scrolling).
+
+```csharp
+// In LifetimeScope.Configure; _binder is the outer scroll Binder.
+builder.RegisterInstance<CounterModel[]>(models);
+using (var registration = builder.RegisterBinder(_binder))
+{
+    registration.WithScrollViewModel<CounterModel>(
+        resolver => resolver.Resolve<CounterModel[]>(),
+        (itemRegistration, model) =>
+        {
+            itemRegistration.WithViewModel<CounterViewModel>()
+                .WithParameter(model);
+        })
+        .AsSelf();
+}
+```
+
+- **`getItems`** is called with the container when the scroll ViewModel is constructed and returns an `IReadOnlyList<TItem>` in display order.
+- **`configureItem`** registers each item's ViewModels. Use `itemRegistration.WithViewModel<T>()` and options such as `WithParameter` to supply item data. You can register multiple ViewModels per item.
+
+A child container and dedicated publisher are created automatically for each item, so you do not need to call `ScrollItemMvvmPublisher.Create` or construct item ViewModels manually. The library commits and disposes the supplied `itemRegistration`; do not add your own `using` or `Dispose` inside the callback.
+
+Item child containers are retained even when their items leave the visible area and are disposed with the owning container. Virtualization applies to the display Binders, not item ViewModel construction. With `AsSelf()`, you can resolve `SingleAxisVirtualScrollViewModel` from the container to control `ScrollRatio`.
+
+### Generated-Code Optimization with WithViewModel
+
+The Bindings Source Generator produces code that calls ViewModel constructors directly. Registrations made with `WithViewModel<T>()` use this generated code to avoid reflective constructor invocation, similarly to `VContainer.SourceGenerator.dll`. VContainer's Source Generator itself is not required.
+
+This optimization applies **only to registrations made with `WithViewModel<T>()`**. It is not automatically applied to VContainer's ordinary `Register<T>()` or other registration paths.
+
+Supported types are top-level, non-generic, concrete classes annotated with `[ViewModel]`, without custom base classes, explicit constructors, or `[Inject]` members. Unsupported types use VContainer's standard construction and injection behavior.
+
+If you also use VContainer's Source Generator, it may generate invalid constructor calls because it cannot see the constructor generated by Bindings. In that case, add `[VContainer.InjectIgnore]` to your ViewModel declaration.
 
 ## License
 This library is released under the MIT license.

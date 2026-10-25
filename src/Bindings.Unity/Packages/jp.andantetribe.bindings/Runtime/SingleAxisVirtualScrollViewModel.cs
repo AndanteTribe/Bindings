@@ -16,11 +16,8 @@ namespace Bindings
 #endif
     public sealed class SingleAxisVirtualScrollViewModel : IViewModel
     {
-        /// <summary>
-        /// The publishers for the scroll items, in display order.
-        /// </summary>
-        public readonly ReadOnlyMemory<ScrollItemMvvmPublisher> Publishers;
-        private float _scrollRatio;
+        internal readonly ReadOnlyMemory<ScrollItemMvvmPublisher> _publishers;
+        internal float _scrollRatio;
         private readonly IMvvmPublisher _publisher;
 
         /// <summary>
@@ -32,14 +29,14 @@ namespace Bindings
             ReadOnlyMemory<ScrollItemMvvmPublisher> publishers, IMvvmPublisher publisher)
         {
             _publisher = publisher;
-            Publishers = publishers;
+            _publishers = publishers;
         }
 
         /// <summary>
-        /// Gets the last requested scroll ratio or requests a new position, clamped to the range from zero to one.
+        /// Gets the current scroll ratio reported by the view or requests a new position, clamped to zero to one.
         /// Zero represents the top or left edge; one represents the bottom or right edge.
         /// </summary>
-        /// <remarks>User scrolling does not update this value.</remarks>
+        /// <remarks>Before a view is bound, this value holds the last requested position.</remarks>
         /// <exception cref="ArgumentOutOfRangeException">The assigned value is <see cref="float.NaN"/>.</exception>
         public float ScrollRatio
         {
