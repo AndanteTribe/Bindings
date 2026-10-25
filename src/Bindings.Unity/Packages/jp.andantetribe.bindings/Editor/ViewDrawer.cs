@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using Bindings.Editor.Internal;
 using UnityEditor;
@@ -20,14 +20,30 @@ namespace Bindings.Editor
                 style = { paddingTop = 5f, paddingBottom = 5f, paddingLeft = 5f, paddingRight = 5f },
             };
             var foldoutCheck = root.Q(className: Foldout.checkmarkUssClassName);
+            foldoutCheck.parent.style.minWidth = 0;
+            foldoutCheck.parent.style.flexShrink = 1;
             foldoutCheck.parent.Add(new Image
             {
                 image = IconConst.ScriptIcon,
-                style = { width = 18f, height = 18f }
+                style = { width = 18f, height = 18f, flexShrink = 0 }
             });
             foldoutCheck.parent.Add(new Label(property.managedReferenceValue.GetType().FullName)
             {
-                style = { marginLeft = 5f, unityFontStyleAndWeight = FontStyle.Bold, fontSize = 13 }
+                style =
+                {
+                    marginLeft = 5f,
+                    marginRight = 25f,
+                    flexGrow = 1,
+                    flexShrink = 1,
+                    minWidth = 0,
+                    unityFontStyleAndWeight = FontStyle.Bold,
+                    fontSize = 13,
+                    unityTextAlign = TextAnchor.MiddleLeft,
+                    whiteSpace = WhiteSpace.NoWrap,
+                    overflow = Overflow.Hidden,
+                    textOverflow = TextOverflow.Ellipsis,
+                    unityTextOverflowPosition = TextOverflowPosition.Start,
+                }
             });
             var removeBtn = new Button()
             {
