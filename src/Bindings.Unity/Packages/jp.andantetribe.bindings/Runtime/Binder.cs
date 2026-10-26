@@ -17,7 +17,6 @@ namespace Bindings
     /// ViewModel, and then call <see cref="Run"/>. This component also implements <see cref="IMvvmPublisher"/> to
     /// route rebind requests and messages to its registered views.
     /// </remarks>
-    [DefaultExecutionOrder(-1000)]
     public sealed class Binder : MonoBehaviour, IMvvmPublisher
     {
         [SerializeField]
@@ -27,12 +26,7 @@ namespace Bindings
         private IView[] _views = Array.Empty<IView>();
 
         private readonly List<IView> _nextChangedViews = new();
-        private CancellationTokenSource _cancellationTokenSource = null!;
-
-        private void Awake()
-        {
-            _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
-        }
+        private CancellationTokenSource? _cancellationTokenSource;
 
         private void Start()
         {
@@ -92,7 +86,7 @@ namespace Bindings
         /// </remarks>
         public void Run()
         {
-            if (!_cancellationTokenSource.IsCancellationRequested)
+            if (_cancellationTokenSource is not null)
             {
                 _cancellationTokenSource.Cancel();
                 _cancellationTokenSource.Dispose();
@@ -108,6 +102,11 @@ namespace Bindings
         /// <inheritdoc />
         void IMvvmPublisher.PublishRebindMessage<T>()
         {
+            if (_cancellationTokenSource is null)
+            {
+                return;
+            }
+
             foreach (var view in _nextChangedViews)
             {
                 if (view is IView<T>)
