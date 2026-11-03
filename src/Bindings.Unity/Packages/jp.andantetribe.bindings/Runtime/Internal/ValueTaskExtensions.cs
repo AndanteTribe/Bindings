@@ -34,20 +34,20 @@ namespace Bindings.Internal
             }
             else
             {
-                awaiter.UnsafeOnCompleted(State.Create(awaiter).Dispose);
+                awaiter.UnsafeOnCompleted(State.Create(awaiter).Continuation);
             }
         }
 
-        private sealed class State : IDisposable
+        private sealed class State
         {
             private static State? s_head;
             private State? _next;
 
             private ValueTaskAwaiter _awaiter;
 
-            private State()
-            {
-            }
+            public readonly Action Continuation;
+
+            private State() => Continuation = Complete;
 
             public static State Create(ValueTaskAwaiter awaiter)
             {
@@ -66,7 +66,7 @@ namespace Bindings.Internal
                 return instance;
             }
 
-            public void Dispose()
+            private void Complete()
             {
                 try
                 {

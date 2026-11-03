@@ -17,6 +17,11 @@
       "displayName": "Gauge Sample (dependency LitMotion)",
       "description": "A sample demonstrating the use of Bindings with a gauge UI element. This sample depends on the LitMotion package for animations.",
       "path": "Samples~/GaugeSample"
+    },
+    {
+      "displayName": "Virtual Scroll Sample",
+      "description": "Vertical and horizontal virtual grids with item Binder prefabs and jump buttons. Requires TMP Essential Resources.",
+      "path": "Samples~/VirtualScrollSample"
     }
   ]
 }

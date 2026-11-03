@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -6,6 +6,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Bindings.Internal;
 using UnityEngine;
+#if ENABLE_VCONTAINER
+using VContainer;
+#endif
 
 namespace Bindings
 {
@@ -17,6 +20,9 @@ namespace Bindings
     /// ViewModel, and then call <see cref="Run"/>. This component also implements <see cref="IMvvmPublisher"/> to
     /// route rebind requests and messages to its registered views.
     /// </remarks>
+#if ENABLE_VCONTAINER
+    [InjectIgnore]
+#endif
     public sealed class Binder : MonoBehaviour, IMvvmPublisher
     {
         [SerializeField]
@@ -44,7 +50,7 @@ namespace Bindings
         /// No registered view accepts one of the supplied ViewModels.
         /// </exception>
 #if ENABLE_VCONTAINER
-        [VContainer.Inject]
+        [Inject]
 #endif
         public void Initialize(IReadOnlyList<IViewModel> viewModels)
         {
@@ -91,6 +97,7 @@ namespace Bindings
                 _cancellationTokenSource.Cancel();
                 _cancellationTokenSource.Dispose();
             }
+
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellationToken);
 
             foreach (var view in _views.AsSpan())
@@ -114,6 +121,7 @@ namespace Bindings
                     return;
                 }
             }
+
             foreach (var view in _views.AsSpan())
             {
                 if (view is IView<T>)
@@ -128,6 +136,7 @@ namespace Bindings
                     return;
                 }
             }
+
             throw new InvalidOperationException("No view found for view model of type " + typeof(T).FullName + ".");
         }
 
@@ -159,7 +168,27 @@ namespace Bindings
             {
                 nextChangedViews.Remove(view);
             }
+
             await view.BindAsync(cancellationToken);
         }
     }
+
+#if ENABLE_VCONTAINER
+    // InjectorCache discovers this type by the component's full name plus "GeneratedInjector".
+    [Preserve]
+    internal sealed class BinderGeneratedInjector : IInjector
+    {
+        public object CreateInstance(IObjectResolver resolver, IReadOnlyList<IInjectParameter> parameters)
+        {
+            throw new NotSupportedException("Binder must be created as a Unity component.");
+        }
+
+        public void Inject(object instance, IObjectResolver resolver, IReadOnlyList<IInjectParameter> parameters)
+        {
+            var viewModels = (IReadOnlyList<IViewModel>)resolver.ResolveOrParameter(
+                typeof(IReadOnlyList<IViewModel>), "viewModels", parameters);
+            ((Binder)instance).Initialize(viewModels);
+        }
+    }
+#endif
 }
