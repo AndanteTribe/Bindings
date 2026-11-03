@@ -1,0 +1,9 @@
+{
+    "name": "Bindings.Samples.VirtualScroll",
+    "rootNamespace": "Bindings.Sample",
+    "references": [
+        "GUID:8ce3cee2a7b55af44bcb3ab338c264f2",
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:2bafac87e7f4b9b418d9448d219b01ab"
+    ]
+}
