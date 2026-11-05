@@ -241,13 +241,13 @@ public class GameEntry : MonoBehaviour
 
 | パラメータ | 型 | デフォルト | 説明 |
 |-----------|-----|-----------|------|
-| `requireBindImplementation` | `bool` | `false` | `true` の場合、`BindAsync` の自動生成をスキップします。ユーザーが partial View クラスに手動で実装する必要があります。 |
+| `requireBindImplementation` | `bool` | `false` | `true` の場合、`BindAsync` の自動生成をスキップします。[バインドとシリアライズ](#バインドとシリアライズ)を参照してください。 |
 
 ### `[Required]`
 
-フィールドまたはプロパティに付与し、生成されるコンストラクタの引数として追加します。生成されるコンストラクタはそのフィールドの型の引数を受け取り、代入します。
+フィールドまたはプロパティに付与し、生成されるコンストラクタの引数として追加します。各メンバーの型の引数を受け取り、代入します。Requiredメンバーは宣言順に並び、最後に `IMvvmPublisher publisher` が続きます。Requiredメンバーがなければ、引数は `publisher` のみです。
 
-ViewModel クラスでは、生成コンストラクタはすべての `[Required]` メンバと内部の `IMvvmPublisher` を代入した後に `partial void OnPostConstruct();` を呼び出します。コンストラクタと競合する独自実装を追加する代わりに、このフックを partial クラス側で実装して一度だけ必要な初期化を行ってください。
+生成コンストラクタは `[Required]` メンバー、内部の `IMvvmPublisher` の順に代入します。ViewModel クラスでは、続けて `partial void OnPostConstruct();` を呼び出します。partial クラス側でこのフックを実装し、Schemaプロパティへの代入など、Publisherが必要な一度だけの初期化を行ってください。構造体にはこのフックを生成しません。
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 
@@ -255,14 +255,14 @@ ViewModel クラスでは、生成コンストラクタはすべての `[Require
 
 | パラメータ | 型 | デフォルト | 説明 |
 |-----------|-----|-----------|------|
-| `bindingPath` | `string` | 必須 | バインド先の UI コンポーネントメンバを `PathResolver` 経由で指定します（例: `PathResolver.TMPro.TMP_Text.text`）。 |
-| `id` | `int` | `-1` | 複数の `[Schema]` を同一 View コンポーネントフィールドにグループ化します。`id >= 0` で明示的にグループ化し、`-1` は自動採番です。`-1` 未満は `BND002` を発生させます。 |
+| `bindingPath` | `string` | 必須 | バインド先の完全修飾コンポーネントメンバパスを、文字列または `PathResolver` 経由で指定します（例: `PathResolver.TMPro.TMP_Text.text`）。 |
+| `id` | `int` | `-1` | **同じコンポーネント型かつ同じ非負ID** のエントリでViewフィールドを共有します。`-1` は各エントリが独立します。`-1` 未満は [BND002](docs/diagnostics/BND002.ja.md) を発生させます。 |
 | `format` | `string` | `""` | `TMPro.TMP_Text.text` バインド時に適用する書式文字列（例: `"N0"`）。それ以外のバインディングパスでは無視されます。 |
 | `tooltip` | `string` | `""` | 生成された View コンポーネントフィールドに表示する Unity Inspector のツールチップテキスト。 |
 
 #### GameObject のアクティブ状態バインド
 
-`bindingPath` に `UnityEngine.GameObject.activeSelf`（または `PathResolver.UnityEngine.GameObject.activeSelf`）を指定した場合、生成される View コードでは `GameObject.SetActive(bool)` を呼び出して GameObject のアクティブ状態を切り替えます。`activeSelf` は読み取り専用のプロパティであるため、内部的に `SetActive` にマッピングして正しく状態を変更します。
+`bindingPath` に `UnityEngine.GameObject.activeSelf`（または `PathResolver.UnityEngine.GameObject.activeSelf`）を指定すると、生成される View は `GameObject.SetActive(bool)` でアクティブ状態を切り替えます。
 
 例:
 
@@ -283,6 +283,44 @@ private Vector2 _size;
 ```
 
 生成される View は、水平軸へ `Size.x`、垂直軸へ `Size.y` を渡して `RectTransform.SetSizeWithCurrentAnchors` をそれぞれ1回呼び出します。この動作は明示的にこのパスを選んだ場合だけ有効であり、`PathResolver.UnityEngine.RectTransform.sizeDelta` は引き続き `RectTransform.sizeDelta` へ直接代入します。
+
+## 生成コードの規則
+
+### 型と命名
+
+- ViewModelはpartialなクラスまたは構造体です。型名には `ViewModel` が必要で、この部分を `View` に置換して生成View名を決めます。[BND001](docs/diagnostics/BND001.ja.md)を参照してください。
+- 生成Viewは `IView<T>` を実装するsealed partial classです。ViewModelと同じアクセシビリティと親型チェーンを維持します。親型もすべてpartialである必要があります。対応するアクセシビリティは [BND004](docs/diagnostics/BND004.ja.md) を参照してください。
+- 生成ファイル名には名前空間と親型を含めます。例：`MyApp.Screen.CounterViewModel.g.cs`、`MyApp.Screen.CounterView.g.cs`。生成コードの型参照は、ユーザー定義名との衝突を避けるため完全修飾名を使用します。
+- フィールド由来の識別子は、先頭の `_` をすべて除去し、続けて先頭の `m_` を1つ除去します。残った先頭文字をSchemaプロパティでは大文字、Requiredのコンストラクター引数では小文字にします。結果は空でない有効な識別子である必要があります。
+
+| メンバー名 | Schemaプロパティ | Required引数 |
+| --- | --- | --- |
+| `_count`、`__count`、`m_count`、`_m_count` | `Count` | `count` |
+| `m_Service` | `Service` | `service` |
+| `myService` | `MyService` | `myService` |
+
+Schema属性を複数付けても、フィールドごとに生成する公開プロパティは1つです。クラスと通常の構造体では、setterがフィールドへ代入して再バインドを要求します。同じ値の代入でも通知します。フィールドを直接参照せず、プロパティを使用してください。[BND007](docs/diagnostics/BND007.ja.md)に詳細があります。readonly structではgetterのみを生成します。
+
+### コンポーネントフィールドと共有
+
+生成コンポーネントフィールド名は、正規化したメンバー名とコンポーネント名を組み合わせます。`TMP_Text` への `_count` のバインドは `_countText`、`Button` への `Increment` のバインドは `_incrementButton` です。メンバー名には上記の先頭小文字の正規化を使います。コンポーネントの接尾辞はクラス名の最後のアンダースコアより後ろ（`TMP_Text` → `Text`）を使い、空になる場合はクラス名全体を使います。
+
+- 同じコンポーネント型かつ同じ明示的な `id >= 0` のエントリは、1つのフィールドを共有します。最初に収集したメンバー名を採用します。フィールド、メソッドの順で、それぞれ宣言順に収集します。ID自体をフィールド名へ付加するわけではありません。
+- ID省略または `id = -1` の各エントリは独立します。名前が異なれば連番はなく、同じ名前が競合した場合にだけ出現順に `1`、`2` などを付加します。使用済みの名前は飛ばします。
+- `Submit` に同じButtonのSchemaを2つ付けると、`_submitButton1` と `_submitButton2` になります。別々の `Increment` と `Decrement` なら `_incrementButton` と `_decrementButton` です。
+- `RectTransform.rect.size` と `RectTransform.sizeDelta` は、同じ明示的IDでRectTransformを共有できます。
+- コンポーネントフィールドはシリアライズ対象です。Schemaフィールド、Schemaメソッドの順に参照を処理し、初出順に宣言します。共有コンポーネントの宣言は1つです。
+- tooltipを指定するとUnityの `Tooltip` 属性になります。最初の非空値を採用し、共有フィールドで異なる非空値が競合した場合は [BND003](docs/diagnostics/BND003.ja.md) になります。
+
+### バインドとシリアライズ
+
+最初にフィールドのSchema、次にメソッドのイベントSchemaを適用します。TMPテキストは `TextMeshProExtensions.SetValue`、`activeSelf` と `rect.size` は前述の専用APIを使い、それ以外のフィールドバインドは直接代入します。コンポーネントとイベントの組み合わせごとに `RemoveAllListeners()` を1回呼び、各メソッドを `AddListener` で登録します。最後にViewの `OnPostBind`、続けて `NotifyCompletedBind` 経由でViewModelの `OnPostBind` を呼びます。
+
+`requireBindImplementation: true` の場合は、partial Viewに `IView.BindAsync` を実装し、準備できた時点で生成済みの `BindAll()` を呼んでください。既定の実装は `BindAll()` を同期実行し、完了済みの `ValueTask` を返します。
+
+デバッグ用サブスクライバーは `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT` の条件でコンパイルします。フィールドのバインドだけを適用して同じ完了フックを呼び、イベントリスナーの再登録は行いません。
+
+Viewには、Binderの `[SerializeReference]` による保持のため、常に `[Serializable]` を付与します。ViewModelへの参照はシリアライズしません。ViewModelには `UNITY_EDITOR` の場合だけ `[Serializable]` を付与し、ユーザーが明示済みの場合は重複させません。これはInspector表示を支援するもので、生成された実行時状態のUnityによる永続化を保証しません。[BND005](docs/diagnostics/BND005.ja.md)に従い、ViewModelは実行時に構築してください。
 
 ## `IMvvmSubscriber<T>` によるメッセージング
 
@@ -329,15 +367,17 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 誤った使い方を検出し、修正すべき箇所をコンパイル時に報告します。
 
+各IDから、原因・例・対象外の条件・Code Fixの有無・ソース生成への影響を説明するページへ移動できます。IDEの診断ヘルプは、アナライザーDLLに記録されたビルド元コミットの英語ページを開き、各ページから日本語へ切り替えられます。
+
 | ID | レベル | 条件 |
 |----|--------|------|
-| `BND001` | エラー | `[ViewModel]` を付与した型の名前に `ViewModel` が含まれていない。名前に `ViewModel` を含める。 |
-| `BND002` | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
-| `BND003` | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
-| `BND004` | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
-| `BND005` | 警告 | `[ViewModel]` 型のフィールドに `[SerializeField]` または `[SerializeReference]` が付与されている。ViewModel は Unity のデシリアライズに任せず、実行時に生成・代入する。 |
-| `BND006` | エラー | `IView` を実装するクラスが `MonoBehaviour` を継承している。View は通常の C# クラスとして実装する。 |
-| `BND007` | エラー | `[ViewModel]` 型の `[Schema]` フィールドを直接読み書きしている。生成されるプロパティを使用する。 |
+| [`BND001`](docs/diagnostics/BND001.ja.md) | エラー | `[ViewModel]` を付与した型の名前に `ViewModel` が含まれていない。名前に `ViewModel` を含める。 |
+| [`BND002`](docs/diagnostics/BND002.ja.md) | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
+| [`BND003`](docs/diagnostics/BND003.ja.md) | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
+| [`BND004`](docs/diagnostics/BND004.ja.md) | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
+| [`BND005`](docs/diagnostics/BND005.ja.md) | 警告 | `[ViewModel]` 型のフィールドに `[SerializeField]` または `[SerializeReference]` が付与されている。ViewModel は Unity のデシリアライズに任せず、実行時に生成・代入する。 |
+| [`BND006`](docs/diagnostics/BND006.ja.md) | エラー | `IView` を実装するクラスが `MonoBehaviour` を継承している。View は通常の C# クラスとして実装する。 |
+| [`BND007`](docs/diagnostics/BND007.ja.md) | エラー | `[ViewModel]` 型の `[Schema]` フィールドを直接読み書きしている。生成されるプロパティを使用する。 |
 
 ### ベストプラクティス診断
 
@@ -345,10 +385,10 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 | ID | レベル | 推奨事項 |
 |----|--------|----------|
-| `BNDP001` | エラー | 自分自身への再バインド要求には、等価な `_publisher.PublishRebindMessage<T>()` ではなく、生成された `PublishRebindMessage()` を使用する。 |
-| `BNDP002` | エラー | View 内で ViewModel を直接生成せず、View の外で生成して受け渡す。 |
-| `BNDP003` | エラー | 子 ViewModel を保持・公開するだけで自身の処理に使わない場合、その所有を親 ViewModel の外へ移す。 |
-| `BNDP004` | エラー | 引数を自分自身の公開 Schema プロパティへそのまま代入するだけのメソッドを作らず、プロパティへ直接代入する。 |
+| [`BNDP001`](docs/diagnostics/BNDP001.ja.md) | エラー | 自分自身への再バインド要求には、等価な `_publisher.PublishRebindMessage<T>()` ではなく、生成された `PublishRebindMessage()` を使用する。 |
+| [`BNDP002`](docs/diagnostics/BNDP002.ja.md) | エラー | View 内で ViewModel を直接生成せず、View の外で生成して受け渡す。 |
+| [`BNDP003`](docs/diagnostics/BNDP003.ja.md) | エラー | 子 ViewModel を保持・公開するだけで自身の処理に使わない場合、その所有を親 ViewModel の外へ移す。 |
+| [`BNDP004`](docs/diagnostics/BNDP004.ja.md) | エラー | 引数を自分自身の公開 Schema プロパティへそのまま代入するだけのメソッドを作らず、プロパティへ直接代入する。 |
 
 ### 重大度の設定
 
@@ -360,6 +400,8 @@ dotnet_diagnostic.BNDP001.severity = suggestion
 ```
 
 無効にする場合は `none` を指定します。ベストプラクティス診断をまとめて無効にするには、`dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none` を指定してください。
+
+診断メッセージはUIカルチャーが `ja` / `ja-JP` の場合に日本語、それ以外は英語になります。生成時のBND001・BND004は該当ViewModelの生成だけを中止し、Usage診断・ベストプラクティス診断はソース生成を抑止しません。個別の動作は各診断ページを参照してください。
 
 ## 単軸仮想スクロール
 
@@ -437,7 +479,7 @@ scrollViewModel.ScrollRatio = 0.5f; // Scroll to the middle.
 
 [VContainer](https://github.com/hadashiA/VContainer) を使用する場合は、`RegisterBinder` で Binder と ViewModel をまとめて登録できます。`Initialize` は自動呼び出しされますが、`Binder.Run()` は利用側で呼ぶか、**Run On Start** を有効にしてください。
 
-`WithViewModel<T>()` による登録では、Bindings 側の Source Generator が生成したコードにより、`VContainer.SourceGenerator.dll` 利用時と同様にコンストラクターを直接呼び出す最適化も行います。VContainer の Source Generator を別途導入する必要はありません。対象条件などは [WithViewModel の生成コードによる最適化](#withviewmodel-の生成コードによる最適化)を参照してください。
+`WithViewModel<T>()` は[生成コードによる最適化](#withviewmodel-の生成コードによる最適化)にも対応しています。
 
 ### Binder と ViewModel の登録
 
@@ -499,6 +541,8 @@ Bindings の Source Generator は、ViewModel のコンストラクターを直�
 この最適化は **`WithViewModel<T>()` による登録に限って適用**されます。VContainer の通常の `Register<T>()` などには自動適用されません。
 
 対象は `[ViewModel]` 付きのトップレベルの非ジェネリックな具象クラスで、独自の基底クラス・明示的なコンストラクター・`[Inject]` メンバーを持たない型です。対象外の型は VContainer 標準の生成・インジェクション処理を使用します。
+
+VContainer APIが利用可能であることも条件です。生成する非公開Injectorは、VContainerのパラメーターと正規化したコンストラクター引数名を使ってRequiredメンバーとPublisherを解決し、`OnPostConstruct` を含む生成コンストラクターを呼びます。Lifetime・インターフェイス・キー・パラメーターなどの登録オプションは維持します。
 
 VContainer の Source Generator を併用すると、Bindings の生成コンストラクターが見えず、不正なコンストラクター呼び出しが生成される場合があります。その場合は、ユーザー側の ViewModel 宣言に `[VContainer.InjectIgnore]` を付与してください。
 

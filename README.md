@@ -241,13 +241,13 @@ Applied to a `partial` class or struct to mark it as a ViewModel and trigger sou
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `requireBindImplementation` | `bool` | `false` | When `true`, skips auto-generating `BindAsync`. The user must implement it manually on the partial View class. |
+| `requireBindImplementation` | `bool` | `false` | When `true`, skips auto-generating `BindAsync`. See [Binding and Serialization](#binding-and-serialization). |
 
 ### `[Required]`
 
-Applied to a field or property to include it as a parameter in the generated constructor. The generated constructor will accept a parameter of the field's type and assign it.
+Applied to a field or property to include it as a parameter in the generated constructor. The constructor accepts each member's type and assigns it. Required members appear in declaration order, followed by `IMvvmPublisher publisher`; without Required members, the constructor accepts only `publisher`.
 
-For ViewModel classes, the generated constructor also calls `partial void OnPostConstruct();` after all `[Required]` members and the internal `IMvvmPublisher` have been assigned. Implement this hook in your partial class for one-time post-construction initialization instead of defining a competing constructor.
+The generated constructor assigns `[Required]` members, then the internal `IMvvmPublisher`. For ViewModel classes, it then calls `partial void OnPostConstruct();`. Implement this hook in your partial class for one-time initialization that needs the publisher, including Schema property assignments. Structs do not generate this hook.
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 
@@ -255,14 +255,14 @@ Applied to a field or method to bind it to a UI component. Can be applied multip
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `bindingPath` | `string` | required | The UI component member to bind, expressed via `PathResolver` (e.g., `PathResolver.TMPro.TMP_Text.text`). |
-| `id` | `int` | `-1` | Groups multiple `[Schema]` entries onto the **same** View component field. Use `id >= 0` for explicit grouping; `-1` means auto-numbered. Values less than `-1` trigger `BND002`. |
+| `bindingPath` | `string` | required | Fully qualified component member path, supplied as a string or via `PathResolver` (e.g., `PathResolver.TMPro.TMP_Text.text`). |
+| `id` | `int` | `-1` | Entries with the **same component type and non-negative ID** share a View field. Each `-1` entry is independent. Values less than `-1` trigger [BND002](docs/diagnostics/BND002.md). |
 | `format` | `string` | `""` | Format string applied when binding to `TMPro.TMP_Text.text` (e.g., `"N0"`). Ignored for other binding paths. |
 | `tooltip` | `string` | `""` | Tooltip text shown in the Unity Inspector on the generated View component field. |
 
 #### GameObject active state binding
 
-If you specify `UnityEngine.GameObject.activeSelf` (or `PathResolver.UnityEngine.GameObject.activeSelf`) as the `bindingPath`, the generated View code will call `GameObject.SetActive(bool)` to update the GameObject active state. The generator maps the `activeSelf` binding to the proper runtime API because `activeSelf` is a read-only property — using `SetActive` ensures the active state is changed correctly.
+Specify `UnityEngine.GameObject.activeSelf` (or `PathResolver.UnityEngine.GameObject.activeSelf`) as the `bindingPath` to have the generated View update the active state through `GameObject.SetActive(bool)`.
 
 Example:
 
@@ -283,6 +283,44 @@ private Vector2 _size;
 ```
 
 The generated View calls `RectTransform.SetSizeWithCurrentAnchors` once for the horizontal axis with `Size.x` and once for the vertical axis with `Size.y`. This binding is opt-in; `PathResolver.UnityEngine.RectTransform.sizeDelta` continues to assign `RectTransform.sizeDelta` directly.
+
+## Generated-Code Conventions
+
+### Types and Names
+
+- A ViewModel is a partial class or struct. Its name must contain `ViewModel`; replacing that substring with `View` determines the generated View name. See [BND001](docs/diagnostics/BND001.md).
+- The generated View is a sealed partial class implementing `IView<T>`, with the same accessibility and containing-type chain as its ViewModel. All containing types must also be partial. See [BND004](docs/diagnostics/BND004.md) for supported accessibilities.
+- Generated file names include the namespace and containing types: `MyApp.Screen.CounterViewModel.g.cs` and `MyApp.Screen.CounterView.g.cs`, for example. Generated type references use fully qualified names to avoid user-name collisions.
+- For field-derived identifiers, remove all leading `_` characters, then one leading `m_`. Uppercase the first remaining character for a Schema property, or lowercase it for a Required constructor parameter. The result must be a valid, non-empty identifier.
+
+| Member name | Schema property | Required parameter |
+| --- | --- | --- |
+| `_count`, `__count`, `m_count`, `_m_count` | `Count` | `count` |
+| `m_Service` | `Service` | `service` |
+| `myService` | `MyService` | `myService` |
+
+Each Schema field produces one public property, even with multiple Schema attributes. For classes and ordinary structs, its setter assigns the field and requests a rebind, including when the value is unchanged. Use the property rather than directly accessing the field; see [BND007](docs/diagnostics/BND007.md). For readonly structs, only a getter is generated.
+
+### Component Fields and Sharing
+
+Generated component fields combine the normalized member name and component name: `_count` bound to `TMP_Text` becomes `_countText`, and `Increment` bound to `Button` becomes `_incrementButton`. Member names use the lowercase-first normalization above. The component suffix uses the class-name segment after its last underscore (`TMP_Text` → `Text`), falling back to the class name when that segment is empty.
+
+- Entries with the same component type and the same explicit `id >= 0` share one field. Its name uses the first collected member; fields are collected before methods, each in declaration order. The ID itself is not appended to the name.
+- Every omitted ID or `id = -1` creates an independent component. Distinct names have no numeric suffix; colliding names receive `1`, `2`, and so on in encounter order, skipping names already used.
+- Repeating the same Button schema twice on `Submit` therefore produces `_submitButton1` and `_submitButton2`. Two different methods `Increment` and `Decrement` produce `_incrementButton` and `_decrementButton`.
+- `RectTransform.rect.size` and `RectTransform.sizeDelta` can share a RectTransform using the same explicit ID.
+- Component fields are serialized and emitted in first-reference order, processing Schema fields before Schema methods. A shared component is declared once.
+- A supplied tooltip becomes a Unity `Tooltip` attribute. The first non-empty tooltip wins; different non-empty values on a shared field produce [BND003](docs/diagnostics/BND003.md).
+
+### Binding and Serialization
+
+Binding applies field schemas first, then method event schemas. TMP text uses `TextMeshProExtensions.SetValue`; `activeSelf` and `rect.size` use the dedicated APIs described above. Other field bindings use direct assignment. For each component/event pair, `RemoveAllListeners()` is called once, followed by `AddListener` for each bound method. Finally, the View's `OnPostBind` runs, then the ViewModel's `OnPostBind` through `NotifyCompletedBind`.
+
+With `requireBindImplementation: true`, implement `IView.BindAsync` on the partial View and call its generated `BindAll()` when ready. The default implementation calls `BindAll()` synchronously and returns a completed `ValueTask`.
+
+The debug subscriber is compiled under `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT`. It applies only field bindings, followed by the same completion hooks; it does not re-register event listeners.
+
+Views always receive `[Serializable]` for the Binder's `[SerializeReference]` storage; their ViewModel reference is non-serialized. ViewModels receive `[Serializable]` only under `UNITY_EDITOR`, unless the user already supplied it. This supports inspection, not Unity persistence of generated runtime state; construct ViewModels at runtime as explained in [BND005](docs/diagnostics/BND005.md).
 
 ## Messaging with `IMvvmSubscriber<T>`
 
@@ -329,15 +367,17 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 Bindings detects incorrect usage at compile time and reports what needs to be fixed.
 
+Each ID links to its detailed cause, examples, exceptions, Code Fix availability, and source-generation behavior. IDE diagnostic help opens the English page at the build-source commit recorded in the analyzer assembly; each page links to Japanese.
+
 | ID | Level | Condition |
 |----|-------|-----------|
-| `BND001` | Error | A type annotated with `[ViewModel]` does not contain `ViewModel` in its name. Include `ViewModel` in the name. |
-| `BND002` | Error | `[Schema]` `id` is less than `-1`. |
-| `BND003` | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
-| `BND004` | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
-| `BND005` | Warning | A field of a `[ViewModel]` type is marked with `[SerializeField]` or `[SerializeReference]`. Construct or assign ViewModels at runtime instead of relying on Unity deserialization. |
-| `BND006` | Error | A class implementing `IView` derives from `MonoBehaviour`. Implement Views as plain C# classes instead. |
-| `BND007` | Error | Code directly reads or writes a `[Schema]` field in a `[ViewModel]` type. Use its generated property instead. |
+| [`BND001`](docs/diagnostics/BND001.md) | Error | A type annotated with `[ViewModel]` does not contain `ViewModel` in its name. Include `ViewModel` in the name. |
+| [`BND002`](docs/diagnostics/BND002.md) | Error | `[Schema]` `id` is less than `-1`. |
+| [`BND003`](docs/diagnostics/BND003.md) | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
+| [`BND004`](docs/diagnostics/BND004.md) | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
+| [`BND005`](docs/diagnostics/BND005.md) | Warning | A field of a `[ViewModel]` type is marked with `[SerializeField]` or `[SerializeReference]`. Construct or assign ViewModels at runtime instead of relying on Unity deserialization. |
+| [`BND006`](docs/diagnostics/BND006.md) | Error | A class implementing `IView` derives from `MonoBehaviour`. Implement Views as plain C# classes instead. |
+| [`BND007`](docs/diagnostics/BND007.md) | Error | Code directly reads or writes a `[Schema]` field in a `[ViewModel]` type. Use its generated property instead. |
 
 ### Best-practice diagnostics
 
@@ -345,10 +385,10 @@ Bindings detects incorrect usage at compile time and reports what needs to be fi
 
 | ID | Level | Recommendation |
 |----|-------|----------------|
-| `BNDP001` | Error | For self-rebind requests, use the generated `PublishRebindMessage()` instead of an equivalent `_publisher.PublishRebindMessage<T>()` call. |
-| `BNDP002` | Error | Construct ViewModels outside the View and pass them in, rather than constructing them inside the View. |
-| `BNDP003` | Error | If a child ViewModel is only stored or exposed without being used in the parent's logic, move ownership outside the parent. |
-| `BNDP004` | Error | Assign public Schema properties directly instead of writing methods that only copy arguments unchanged to those properties on the current instance. |
+| [`BNDP001`](docs/diagnostics/BNDP001.md) | Error | For self-rebind requests, use the generated `PublishRebindMessage()` instead of an equivalent `_publisher.PublishRebindMessage<T>()` call. |
+| [`BNDP002`](docs/diagnostics/BNDP002.md) | Error | Construct ViewModels outside the View and pass them in, rather than constructing them inside the View. |
+| [`BNDP003`](docs/diagnostics/BNDP003.md) | Error | If a child ViewModel is only stored or exposed without being used in the parent's logic, move ownership outside the parent. |
+| [`BNDP004`](docs/diagnostics/BNDP004.md) | Error | Assign public Schema properties directly instead of writing methods that only copy arguments unchanged to those properties on the current instance. |
 
 ### Configuring Severity
 
@@ -360,6 +400,8 @@ dotnet_diagnostic.BNDP001.severity = suggestion
 ```
 
 Use `none` to disable a diagnostic. To disable all best-practice diagnostics, set `dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none`.
+
+Diagnostic messages use Japanese for the `ja` / `ja-JP` UI cultures and fall back to English for other cultures. Source-generation errors BND001 and BND004 stop only the affected ViewModel's generation; usage and best-practice diagnostics do not suppress source generation. Detailed behavior is documented on each rule's page.
 
 ## Single-Axis Virtual Scrolling
 
@@ -437,7 +479,7 @@ When an item leaves the visible area, its Binder can be reused for another item,
 
 When using [VContainer](https://github.com/hadashiA/VContainer), use `RegisterBinder` to register a Binder and its ViewModels together. `Initialize` is called automatically; call `Binder.Run()` yourself or enable **Run On Start**.
 
-Registrations made with `WithViewModel<T>()` also use code generated by the Bindings Source Generator to call constructors directly, similarly to `VContainer.SourceGenerator.dll`. You do not need to install VContainer's Source Generator separately. See [Generated-Code Optimization with WithViewModel](#generated-code-optimization-with-withviewmodel) for supported types and scope.
+`WithViewModel<T>()` also supports [generated-code optimization](#generated-code-optimization-with-withviewmodel).
 
 ### Registering a Binder and ViewModels
 
@@ -499,6 +541,8 @@ The Bindings Source Generator produces code that calls ViewModel constructors di
 This optimization applies **only to registrations made with `WithViewModel<T>()`**. It is not automatically applied to VContainer's ordinary `Register<T>()` or other registration paths.
 
 Supported types are top-level, non-generic, concrete classes annotated with `[ViewModel]`, without custom base classes, explicit constructors, or `[Inject]` members. Unsupported types use VContainer's standard construction and injection behavior.
+
+The VContainer APIs must also be available. The generated private injector resolves Required members and the publisher using VContainer's parameters and normalized constructor parameter names, and calls the generated constructor, including `OnPostConstruct`. Registration options such as lifetime, interfaces, keys, and parameters are retained.
 
 If you also use VContainer's Source Generator, it may generate invalid constructor calls because it cannot see the constructor generated by Bindings. In that case, add `[VContainer.InjectIgnore]` to your ViewModel declaration.
 

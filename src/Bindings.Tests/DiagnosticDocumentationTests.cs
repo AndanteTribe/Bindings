@@ -4,7 +4,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Resources;
+using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Xunit;
 
 namespace Bindings.Tests;
@@ -31,9 +34,120 @@ public class DiagnosticDocumentationTests
 
         foreach (var descriptor in descriptors)
         {
-            Assert.Contains($"| `{descriptor.Id}` | {descriptor.DefaultSeverity} |", readme);
-            Assert.Contains($"| `{descriptor.Id}` | {ToJapaneseSeverity(descriptor.DefaultSeverity)} |", readmeJa);
+            Assert.Contains($"| [`{descriptor.Id}`](docs/diagnostics/{descriptor.Id}.md) | {descriptor.DefaultSeverity} |", readme);
+            Assert.Contains($"| [`{descriptor.Id}`](docs/diagnostics/{descriptor.Id}.ja.md) | {ToJapaneseSeverity(descriptor.DefaultSeverity)} |", readmeJa);
         }
+    }
+
+    [Theory]
+    [InlineData("en-US", ".md")]
+    [InlineData("ja", ".ja.md")]
+    public void DiagnosticPagesMatchMetadataAndLocalizedResources(string cultureName, string extension)
+    {
+        var descriptors = typeof(ViewModelGenerator).Assembly.GetType("Bindings.DiagnosticDescriptors")!
+            .GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Where(static field => field.FieldType == typeof(DiagnosticDescriptor))
+            .Select(static field => (DiagnosticDescriptor)field.GetValue(null)!)
+            .ToArray();
+        var fixableIds = new BindingsPracticesCodeFixProvider().FixableDiagnosticIds;
+        var directory = Path.Combine(FindRepositoryRoot(), "docs", "diagnostics");
+        var culture = CultureInfo.GetCultureInfo(cultureName);
+        foreach (var descriptor in descriptors)
+        {
+            var page = File.ReadAllText(Path.Combine(directory, descriptor.Id + extension));
+            Assert.StartsWith($"# {descriptor.Id}: {descriptor.Title.ToString(culture)}", page);
+            Assert.Contains($"> {descriptor.MessageFormat.ToString(culture)}", page);
+            if (cultureName == "ja")
+            {
+                Assert.Contains($"| カテゴリ | {descriptor.Category} |", page);
+                Assert.Contains($"| 標準重大度 | {descriptor.DefaultSeverity} |", page);
+                Assert.Contains($"| 既定で有効 | {(descriptor.IsEnabledByDefault ? "はい" : "いいえ")} |", page);
+                Assert.Contains($"| Code Fix | {(fixableIds.Contains(descriptor.Id) ? "あり" : "なし")} |", page);
+                Assert.Contains($"[English]({descriptor.Id}.md)", page);
+                Assert.Contains("../../README_JA.md#", page);
+            }
+            else
+            {
+                Assert.Contains($"| Category | {descriptor.Category} |", page);
+                Assert.Contains($"| Default severity | {descriptor.DefaultSeverity} |", page);
+                Assert.Contains($"| Enabled by default | {(descriptor.IsEnabledByDefault ? "Yes" : "No")} |", page);
+                Assert.Contains($"| Code fix | {(fixableIds.Contains(descriptor.Id) ? "Yes" : "None")} |", page);
+                Assert.Contains($"[日本語]({descriptor.Id}.ja.md)", page);
+                Assert.Contains("../../README.md#", page);
+            }
+        }
+
+        var expectedFiles = descriptors.SelectMany(static descriptor => new[] { descriptor.Id + ".md", descriptor.Id + ".ja.md" });
+        Assert.Equal(expectedFiles.OrderBy(static name => name), Directory.GetFiles(directory, "*.md").Select(Path.GetFileName).OrderBy(static name => name));
+    }
+
+    [Fact]
+    public void DocumentationLinksResolveToExistingFilesAndSections()
+    {
+        var root = FindRepositoryRoot();
+        var pages = Directory.GetFiles(Path.Combine(root, "docs", "diagnostics"), "*.md")
+            .Concat(new[] { Path.Combine(root, "README.md"), Path.Combine(root, "README_JA.md") });
+        foreach (var page in pages)
+        {
+            foreach (Match match in Regex.Matches(File.ReadAllText(page), @"\]\(([^\s)]+)\)"))
+            {
+                var link = match.Groups[1].Value;
+                if (Uri.TryCreate(link, UriKind.Absolute, out _))
+                {
+                    continue;
+                }
+
+                var parts = link.Split(new[] { '#' }, 2);
+                var target = parts[0].Length == 0 ? page : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(page)!, parts[0]));
+                Assert.True(File.Exists(target), $"Missing link target in {page}: {link}");
+                if (parts.Length == 2)
+                {
+                    var headings = File.ReadLines(target).Where(static line => line.StartsWith('#'))
+                        .Select(static line => Regex.Replace(line.TrimStart('#').Trim().ToLowerInvariant(), @"[^\p{L}\p{M}\p{N}_\- ]", "").Replace(' ', '-'));
+                    Assert.Contains(parts[1], headings);
+                }
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(null, "main")]
+    [InlineData("", "main")]
+    [InlineData("1.0.0", "main")]
+    [InlineData("1.0.0+not-a-commit", "main")]
+    [InlineData("1.0.0+metadata+0123456789abcdef0123456789abcdef01234567", "0123456789abcdef0123456789abcdef01234567")]
+    [InlineData("1.0.0+0123456789abcdef0123456789abcdef01234567+metadata", "main")]
+    [InlineData("1.0.0+g123456789abcdef0123456789abcdef01234567", "main")]
+    [InlineData("1.0.0+0123456789abcdef0123456789abcdef0123456_", "main")]
+    [InlineData("1.0.0+012345678901234567890123456789012345678", "main")]
+    [InlineData("1.0.0+01234567890123456789012345678901234567890", "main")]
+    [InlineData("1.0.0+0123456789012345678901234567890123456789/extra", "main")]
+    [InlineData("1.0.0+0123456789abcdef0123456789abcdef01234567", "0123456789abcdef0123456789abcdef01234567")]
+    [InlineData("2.0.0-preview.1+ABCDEF0123456789ABCDEF0123456789ABCDEF01", "ABCDEF0123456789ABCDEF0123456789ABCDEF01")]
+    public void DocumentationReferenceUsesCommitShaOrFallsBackToMain(string? informationalVersion, string expected)
+    {
+        // Run the actual nested static constructor in a fresh assembly with controlled metadata.
+        var source = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Bindings.SourceGenerator", "DiagnosticDescriptors.cs"));
+        var declaration = CSharpSyntaxTree.ParseText(source).GetRoot().DescendantNodes()
+            .OfType<ClassDeclarationSyntax>().Single(static type => type.Identifier.ValueText == "Documentation");
+        var fixture = "using System; using System.Reflection; namespace Bindings; internal static class DiagnosticDescriptors { "
+            + declaration.ToFullString() + " }";
+        var attribute = informationalVersion == null ? "" :
+            "[assembly: System.Reflection.AssemblyInformationalVersion(" + SymbolDisplay.FormatLiteral(informationalVersion, true) + ")]";
+        var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!).Split(Path.PathSeparator)
+            .Select(static path => MetadataReference.CreateFromFile(path));
+        var compilation = CSharpCompilation.Create(
+            "HelpLinkFixture_" + Guid.NewGuid().ToString("N"),
+            new[] { CSharpSyntaxTree.ParseText(fixture), CSharpSyntaxTree.ParseText(attribute) },
+            references,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, nullableContextOptions: NullableContextOptions.Enable));
+        using var stream = new MemoryStream();
+        var result = compilation.Emit(stream);
+        Assert.True(result.Success, string.Join(Environment.NewLine, result.Diagnostics));
+        var assembly = Assembly.Load(stream.ToArray());
+        var field = assembly.GetType("Bindings.DiagnosticDescriptors")!
+            .GetNestedType("Documentation", BindingFlags.NonPublic)!.GetField("BaseUrl")!;
+        Assert.Equal($"https://github.com/AndanteTribe/Bindings/blob/{expected}/docs/diagnostics/", field.GetValue(null));
     }
 
     [Theory]
@@ -47,6 +161,14 @@ public class DiagnosticDocumentationTests
         var descriptorType = assembly.GetType("Bindings.DiagnosticDescriptors")!;
         var resources = new ResourceManager("Bindings.DiagnosticResources", assembly);
         var culture = CultureInfo.GetCultureInfo(cultureName);
+        var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        Assert.False(string.IsNullOrWhiteSpace(version));
+        var separator = version!.LastIndexOf('+');
+        var candidate = separator >= 0 ? version.Substring(separator + 1) : "";
+        var reference = candidate.Length == 40
+            && candidate.All(static c => c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F')
+                ? candidate
+                : "main";
         foreach (var field in descriptorType.GetFields(BindingFlags.Public | BindingFlags.Static).Where(static field => field.FieldType == typeof(DiagnosticDescriptor)))
         {
             var descriptor = (DiagnosticDescriptor)field.GetValue(null)!;
@@ -70,8 +192,7 @@ public class DiagnosticDocumentationTests
             }
             Assert.Contains(descriptor.Category, descriptor.CustomTags);
             Assert.Equal(
-                "https://github.com/AndanteTribe/Bindings/blob/main/README.md#" +
-                (descriptor.Category == "Bindings.Practices" ? "best-practice-diagnostics" : "analyzer-diagnostics"),
+                $"https://github.com/AndanteTribe/Bindings/blob/{reference}/docs/diagnostics/{descriptor.Id}.md",
                 descriptor.HelpLinkUri);
         }
     }

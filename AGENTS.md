@@ -2,7 +2,7 @@
 
 ## 基本方針
 
-- この `AGENTS.md` は日本語で記述する。リポジトリ内では `README_JA.md` も日本語とし、それ以外のドキュメント、コード内コメント、XML ドキュメントコメント、診断メッセージなどは基本的に英語で記述する。
+- この `AGENTS.md`、`README_JA.md`、`docs/diagnostics/*.ja.md` は日本語で記述する。それ以外のドキュメント、コード内コメント、XML ドキュメントコメントなどは基本的に英語で記述する。診断メッセージは英語を既定とし、日本語リソースも管理する。
 - 作業開始前に `git status --short` を確認し、既存の変更や未追跡ファイルを勝手に変更・削除しない。
 - 命名規則、インデント、改行、`using` の配置などは、リポジトリ直下の `.editorconfig` に従う。Unity 配下では `src/Bindings.Unity/.editorconfig` の追加設定も適用される。
 
@@ -46,10 +46,11 @@ Source Generator の診断を追加または変更するときは、実装だけ
 - `src/Bindings.SourceGenerator/DiagnosticDescriptors.cs` に英語のタイトルとメッセージを定義し、ID、Category、Severity が既存ルールと整合することを確認する。
 - 想定外の入力で例外を投げて Generator 全体を失敗させず、診断を報告する。生成を継続できない場合は、該当する ViewModel の生成だけを安全に中止する。
 - `src/Bindings.SourceGenerator/AnalyzerReleases.Shipped.md` の既存リリース表へルールを追加する。リリース追跡警告を無視しない。
-- `README.md` と `README_JA.md` の診断一覧へ同じIDと実装どおりのSeverityを追記する。
-- `docs/ViewModelGenerator-Spec.md` の診断条件、Severity、診断後に生成を継続するか中止するかを更新する。診断に関連する生成仕様が変わる場合は、その節も更新する。
+- `README.md` と `README_JA.md` の診断一覧へ同じIDと実装どおりのSeverityを追記し、それぞれ英語・日本語の診断ページへリンクする。
+- `docs/diagnostics/{ID}.md` と `{ID}.ja.md` を同時に追加・更新する。タイトル・メッセージは対応するリソースに合わせ、カテゴリー・既定のSeverity・既定の有効状態・Code Fixの有無・原因・修正方法・対象範囲と例外・診断後の生成継続または中止を記載する。日英ページを相互リンクし、READMEへ戻る導線を設ける。生成コードの検査対象・対象外は診断ごとに明記する。
+- 通常の使い方・生成コードの仕様は両README、個別診断の詳細は診断ページ、開発時の規約はこのAGENTS.mdを更新する。実装手順だけの説明はコード内コメントやテストで管理し、重複した仕様書を追加しない。
 - 診断のID、Severity、主要なメッセージ内容、生成継続または中止の挙動を自動テストで検証する。通常のC#コードから到達しない防御分岐も、Roslynのエラーシンボルなどを使って可能な限り検証する。
-- `DiagnosticDocumentationTests` が全 `DiagnosticDescriptor` と英語・日本語READMEの記載を照合するため、READMEを更新せずにテスト側の期待値を弱めない。
+- `DiagnosticDocumentationTests` は全 `DiagnosticDescriptor` と両README・日英診断ページ・ヘルプURLの整合性を照合する。ドキュメントを更新せずにテスト側の期待値を弱めない。診断ページのファイル名はIDと一致させる。
 - Releaseビルドで analyzer release tracking を含む警告が0件であることと、Release構成の全テストが成功することを確認する。
 
 ## Roslyn の検査が有効になる実装構造
@@ -58,8 +59,17 @@ Source Generator の診断を追加または変更するときは、実装だけ
 - `Initialize` に解析設定とコールバックの登録フローを明記する。登録を別メソッドへ委譲しない。コールバックから呼ぶ判定用の private メソッドは利用してよいが、診断報告は Analyzer 自身の型に置き、報告する `DiagnosticDescriptors` のフィールドを明示する。
 - コンパイル・シンボル単位の状態は、それぞれの Start コールバックのローカルに閉じ込める。Analyzer や共有ヘルパーのインスタンスフィールド・static フィールドに Compilation、SemanticModel、シンボル、操作を保持しない。
 - 共有の拡張メソッドには解決済みのシンボル・操作・値を渡す。Compilation や解析 Context を渡して情報取得・登録・診断報告を隠さない。Code Fix の Document API 呼び出しと CodeAction 生成は CodeFixProvider 内に置く。
-- 診断定義は `DiagnosticDescriptors.cs` のフィールドで直接生成する。不透明なファクトリーを介さず、文言は `DiagnosticResources.resx` の LocalizableResourceString、ヘルプリンク、カテゴリーを示す customTags を指定する。英語の既存文言は意図せず変更しない。
+- 診断定義は `DiagnosticDescriptors.cs` のフィールドで直接生成する。不透明なファクトリーを介さず、文言は `DiagnosticResources.resx` の LocalizableResourceString、ヘルプリンク、カテゴリーを示す customTags を指定する。英語の既存文言は意図せず変更しない。現在のMicrosoft.CodeAnalysis.Analyzers 3.3.4では、生成を静的コンストラクターへ移すとリリース追跡が認識できずRS2003になる。
 - 診断 ID・カテゴリーを追加する際は `DiagnosticCategoryAndIdRanges.txt` も更新する。リリース表と `.resx` は使用中の公式 Analyzer パッケージが AdditionalFiles に追加するため、csproj で二重登録しない。
+- Generatorのsource-outputコールバックが診断報告とAddSourceを所有し、描画用ヘルパーは生成データを受け取ってソースを返す。型参照は名前衝突を避けるため完全修飾名を使用する。
+- コールバックやpartialファイルの順序に依存しない実装・テストにする。エラーシンボルや不足した参照でAnalyzer全体を例外停止させない。Code Fixは古くなった診断を再検証し、診断IDをCodeActionのequivalence keyに使用する。
+
+## 診断ヘルプURLとコミットSHA
+
+- `DiagnosticDescriptor.HelpLinkUri` は `https://github.com/AndanteTribe/Bindings/blob/{sha}/docs/diagnostics/{ID}.md` を指す。日本語への切り替えはページ内の相互リンクで行う。
+- Analyzer自身の `AssemblyInformationalVersionAttribute` を実行時に読み、SDKが `+` に続けて付与する40桁のGitコミットSHAを使用する。解析対象のCompilationや実行環境のGitを参照しない。SHAがない、または不正な形式の場合は `main` へフォールバックする。
+- `IncludeSourceRevisionInInformationalVersion=true` を維持する。ヘルプURLのためのAnalyzerのVersion設定・package.jsonとの同期・独自のURL定数生成は不要。
+- ローカルビルドもビルド元のコミットを参照し、未コミットの文書変更はリンク先に含まれない。リリース前に診断ページをmainへコミット・pushする。既存release.ymlはorigin/mainから作成したブランチでビルドするため、そのmainコミットの文書を参照でき、タグ公開を待つ必要はない。
 
 ## Source Generator の Release ビルドと Unity への DLL 配置
 
@@ -68,6 +78,8 @@ Source Generator は次のコマンドで Release ビルドする。
 ```powershell
 dotnet build src/Bindings.SourceGenerator/Bindings.SourceGenerator.csproj --configuration Release
 ```
+
+URLを変更した場合はSHAを含む通常ビルドと、SHAなしのビルドの両方で、アセンブリ属性と診断ヘルプURLを検証する。
 
 `src/Bindings.SourceGenerator/Directory.Build.targets` の `DllCopy` ターゲットにより、ビルド後に次の DLL だけが Unity パッケージへ自動コピーされる。
 
