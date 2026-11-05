@@ -14,7 +14,6 @@
   - .NET 側のソリューション。
   - `src/Bindings.SourceGenerator`: Source Generator 本体（`netstandard2.0`）。
   - `src/Bindings.Tests`: Source Generator の xUnit テスト（`net8.0`）。
-  - `src/Bindings.Sample`: Source Generator の利用サンプル（`net8.0`）。
 - `src/Bindings.Unity`
   - Unity プロジェクト。使用する Unity バージョンは `ProjectSettings/ProjectVersion.txt` を確認する。
   - 配布対象の UPM パッケージ本体は `Packages/jp.andantetribe.bindings` にある。
@@ -95,9 +94,11 @@ PDB や依存 DLL はこのターゲットのコピー対象ではない。Sourc
 - Source Generator の変更後は、少なくとも次を実行する。
 
 ```powershell
+dotnet build Bindings.slnx --configuration Release
 dotnet test src/Bindings.Tests/Bindings.Tests.csproj --configuration Release
 ```
 
+- 命名・生成コード・診断の仕様を変更した場合は、テスト内の入力だけでなく、Unityの`Assets`・パッケージの`Samples~`、手書きpartial View、保存データ、文書内の参照も確認する。Source Generator単体のビルド成功をソリューション全体の検証の代わりにしない。
 - 新機能、分岐、例外処理を追加した場合は、対応する自動テストも追加する。
 - Source Generator のテストカバレッジは現在 90% 以上である。正常系だけでなく、境界値、分岐、異常系、診断出力も網羅するテストを追加し、変更後も全体のカバレッジを 90% 未満へ低下させない。
 - Unity の `Assets` または `Packages` 配下でファイルやディレクトリを追加・移動・削除する場合は、対応する `.meta` ファイルも同時に管理する。CI では `.github/workflows/unity-meta-check.yml` により整合性が検査される。

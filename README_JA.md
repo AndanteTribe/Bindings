@@ -288,7 +288,7 @@ private Vector2 _size;
 
 ### 型と命名
 
-- ViewModelはpartialなクラスまたは構造体です。型名には `ViewModel` が必要で、この部分を `View` に置換して生成View名を決めます。[BND001](docs/diagnostics/BND001.ja.md)を参照してください。
+- ViewModelはpartialなクラスまたは構造体です。型名の末尾は `ViewModel`、またはその後にASCII数字（`0`～`9`）だけを付けた形式にします。この最後の `ViewModel` だけを `View` に置換し、数字は維持します。例：`CounterViewModel2` → `CounterView2`。[BND001](docs/diagnostics/BND001.ja.md)を参照してください。
 - 生成Viewは `IView<T>` を実装するsealed partial classです。ViewModelと同じアクセシビリティと親型チェーンを維持します。親型もすべてpartialである必要があります。対応するアクセシビリティは [BND004](docs/diagnostics/BND004.ja.md) を参照してください。
 - 生成ファイル名には名前空間と親型を含めます。例：`MyApp.Screen.CounterViewModel.g.cs`、`MyApp.Screen.CounterView.g.cs`。生成コードの型参照は、ユーザー定義名との衝突を避けるため完全修飾名を使用します。
 - フィールド由来の識別子は、先頭の `_` をすべて除去し、続けて先頭の `m_` を1つ除去します。残った先頭文字をSchemaプロパティでは大文字、Requiredのコンストラクター引数では小文字にします。結果は空でない有効な識別子である必要があります。
@@ -371,7 +371,7 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 
 | ID | レベル | 条件 |
 |----|--------|------|
-| [`BND001`](docs/diagnostics/BND001.ja.md) | エラー | `[ViewModel]` を付与した型の名前に `ViewModel` が含まれていない。名前に `ViewModel` を含める。 |
+| [`BND001`](docs/diagnostics/BND001.ja.md) | エラー | `[ViewModel]` を付与した型の名前の末尾が `ViewModel`、またはその後にASCII数字（`0`～`9`）だけを付けた形式ではない。 |
 | [`BND002`](docs/diagnostics/BND002.ja.md) | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
 | [`BND003`](docs/diagnostics/BND003.ja.md) | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
 | [`BND004`](docs/diagnostics/BND004.ja.md) | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |

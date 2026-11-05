@@ -1,5 +1,4 @@
 <Solution>
-  <Project Path="src/Bindings.Sample/Bindings.Sample.csproj" />
   <Project Path="src/Bindings.Tests/Bindings.Tests.csproj" />
   <Project Path="src/Bindings.SourceGenerator/Bindings.SourceGenerator.csproj" />
 </Solution>

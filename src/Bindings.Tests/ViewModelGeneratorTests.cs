@@ -428,7 +428,7 @@ namespace VContainer
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelSerialized
+    public partial class CountSerializedViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -437,7 +437,7 @@ namespace Bindings.Sample
     public sealed class ViewModelHost
     {
         [UnityEngine.SerializeField]
-        private CountViewModelSerialized _viewModel;
+        private CountSerializedViewModel _viewModel;
     }
 }";
 
@@ -448,15 +448,15 @@ namespace Bindings.Sample
         var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Contains("_viewModel", diagnostic.GetMessage());
-        Assert.Contains("Bindings.Sample.CountViewModelSerialized", diagnostic.GetMessage());
+        Assert.Contains("Bindings.Sample.CountSerializedViewModel", diagnostic.GetMessage());
         Assert.Contains("[SerializeField]", diagnostic.GetMessage());
         Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewModelSerialized.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountViewSerialized.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountSerializedViewModel.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountSerializedView.g.cs"));
     }
 
     [Fact]
@@ -480,7 +480,7 @@ public sealed class PrimitiveHost
         const string userCode = @"
 [System.Serializable]
 [Bindings.ViewModel]
-public partial class CountViewModelReference
+public partial class CountReferenceViewModel
 {
     [Bindings.Schema(""TMPro.TMP_Text.text"")]
     private int _count;
@@ -489,7 +489,7 @@ public partial class CountViewModelReference
 public sealed class ViewModelHost
 {
     [UnityEngine.SerializeReference]
-    private CountViewModelReference _viewModel;
+    private CountReferenceViewModel _viewModel;
 }";
 
         RunGenerator(userCode, out var runResult, out var compilation);
@@ -499,15 +499,15 @@ public sealed class ViewModelHost
         var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
         Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
         Assert.Contains("_viewModel", diagnostic.GetMessage());
-        Assert.Contains("CountViewModelReference", diagnostic.GetMessage());
+        Assert.Contains("CountReferenceViewModel", diagnostic.GetMessage());
         Assert.Contains("[SerializeReference]", diagnostic.GetMessage());
         Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
         Assert.Equal("UnityEngine.SerializeReference", diagnostic.Location.SourceTree!
             .GetText()
             .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountViewModelReference.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountViewReference.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountReferenceViewModel.g.cs"));
+        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountReferenceView.g.cs"));
     }
 
     [Fact]
@@ -530,13 +530,13 @@ public sealed class PrimitiveHost
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void CountViewModel1MultipleDefaultIdMethodsProduceSeparateFields()
+    public void Count1ViewModelMultipleDefaultIdMethodsProduceSeparateFields()
     {
         const string userCode = @"
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModel1
+    public partial class Count1ViewModel
     {
         [Bindings.Required]
         private readonly object _model;
@@ -570,13 +570,13 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
 
     [Fact]
-    public void CountViewModel6SameExplicitIdMethodsShareField()
+    public void Count6ViewModelSameExplicitIdMethodsShareField()
     {
         const string userCode = @"
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModel6
+    public partial class Count6ViewModel
     {
         [Bindings.Required]
         private readonly object _model;
@@ -615,7 +615,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public readonly partial struct CountViewModelReadOnly
+    public readonly partial struct CountReadOnlyViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private readonly int _count;
@@ -639,7 +639,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelNullableText
+    public partial class CountNullableTextViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private string? _rightButtonText;
@@ -666,7 +666,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelSingle
+    public partial class CountSingleViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -692,7 +692,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelRepeatedMember
+    public partial class CountRepeatedMemberViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
@@ -715,7 +715,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelMultipleSchemas
+    public partial class CountMultipleSchemasViewModel
     {
         [Bindings.Schema(""UnityEngine.GameObject.activeSelf"")]
         [Bindings.Schema(""UnityEngine.Behaviour.enabled"")]
@@ -754,7 +754,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelTooltip
+    public partial class CountTooltipViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", tooltip: ""Increment the count"")]
         public void Increment() { }
@@ -779,7 +779,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelNoTooltip
+    public partial class CountNoTooltipViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
         public void Increment() { }
@@ -803,7 +803,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelConflictTooltip
+    public partial class CountConflictTooltipViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1, tooltip: ""Increment"")]
         public void Increment() { }
@@ -857,7 +857,7 @@ namespace Bindings.Sample
 {
     [Bindings.ViewModel]
     [System.Serializable]
-    public partial class CountViewModelSerializable
+    public partial class CountSerializableViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -874,11 +874,29 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // BND001: [ViewModel] class name does not contain "ViewModel" → error diagnostic, no source generated
+    // BND001: the type name must end with ViewModel and optional ASCII digits.
     // -------------------------------------------------------------------------
 
-    [Fact]
-    public void BND001TypeNameWithoutViewModelReportsErrorAndSkipsAllGeneration()
+    [Theory]
+    [InlineData("class", "CountModel")]
+    [InlineData("class", "ViewModelCounter")]
+    [InlineData("class", "CountViewModelExtra")]
+    [InlineData("class", "CountViewmodel")]
+    [InlineData("class", "CountViewModel2Extra")]
+    [InlineData("class", "CountViewModel２")]
+    [InlineData("class", "CountViewModel١")]
+    [InlineData("class", "CountViewModel_2")]
+    [InlineData("class", "CountViewmodel2")]
+    [InlineData("struct", "CountModel")]
+    [InlineData("struct", "ViewModelCounter")]
+    [InlineData("struct", "CountViewModelExtra")]
+    [InlineData("struct", "CountViewmodel")]
+    [InlineData("struct", "CountViewModel2Extra")]
+    [InlineData("struct", "CountViewModel２")]
+    [InlineData("struct", "CountViewModel١")]
+    [InlineData("struct", "CountViewModel_2")]
+    [InlineData("struct", "CountViewmodel2")]
+    public void BND001TypeNameWithoutViewModelSuffixReportsErrorAndSkipsAllGeneration(string kind, string name)
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -899,7 +917,7 @@ namespace Bindings.Sample
             new[]
             {
                 CSharpSyntaxTree.ParseText(AttributeStubs),
-                CSharpSyntaxTree.ParseText(userCode),
+                CSharpSyntaxTree.ParseText(userCode.Replace("class CountModel", $"{kind} {name}")),
             },
             new[]
             {
@@ -913,7 +931,9 @@ namespace Bindings.Sample
         var bnd001 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND001");
         Assert.NotNull(bnd001);
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd001.Severity);
-        Assert.Contains("CountModel", bnd001.GetMessage());
+        Assert.Contains(name, bnd001.GetMessage());
+        Assert.Contains("does not end with \"ViewModel\"", bnd001.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Contains("optionally followed by ASCII digits (0-9)", bnd001.GetMessage(CultureInfo.InvariantCulture));
         Assert.Contains("No source will be generated for this ViewModel", bnd001.GetMessage(CultureInfo.InvariantCulture));
 
         // No View should be generated for this type
@@ -925,6 +945,66 @@ namespace Bindings.Sample
         var vmSource = runResult.GeneratedTrees
             .FirstOrDefault(IsGeneratedViewModelSource);
         Assert.Null(vmSource);
+    }
+
+    [Theory]
+    [InlineData("class", "ViewModel", "View")]
+    [InlineData("struct", "ViewModel", "View")]
+    [InlineData("class", "CounterViewModel", "CounterView")]
+    [InlineData("struct", "CounterViewModel", "CounterView")]
+    [InlineData("class", "ViewModelFactoryViewModel", "ViewModelFactoryView")]
+    [InlineData("struct", "ViewModelFactoryViewModel", "ViewModelFactoryView")]
+    [InlineData("class", "CounterViewModel2", "CounterView2")]
+    [InlineData("struct", "CounterViewModel2", "CounterView2")]
+    [InlineData("class", "CounterViewModel12", "CounterView12")]
+    [InlineData("struct", "CounterViewModel12", "CounterView12")]
+    [InlineData("class", "CounterViewModel0123456789", "CounterView0123456789")]
+    [InlineData("struct", "CounterViewModel0123456789", "CounterView0123456789")]
+    [InlineData("class", "ViewModelFactoryViewModel2", "ViewModelFactoryView2")]
+    [InlineData("struct", "ViewModelFactoryViewModel2", "ViewModelFactoryView2")]
+    [InlineData("class", "ViewModel2", "View2")]
+    [InlineData("struct", "ViewModel2", "View2")]
+    public void ViewNameReplacesOnlyTheTrailingViewModel(string kind, string name, string viewName)
+    {
+        var (vmSource, viewSource) = RunGenerator(
+            $"namespace Sample {{ [Bindings.ViewModel] public partial {kind} {name} {{ }} }}",
+            out var result, out var compilation);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.NotNull(vmSource);
+        Assert.NotNull(viewSource);
+        Assert.Contains($"public sealed partial class {viewName} :", viewSource);
+        Assert.Contains($"global::Sample.{name}", viewSource);
+        Assert.Contains(result.Results.Single().GeneratedSources, source => source.HintName == $"Sample.{viewName}.g.cs");
+        Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Theory]
+    [InlineData("class", "ViewModelFactory")]
+    [InlineData("struct", "ViewModelFactory")]
+    [InlineData("class", "CountViewModelExtra")]
+    [InlineData("struct", "CountViewModelExtra")]
+    public void TypesWithoutViewModelAttributeDoNotRequireSuffix(string kind, string name)
+    {
+        RunGenerator($"public {kind} {name} {{ }}", out var result);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.Results.Single().GeneratedSources);
+    }
+
+    [Fact]
+    public void BND001InvalidSuffixDoesNotStopOtherViewModels()
+    {
+        RunGenerator("""
+            [Bindings.ViewModel] public partial class CounterViewModelExtra { }
+            [Bindings.ViewModel] public partial class CounterViewModel { }
+            """, out var result);
+
+        Assert.Equal("BND001", Assert.Single(result.Diagnostics).Id);
+        var sources = result.Results.Single().GeneratedSources;
+        Assert.Equal(2, sources.Length);
+        Assert.Contains(sources, static source => source.HintName == "CounterViewModel.g.cs");
+        Assert.Contains(sources, static source => source.HintName == "CounterView.g.cs");
     }
 
     // -------------------------------------------------------------------------
@@ -981,7 +1061,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel(requireBindImplementation: true)]
-    public partial class CountViewModelRequireBind
+    public partial class CountRequireBindViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -1007,7 +1087,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelDefaultBind
+    public partial class CountDefaultBindViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -1031,7 +1111,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial struct CountViewModelStruct
+    public partial struct CountStructViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -1044,7 +1124,7 @@ namespace Bindings.Sample
         Assert.Contains("get => _count;", vmSource);
         Assert.Contains("set", vmSource);
         // Generated as struct, not class
-        Assert.Contains("public partial struct CountViewModelStruct", vmSource);
+        Assert.Contains("public partial struct CountStructViewModel", vmSource);
     }
 
     // -------------------------------------------------------------------------
@@ -1058,7 +1138,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelDirect
+    public partial class CountDirectViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Image.fillAmount"")]
         private float _progress;
@@ -1145,7 +1225,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelFormat
+    public partial class CountFormatViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"", format: ""N0"")]
         private int _count;
@@ -1174,7 +1254,7 @@ namespace Bindings.Sample
     }
 
     [Bindings.ViewModel]
-    public partial class CountViewModelTrailingUnderscore
+    public partial class CountTrailingUnderscoreViewModel
     {
         [Bindings.Schema(""Bindings.Sample.Widget_.value"")]
         private int _count;
@@ -1202,7 +1282,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelMixedIds
+    public partial class CountMixedIdsViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 2)]
         public void Submit() { }
@@ -1226,7 +1306,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelMixedIdsBinding
+    public partial class CountMixedIdsBindingViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
         public void Submit() { }
@@ -1352,7 +1432,7 @@ public partial class GlobalViewModel
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelPropModel
+    public partial class CountPropModelViewModel
     {
         [Bindings.Required]
         public object Model { get; }
@@ -1381,7 +1461,7 @@ namespace Bindings.Sample
     }
 
     [Bindings.ViewModel]
-    public partial class CountViewModelPostConstruct
+    public partial class CountPostConstructViewModel
     {
         [Bindings.Required]
         private readonly CounterModel _model;
@@ -1414,7 +1494,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial struct CountViewModelStructAfterConstruct
+    public partial struct CountStructAfterConstructViewModel
     {
         [Bindings.Required]
         private readonly object _model;
@@ -1441,7 +1521,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelMethodBnd002
+    public partial class CountMethodBnd002ViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: -3)]
         public void Increment() { }
@@ -1483,7 +1563,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelFieldMethodShared
+    public partial class CountFieldMethodSharedViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
         private bool _interactable;
@@ -1515,7 +1595,7 @@ namespace Bindings.Sample
     public partial class Outer
     {
         [Bindings.ViewModel]
-        public partial class CountViewModel1
+        public partial class Count1ViewModel
         {
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
             private int _count;
@@ -1531,19 +1611,19 @@ namespace Bindings.Sample
         // ViewModel: wrapped in namespace + outer class + ViewModel class (all unindented)
         Assert.Contains("namespace Bindings.Sample", vmSource);
         Assert.Contains("public partial class Outer", vmSource);
-        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+        Assert.Contains("public partial class Count1ViewModel : global::Bindings.IViewModel", vmSource);
 
         // ViewModel body uses fixed 4-space indent
         Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSource);
         Assert.Contains("    public int Count", vmSource);
 
         // Fully-qualified name includes the containing type
-        Assert.Contains("global::Bindings.Sample.Outer.CountViewModel1", vmSource);
+        Assert.Contains("global::Bindings.Sample.Outer.Count1ViewModel", vmSource);
 
         // View: also wrapped in outer class
         Assert.Contains("public partial class Outer", viewSource);
-        Assert.Contains("public sealed partial class CountView1", viewSource);
-        Assert.Contains("global::Bindings.Sample.Outer.CountViewModel1", viewSource);
+        Assert.Contains("public sealed partial class Count1View", viewSource);
+        Assert.Contains("global::Bindings.Sample.Outer.Count1ViewModel", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -1561,7 +1641,7 @@ namespace Bindings.Sample
         public partial class Middle
         {
             [Bindings.ViewModel]
-            public partial class CountViewModel1
+            public partial class Count1ViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
                 private int _count;
@@ -1578,15 +1658,15 @@ namespace Bindings.Sample
         // Both containing classes are present (unindented)
         Assert.Contains("public partial class Outer", vmSource);
         Assert.Contains("public partial class Middle", vmSource);
-        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+        Assert.Contains("public partial class Count1ViewModel : global::Bindings.IViewModel", vmSource);
 
         // Fully-qualified name includes both containing types
-        Assert.Contains("global::Bindings.Sample.Outer.Middle.CountViewModel1", vmSource);
+        Assert.Contains("global::Bindings.Sample.Outer.Middle.Count1ViewModel", vmSource);
 
         // View also wraps both containing classes
         Assert.Contains("public partial class Outer", viewSource);
         Assert.Contains("public partial class Middle", viewSource);
-        Assert.Contains("global::Bindings.Sample.Outer.Middle.CountViewModel1", viewSource);
+        Assert.Contains("global::Bindings.Sample.Outer.Middle.Count1ViewModel", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -1600,7 +1680,7 @@ namespace Bindings.Sample
 public partial class Outer
 {
     [Bindings.ViewModel]
-    public partial class CountViewModel1
+    public partial class Count1ViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -1617,10 +1697,10 @@ public partial class Outer
 
         // Outer class wrapping present
         Assert.Contains("public partial class Outer", vmSource);
-        Assert.Contains("public partial class CountViewModel1 : global::Bindings.IViewModel", vmSource);
+        Assert.Contains("public partial class Count1ViewModel : global::Bindings.IViewModel", vmSource);
 
         // Fully-qualified name with global:: but no namespace
-        Assert.Contains("global::Outer.CountViewModel1", vmSource);
+        Assert.Contains("global::Outer.Count1ViewModel", vmSource);
     }
 
     // -------------------------------------------------------------------------
@@ -1635,7 +1715,7 @@ public partial class Outer
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModelIndent
+    public partial class CountIndentViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -1645,7 +1725,7 @@ namespace Bindings.Sample
         // Without namespace
         const string withoutNs = @"
 [Bindings.ViewModel]
-public partial class CountViewModelIndentGlobal
+public partial class CountIndentGlobalViewModel
 {
     [Bindings.Schema(""TMPro.TMP_Text.text"")]
     private int _count;
@@ -1658,11 +1738,11 @@ public partial class CountViewModelIndentGlobal
         Assert.NotNull(vmSourceNoNs);
 
         // With namespace: class at column 0 (no leading spaces)
-        Assert.Contains("public partial class CountViewModelIndent : global::Bindings.IViewModel", vmSourceWithNs);
-        Assert.DoesNotContain("    public partial class CountViewModelIndent", vmSourceWithNs);
+        Assert.Contains("public partial class CountIndentViewModel : global::Bindings.IViewModel", vmSourceWithNs);
+        Assert.DoesNotContain("    public partial class CountIndentViewModel", vmSourceWithNs);
 
         // Without namespace: class also at column 0
-        Assert.Contains("public partial class CountViewModelIndentGlobal : global::Bindings.IViewModel", vmSourceNoNs);
+        Assert.Contains("public partial class CountIndentGlobalViewModel : global::Bindings.IViewModel", vmSourceNoNs);
 
         // Both have 4-space indented members
         Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSourceWithNs);
@@ -1682,7 +1762,7 @@ namespace Bindings.Sample
     public partial class Outer
     {
         [Bindings.ViewModel]
-        public partial class CountViewModel1
+        public partial class Count1ViewModel
         {
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
             private int _count;
@@ -1703,7 +1783,7 @@ namespace Bindings.Sample
     public partial struct Outer
     {
         [Bindings.ViewModel]
-        public partial class CountViewModelInStruct
+        public partial class CountInStructViewModel
         {
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
             private int _count;
@@ -1737,7 +1817,7 @@ namespace Bindings.Sample
         public partial class Middle
         {
             [Bindings.ViewModel]
-            public partial class CountViewModel1
+            public partial class Count1ViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
                 private int _count;
@@ -1761,7 +1841,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    internal partial class CountViewModelInternal
+    internal partial class CountInternalViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -1772,8 +1852,8 @@ namespace Bindings.Sample
 
         Assert.NotNull(vmSource);
         Assert.NotNull(viewSource);
-        Assert.Contains("internal partial class CountViewModelInternal : global::Bindings.IViewModel", vmSource);
-        Assert.Contains("internal sealed partial class CountViewInternal", viewSource);
+        Assert.Contains("internal partial class CountInternalViewModel : global::Bindings.IViewModel", vmSource);
+        Assert.Contains("internal sealed partial class CountInternalView", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -1794,7 +1874,7 @@ namespace Bindings.Sample
         public partial class PublicMiddle
         {
             [Bindings.ViewModel]
-            internal partial class CountViewModelInternal
+            internal partial class CountInternalViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
                 private int _count;
@@ -1807,7 +1887,7 @@ namespace Bindings.Sample
         internal partial class InternalMiddle
         {
             [Bindings.ViewModel]
-            public partial class CountViewModelPublic
+            public partial class CountPublicViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
                 private int _count;
@@ -1838,11 +1918,11 @@ namespace Bindings.Sample
         Assert.Contains(generatedSources, static source =>
             source.Contains("internal partial class InternalOuter")
             && source.Contains("public partial class PublicMiddle")
-            && source.Contains("internal partial class CountViewModelInternal : global::Bindings.IViewModel"));
+            && source.Contains("internal partial class CountInternalViewModel : global::Bindings.IViewModel"));
         Assert.Contains(generatedSources, static source =>
             source.Contains("public partial class PublicOuter")
             && source.Contains("internal partial class InternalMiddle")
-            && source.Contains("public partial class CountViewModelPublic : global::Bindings.IViewModel"));
+            && source.Contains("public partial class CountPublicViewModel : global::Bindings.IViewModel"));
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -1867,7 +1947,7 @@ namespace Bindings.Sample
     public partial class Outer
     {{
         [Bindings.ViewModel]
-        {accessibility} partial class CountViewModelAccessibility
+        {accessibility} partial class CountAccessibilityViewModel
         {{
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
             private int _count;
@@ -1879,8 +1959,8 @@ namespace Bindings.Sample
 
         Assert.NotNull(vmSource);
         Assert.NotNull(viewSource);
-        Assert.Contains($"{accessibility} partial class CountViewModelAccessibility : global::Bindings.IViewModel", vmSource);
-        Assert.Contains($"{accessibility} sealed partial class CountViewAccessibility", viewSource);
+        Assert.Contains($"{accessibility} partial class CountAccessibilityViewModel : global::Bindings.IViewModel", vmSource);
+        Assert.Contains($"{accessibility} sealed partial class CountAccessibilityView", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -1907,7 +1987,7 @@ namespace Bindings.Sample
         {accessibility} partial class Middle
         {{
             [Bindings.ViewModel]
-            public partial class CountViewModelAccessibility
+            public partial class CountAccessibilityViewModel
             {{
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
                 private int _count;
@@ -1942,7 +2022,7 @@ namespace Bindings.Sample
         partial class Middle
         {
             [Bindings.ViewModel]
-            partial class CountViewModelImplicitPrivate
+            partial class CountImplicitPrivateViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
                 private int _count;
@@ -1956,9 +2036,9 @@ namespace Bindings.Sample
         Assert.NotNull(vmSource);
         Assert.NotNull(viewSource);
         Assert.Contains("private partial class Middle", vmSource);
-        Assert.Contains("private partial class CountViewModelImplicitPrivate : global::Bindings.IViewModel", vmSource);
+        Assert.Contains("private partial class CountImplicitPrivateViewModel : global::Bindings.IViewModel", vmSource);
         Assert.Contains("private partial class Middle", viewSource);
-        Assert.Contains("private sealed partial class CountViewImplicitPrivate", viewSource);
+        Assert.Contains("private sealed partial class CountImplicitPrivateView", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -1975,7 +2055,7 @@ namespace Bindings.Sample
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    public partial class CountViewModel1
+    public partial class Count1ViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
         private int _count;
@@ -2005,7 +2085,7 @@ namespace Bindings.Sample
     }
 
     [Bindings.ViewModel]
-    public partial class CountViewModelObjectPath1
+    public partial class CountObjectPath1ViewModel
     {
         [Bindings.Schema(Resolver.TMPro_TMP_Text_text)]
         private int _count;
@@ -2036,7 +2116,7 @@ namespace Bindings.Sample
     }
 
     [Bindings.ViewModel]
-    public partial class CountViewModelObjectRaw1
+    public partial class CountObjectRaw1ViewModel
     {
         [Bindings.Schema(MyPaths.SomeValue)]
         private int _count;

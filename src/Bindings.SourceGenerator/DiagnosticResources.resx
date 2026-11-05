@@ -3,10 +3,10 @@
     <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
     <resheader name="version"><value>2.0</value></resheader>
     <data name="Bnd001Title" xml:space="preserve">
-        <value>ViewModel type name must contain "ViewModel"</value>
+        <value>ViewModel type name must end with "ViewModel", optionally followed by ASCII digits</value>
     </data>
     <data name="Bnd001Message" xml:space="preserve">
-        <value>Type '{0}' is annotated with [ViewModel] but its name does not contain "ViewModel". No source will be generated for this ViewModel.</value>
+        <value>Type '{0}' is annotated with [ViewModel] but its name does not end with "ViewModel", optionally followed by ASCII digits (0-9). No source will be generated for this ViewModel.</value>
     </data>
     <data name="Bnd002Title" xml:space="preserve">
         <value>Invalid [Schema] id value</value>
