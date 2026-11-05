@@ -20,7 +20,7 @@ public class TemplateBaseTests
     // -------------------------------------------------------------------------
 
     private static GenerationContext MinimalContext(
-        string className = "CountViewModel1",
+        string className = "Count1ViewModel",
         string ns = "Test.Space",
         bool isStruct = false,
         bool isReadOnly = false) =>

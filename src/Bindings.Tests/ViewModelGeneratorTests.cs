@@ -958,6 +958,19 @@ namespace Bindings.Sample
         Assert.DoesNotContain(compilation.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
     }
 
+    [Theory]
+    [InlineData("class", "ViewModelFactory")]
+    [InlineData("struct", "ViewModelFactory")]
+    [InlineData("class", "CountViewModelExtra")]
+    [InlineData("struct", "CountViewModelExtra")]
+    public void TypesWithoutViewModelAttributeDoNotRequireSuffix(string kind, string name)
+    {
+        RunGenerator($"public {kind} {name} {{ }}", out var result);
+
+        Assert.Empty(result.Diagnostics);
+        Assert.Empty(result.Results.Single().GeneratedSources);
+    }
+
     [Fact]
     public void BND001InvalidSuffixDoesNotStopOtherViewModels()
     {
