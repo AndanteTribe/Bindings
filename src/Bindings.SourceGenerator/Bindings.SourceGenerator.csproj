@@ -8,6 +8,7 @@
         <IsRoslynComponent>true</IsRoslynComponent>
         <RootNamespace>Bindings</RootNamespace>
         <CodeAnalysisRuleSet>Roslyn.ruleset</CodeAnalysisRuleSet>
+        <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
     </PropertyGroup>
 
     <ItemGroup>
