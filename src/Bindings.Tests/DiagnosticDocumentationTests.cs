@@ -115,6 +115,8 @@ public class DiagnosticDocumentationTests
     [InlineData("", "main")]
     [InlineData("1.0.0", "main")]
     [InlineData("1.0.0+not-a-commit", "main")]
+    [InlineData("1.0.0+metadata+0123456789abcdef0123456789abcdef01234567", "0123456789abcdef0123456789abcdef01234567")]
+    [InlineData("1.0.0+0123456789abcdef0123456789abcdef01234567+metadata", "main")]
     [InlineData("1.0.0+g123456789abcdef0123456789abcdef01234567", "main")]
     [InlineData("1.0.0+0123456789abcdef0123456789abcdef0123456_", "main")]
     [InlineData("1.0.0+012345678901234567890123456789012345678", "main")]
@@ -161,7 +163,12 @@ public class DiagnosticDocumentationTests
         var culture = CultureInfo.GetCultureInfo(cultureName);
         var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         Assert.False(string.IsNullOrWhiteSpace(version));
-        var reference = version!.Contains('+') ? version.Split('+')[1] : "main";
+        var separator = version!.LastIndexOf('+');
+        var candidate = separator >= 0 ? version.Substring(separator + 1) : "";
+        var reference = candidate.Length == 40
+            && candidate.All(static c => c is >= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F')
+                ? candidate
+                : "main";
         foreach (var field in descriptorType.GetFields(BindingFlags.Public | BindingFlags.Static).Where(static field => field.FieldType == typeof(DiagnosticDescriptor)))
         {
             var descriptor = (DiagnosticDescriptor)field.GetValue(null)!;
