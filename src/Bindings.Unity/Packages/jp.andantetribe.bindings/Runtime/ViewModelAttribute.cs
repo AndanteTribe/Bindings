@@ -8,9 +8,10 @@ namespace Bindings
     /// Marks a partial class or struct as input for the Bindings source generator.
     /// </summary>
     /// <remarks>
-    /// The annotated type name must end with <c>ViewModel</c>. The generator augments that type with
+    /// The annotated type name must end with <c>ViewModel</c>, optionally followed by ASCII digits (0-9).
+    /// The generator augments that type with
     /// <see cref="IViewModel"/> and generates a corresponding serializable View type whose name replaces
-    /// the trailing <c>ViewModel</c> with <c>View</c>.
+    /// the trailing <c>ViewModel</c> with <c>View</c>, preserving any following digits.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
     public sealed class ViewModelAttribute : Attribute

@@ -288,7 +288,7 @@ The generated View calls `RectTransform.SetSizeWithCurrentAnchors` once for the 
 
 ### Types and Names
 
-- A ViewModel is a partial class or struct. Its name must end with `ViewModel`; replacing that suffix with `View` determines the generated View name. See [BND001](docs/diagnostics/BND001.md).
+- A ViewModel is a partial class or struct. Its name must end with `ViewModel`, optionally followed by ASCII digits (`0`–`9`). Only that final `ViewModel` is replaced with `View`, preserving the digits: `CounterViewModel2` becomes `CounterView2`. See [BND001](docs/diagnostics/BND001.md).
 - The generated View is a sealed partial class implementing `IView<T>`, with the same accessibility and containing-type chain as its ViewModel. All containing types must also be partial. See [BND004](docs/diagnostics/BND004.md) for supported accessibilities.
 - Generated file names include the namespace and containing types: `MyApp.Screen.CounterViewModel.g.cs` and `MyApp.Screen.CounterView.g.cs`, for example. Generated type references use fully qualified names to avoid user-name collisions.
 - For field-derived identifiers, remove all leading `_` characters, then one leading `m_`. Uppercase the first remaining character for a Schema property, or lowercase it for a Required constructor parameter. The result must be a valid, non-empty identifier.
@@ -371,7 +371,7 @@ Each ID links to its detailed cause, examples, exceptions, Code Fix availability
 
 | ID | Level | Condition |
 |----|-------|-----------|
-| [`BND001`](docs/diagnostics/BND001.md) | Error | A type annotated with `[ViewModel]` has a name that does not end with `ViewModel`. Use the `ViewModel` suffix. |
+| [`BND001`](docs/diagnostics/BND001.md) | Error | A type annotated with `[ViewModel]` has a name that does not end with `ViewModel`, optionally followed by ASCII digits (`0`–`9`). |
 | [`BND002`](docs/diagnostics/BND002.md) | Error | `[Schema]` `id` is less than `-1`. |
 | [`BND003`](docs/diagnostics/BND003.md) | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
 | [`BND004`](docs/diagnostics/BND004.md) | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |

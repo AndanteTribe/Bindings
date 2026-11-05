@@ -53,7 +53,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     ctx.ReportDiagnostic(Diagnostic.Create(DiagnosticDescriptors.Bnd003, Location.None, fieldName));
                 }
 
-                var viewClassName = data.ClassName.Substring(0, data.ClassName.Length - "Model".Length);
+                var viewClassName = TemplateHelpers.GetViewName(data.ClassName)!;
                 ctx.AddSource(
                     GetHintName(data, viewClassName),
                     CreateViewSource(data, fieldAssignments, methodAssignments, orderedFields));
@@ -102,7 +102,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var containingTypes = containingTypesList.ToArray();
 
         // 6. Validate the ViewModel class name
-        if (!typeSymbol.Name.EndsWith("ViewModel", StringComparison.Ordinal))
+        if (TemplateHelpers.GetViewName(typeSymbol.Name) == null)
         {
             diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, [typeSymbol.Name]));
             canGenerate = false;

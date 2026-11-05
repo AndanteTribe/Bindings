@@ -874,7 +874,7 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // BND001: the type name must end with the case-sensitive ViewModel suffix.
+    // BND001: the type name must end with ViewModel and optional ASCII digits.
     // -------------------------------------------------------------------------
 
     [Theory]
@@ -882,10 +882,20 @@ namespace Bindings.Sample
     [InlineData("class", "ViewModelCounter")]
     [InlineData("class", "CountViewModelExtra")]
     [InlineData("class", "CountViewmodel")]
+    [InlineData("class", "CountViewModel2Extra")]
+    [InlineData("class", "CountViewModel２")]
+    [InlineData("class", "CountViewModel١")]
+    [InlineData("class", "CountViewModel_2")]
+    [InlineData("class", "CountViewmodel2")]
     [InlineData("struct", "CountModel")]
     [InlineData("struct", "ViewModelCounter")]
     [InlineData("struct", "CountViewModelExtra")]
     [InlineData("struct", "CountViewmodel")]
+    [InlineData("struct", "CountViewModel2Extra")]
+    [InlineData("struct", "CountViewModel２")]
+    [InlineData("struct", "CountViewModel١")]
+    [InlineData("struct", "CountViewModel_2")]
+    [InlineData("struct", "CountViewmodel2")]
     public void BND001TypeNameWithoutViewModelSuffixReportsErrorAndSkipsAllGeneration(string kind, string name)
     {
         const string userCode = @"
@@ -923,6 +933,7 @@ namespace Bindings.Sample
         Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd001.Severity);
         Assert.Contains(name, bnd001.GetMessage());
         Assert.Contains("does not end with \"ViewModel\"", bnd001.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Contains("optionally followed by ASCII digits (0-9)", bnd001.GetMessage(CultureInfo.InvariantCulture));
         Assert.Contains("No source will be generated for this ViewModel", bnd001.GetMessage(CultureInfo.InvariantCulture));
 
         // No View should be generated for this type
@@ -943,6 +954,16 @@ namespace Bindings.Sample
     [InlineData("struct", "CounterViewModel", "CounterView")]
     [InlineData("class", "ViewModelFactoryViewModel", "ViewModelFactoryView")]
     [InlineData("struct", "ViewModelFactoryViewModel", "ViewModelFactoryView")]
+    [InlineData("class", "CounterViewModel2", "CounterView2")]
+    [InlineData("struct", "CounterViewModel2", "CounterView2")]
+    [InlineData("class", "CounterViewModel12", "CounterView12")]
+    [InlineData("struct", "CounterViewModel12", "CounterView12")]
+    [InlineData("class", "CounterViewModel0123456789", "CounterView0123456789")]
+    [InlineData("struct", "CounterViewModel0123456789", "CounterView0123456789")]
+    [InlineData("class", "ViewModelFactoryViewModel2", "ViewModelFactoryView2")]
+    [InlineData("struct", "ViewModelFactoryViewModel2", "ViewModelFactoryView2")]
+    [InlineData("class", "ViewModel2", "View2")]
+    [InlineData("struct", "ViewModel2", "View2")]
     public void ViewNameReplacesOnlyTheTrailingViewModel(string kind, string name, string viewName)
     {
         var (vmSource, viewSource) = RunGenerator(

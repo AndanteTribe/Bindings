@@ -3,10 +3,10 @@
     <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
     <resheader name="version"><value>2.0</value></resheader>
     <data name="Bnd001Title" xml:space="preserve">
-        <value>ViewModel の型名の末尾に "ViewModel" が必要です</value>
+        <value>ViewModel の型名の末尾には "ViewModel" と省略可能なASCII数字が必要です</value>
     </data>
     <data name="Bnd001Message" xml:space="preserve">
-        <value>型 '{0}' に [ViewModel] が付与されていますが、型名の末尾が "ViewModel" ではありません。この ViewModel のソースは生成されません。</value>
+        <value>型 '{0}' に [ViewModel] が付与されていますが、型名の末尾が "ViewModel" またはその後にASCII数字（0-9）だけを付けた形式ではありません。この ViewModel のソースは生成されません。</value>
     </data>
     <data name="Bnd002Title" xml:space="preserve">
         <value>[Schema] の id 値が無効です</value>

@@ -235,7 +235,7 @@ public class DiagnosticDocumentationTests
     }
 
     [Theory]
-    [InlineData("Bnd001", "ViewModel type name must end with \"ViewModel\"", "Type '{0}' is annotated with [ViewModel] but its name does not end with \"ViewModel\". No source will be generated for this ViewModel.")]
+    [InlineData("Bnd001", "ViewModel type name must end with \"ViewModel\", optionally followed by ASCII digits", "Type '{0}' is annotated with [ViewModel] but its name does not end with \"ViewModel\", optionally followed by ASCII digits (0-9). No source will be generated for this ViewModel.")]
     [InlineData("Bnd002", "Invalid [Schema] id value", "[Schema] id value {0} is invalid. Use id >= 0 for explicit grouping, or omit id (defaults to -1) for auto-numbering.")]
     [InlineData("Bnd003", "Conflicting tooltip values for the same View field", "View field '{0}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.")]
     [InlineData("Bnd004", "Unsupported type accessibility", "Type '{0}' has unsupported accessibility '{1}'. No source will be generated for ViewModel '{2}'.")]

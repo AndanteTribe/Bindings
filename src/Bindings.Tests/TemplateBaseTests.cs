@@ -15,6 +15,20 @@ namespace Bindings.Tests;
 /// </summary>
 public class TemplateBaseTests
 {
+    [Theory]
+    [InlineData("")]
+    [InlineData("0123456789")]
+    [InlineData("Model2")]
+    public void ViewNameRejectsNamesWithoutViewModel(string name)
+    {
+        var template = new ViewTemplate(
+            MinimalContext(className: name),
+            Array.Empty<string>(),
+            Array.Empty<string>(),
+            Array.Empty<(string, string, string)>());
+        Assert.Null(template.ViewClassName);
+    }
+
     // -------------------------------------------------------------------------
     // Helper: build a minimal GenerationContext for direct template instantiation
     // -------------------------------------------------------------------------

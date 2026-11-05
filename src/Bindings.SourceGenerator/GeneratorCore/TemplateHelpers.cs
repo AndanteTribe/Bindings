@@ -9,6 +9,26 @@ namespace Bindings.GeneratorCore
     internal static class TemplateHelpers
     {
         /// <summary>
+        /// Replaces the trailing ViewModel, optionally followed by ASCII digits, with View.
+        /// Returns null when the type name does not follow this convention.
+        /// </summary>
+        internal static string? GetViewName(string typeName)
+        {
+            var suffixEnd = typeName.Length;
+            while (suffixEnd > 0 && typeName[suffixEnd - 1] is >= '0' and <= '9')
+            {
+                suffixEnd--;
+            }
+
+            if (!typeName.AsSpan(0, suffixEnd).EndsWith("ViewModel".AsSpan(), StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            return typeName.Remove(suffixEnd - "Model".Length, "Model".Length);
+        }
+
+        /// <summary>
         /// Normalizes a field name following the CommunityToolkit ObservableProperty convention:
         /// 1. Trim all leading '_' characters.
         /// 2. If the result starts with "m_", remove that prefix.

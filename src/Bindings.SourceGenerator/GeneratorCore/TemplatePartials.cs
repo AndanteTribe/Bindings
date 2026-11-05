@@ -148,7 +148,7 @@ namespace Bindings.GeneratorCore
         /// <summary>
         /// The View class name derived from the ViewModel class name.
         /// </summary>
-        public string ViewClassName => Context.ClassName.Substring(0, Context.ClassName.Length - "Model".Length);
+        public string ViewClassName => TemplateHelpers.GetViewName(Context.ClassName)!;
 
         /// <summary>
         /// Initializer expression for the _viewModel field.
