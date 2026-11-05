@@ -7,7 +7,7 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|-------
-BND001  | Bindings | Error    | ViewModelTypeNameMustContainViewModel. [Documentation](../../docs/diagnostics/BND001.md)
+BND001  | Bindings | Error    | ViewModelTypeNameMustEndWithViewModel. [Documentation](../../docs/diagnostics/BND001.md)
 BND002  | Bindings | Error    | InvalidSchemaIdValue. [Documentation](../../docs/diagnostics/BND002.md)
 BND003  | Bindings | Error    | ConflictingTooltipValues. [Documentation](../../docs/diagnostics/BND003.md)
 BND004  | Bindings | Error    | UnsupportedTypeAccessibility. [Documentation](../../docs/diagnostics/BND004.md)

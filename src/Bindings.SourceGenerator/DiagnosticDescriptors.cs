@@ -51,7 +51,7 @@ internal static class DiagnosticDescriptors
     }
 
     /// <summary>
-    /// BND001: emitted when a [ViewModel] class/struct name does not contain "ViewModel".
+    /// BND001: emitted when a [ViewModel] class/struct name does not end with "ViewModel".
     /// Neither ViewModel nor View source is generated for the annotated type.
     /// </summary>
     public static readonly DiagnosticDescriptor Bnd001 = new(
