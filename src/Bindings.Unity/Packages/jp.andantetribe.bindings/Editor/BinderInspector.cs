@@ -1,7 +1,6 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
-using System.Runtime.CompilerServices;
 using Bindings.Editor.Internal;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -48,7 +47,7 @@ namespace Bindings.Editor
                 _viewsProperty.InsertArrayElementAtIndex(_viewsProperty.arraySize);
                 var property = _viewsProperty.GetArrayElementAtIndex(last);
                 property.managedReferenceValue = Activator.CreateInstance(type);
-                serializedObject.ApplyModifiedProperties();
+                _ = serializedObject.ApplyModifiedProperties();
             }
         }
 
@@ -148,7 +147,6 @@ namespace Bindings.Editor
             return previewButton;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         protected static VisualElement CreateBox(string label)
         {
             var box = new Box

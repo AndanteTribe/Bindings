@@ -17,6 +17,9 @@ namespace Bindings
         /// <summary>
         /// Copies characters to the text component without creating an intermediate string.
         /// </summary>
+#if UGUI2_6_0_OR_GREATER
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#endif
         public static void SetValue(this TMP_Text text, ReadOnlySpan<char> value)
         {
 #if UGUI2_6_0_OR_GREATER
@@ -35,6 +38,7 @@ namespace Bindings
 #endif
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, byte? value, string format = "")
         {
             if (value.HasValue)
@@ -47,6 +51,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, sbyte? value, string format = "")
         {
             if (value.HasValue)
@@ -59,6 +64,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, short? value, string format = "")
         {
             if (value.HasValue)
@@ -71,6 +77,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, ushort? value, string format = "")
         {
             if (value.HasValue)
@@ -83,6 +90,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, int? value, string format = "")
         {
             if (value.HasValue)
@@ -95,6 +103,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, uint? value, string format = "")
         {
             if (value.HasValue)
@@ -107,6 +116,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, long? value, string format = "")
         {
             if (value.HasValue)
@@ -119,6 +129,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, ulong? value, string format = "")
         {
             if (value.HasValue)
@@ -131,6 +142,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, float? value, string format = "")
         {
             if (value.HasValue)
@@ -143,6 +155,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, double? value, string format = "")
         {
             if (value.HasValue)
@@ -155,6 +168,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, decimal? value, string format = "")
         {
             if (value.HasValue)
@@ -167,6 +181,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, DateTime? value, string format = "")
         {
             if (value.HasValue)
@@ -179,6 +194,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, DateTimeOffset? value, string format = "")
         {
             if (value.HasValue)
@@ -191,6 +207,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, Guid? value, string format = "")
         {
             if (value.HasValue)
@@ -203,6 +220,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, TimeSpan? value, string format = "")
         {
             if (value.HasValue)
@@ -215,6 +233,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, bool? value)
         {
             if (value.HasValue)
@@ -227,6 +246,7 @@ namespace Bindings
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void SetValue(this TMP_Text text, char? value)
         {
             if (value.HasValue)

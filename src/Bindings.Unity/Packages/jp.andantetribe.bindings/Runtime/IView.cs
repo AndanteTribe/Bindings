@@ -1,5 +1,6 @@
-﻿#nullable enable
+#nullable enable
 
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,9 +43,11 @@ namespace Bindings
     public interface IView<in T> : IView where T : IViewModel
     {
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         bool IView.CanBind(IViewModel viewModel) => viewModel is T;
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IView.Initialize(IViewModel viewModel)
         {
             if (viewModel is T typedViewModel)
@@ -52,7 +55,10 @@ namespace Bindings
                 Initialize(typedViewModel);
                 return;
             }
-            throw new System.InvalidOperationException("Cannot initialize view with view model of type " + viewModel.GetType().FullName + ".");
+            ThrowInvalidViewModel(viewModel);
+
+            static void ThrowInvalidViewModel(IViewModel viewModel)
+                => throw new System.InvalidOperationException("Cannot initialize view with view model of type " + viewModel.GetType().FullName + ".");
         }
 
         /// <summary>

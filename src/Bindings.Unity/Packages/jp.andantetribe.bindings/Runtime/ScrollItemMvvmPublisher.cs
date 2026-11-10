@@ -1,6 +1,7 @@
 #nullable enable
 
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace Bindings
 {
@@ -16,10 +17,7 @@ namespace Bindings
         internal readonly List<IViewModel> _viewModels;
         private Binder? _binder;
 
-        private ScrollItemMvvmPublisher(List<IViewModel> viewModels)
-        {
-            _viewModels = viewModels;
-        }
+        private ScrollItemMvvmPublisher(List<IViewModel> viewModels) => _viewModels = viewModels;
 
         internal ScrollItemMvvmPublisher() : this(new List<IViewModel>())
         {
@@ -27,6 +25,7 @@ namespace Bindings
 
         internal Binder? Binder
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => _binder == null ? _binder = null : _binder;
             set
             {
@@ -54,6 +53,7 @@ namespace Bindings
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IMvvmPublisher.PublishRebindMessage<T>()
         {
             if (Binder != null)
@@ -63,6 +63,7 @@ namespace Bindings
         }
 
         /// <inheritdoc />
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IMvvmPublisher.Publish<T>(T message)
         {
             if (Binder != null)
@@ -84,6 +85,7 @@ namespace Bindings
             /// Adds a ViewModel to this scroll item.
             /// </summary>
             /// <param name="viewModel">The ViewModel constructed using the item's publisher.</param>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Register(IViewModel viewModel) => _viewModels.Add(viewModel);
         }
     }

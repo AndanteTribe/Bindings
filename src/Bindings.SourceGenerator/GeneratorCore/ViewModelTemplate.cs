@@ -45,11 +45,15 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldTypeName ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ToPropertyName(schemaField.FieldName) ));
-            this.Write("\n    {\n        get => ");
+            this.Write("\n    {\n        [global::System.Runtime.CompilerServices.MethodImpl(global::System" +
+                    ".Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n        get => " +
+                    "");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
             this.Write(";\n");
  if (!Context.IsReadOnly) { 
-            this.Write("        set\n        {\n            ");
+            this.Write("        [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtim" +
+                    "e.CompilerServices.MethodImplOptions.AggressiveInlining)]\n        set\n        {\n" +
+                    "            ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
             this.Write(" = value;\n            PublishRebindMessage();\n        }\n");
  } 
@@ -71,8 +75,9 @@ namespace Bindings.GeneratorCore {
  if (!Context.IsStruct) { 
             this.Write("        OnPostConstruct();\n");
  } 
-            this.Write("    }\n\n    public void NotifyCompletedBind() => OnPostBind();\n\n    partial void O" +
-                    "nPostBind();\n");
+            this.Write("    }\n\n    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Run" +
+                    "time.CompilerServices.MethodImplOptions.AggressiveInlining)]\n    public void Not" +
+                    "ifyCompletedBind() => OnPostBind();\n\n    partial void OnPostBind();\n");
  if (!Context.IsStruct) { 
             this.Write("\n    partial void OnPostConstruct();\n");
  } 

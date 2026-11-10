@@ -21,8 +21,10 @@ namespace <#= Context.Namespace #>
 
     public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
     {
+        [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         get => <#= schemaField.FieldName #>;
 <# if (!Context.IsReadOnly) { #>
+        [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         set
         {
             <#= schemaField.FieldName #> = value;
@@ -43,6 +45,7 @@ namespace <#= Context.Namespace #>
 <# } #>
     }
 
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void NotifyCompletedBind() => OnPostBind();
 
     partial void OnPostBind();
