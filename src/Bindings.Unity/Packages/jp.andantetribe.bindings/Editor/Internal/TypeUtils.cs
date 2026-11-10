@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -11,18 +11,14 @@ namespace Bindings.Editor.Internal
 {
     internal static class TypeUtils
     {
-        private static readonly IComparer<Type?> s_typeComparer = Comparer<Type?>.Create(static (x, y) =>
+        private static readonly IComparer<Type?> s_typeComparer = Comparer<Type?>.Create(static (x, y) => (x, y) switch
         {
-            return (x, y) switch
-            {
-                (null, null) => 0,
-                (null, _) => 1,
-                (_, null) => -1,
-                _ => string.CompareOrdinal(x.Namespace, y.Namespace) is var ns and not 0 ? ns : string.CompareOrdinal(x.Name, y.Name)
-            };
+            (null, null) => 0,
+            (null, _) => 1,
+            (_, null) => -1,
+            _ => string.CompareOrdinal(x.Namespace, y.Namespace) is var ns and not 0 ? ns : string.CompareOrdinal(x.Name, y.Name)
         });
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ReadOnlyMemory<Type> GetAllViewTypes()
         {
             var collection = TypeCache.GetTypesDerivedFrom<IView>();
@@ -39,7 +35,6 @@ namespace Bindings.Editor.Internal
             return new ReadOnlyMemory<Type>(array, 0, written);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Dictionary<Type, Type> GetAllGenericViewTypes()
         {
             var collection = TypeCache.GetTypesDerivedFrom(typeof(IView<>));
@@ -65,7 +60,6 @@ namespace Bindings.Editor.Internal
             return types.Span.BinarySearch(type, s_typeComparer) >= 0;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string GetNestedTypeName(Type type)
         {
             var container = new NativeArray<char>(16, Allocator.Temp);
@@ -80,7 +74,6 @@ namespace Bindings.Editor.Internal
                 container.Dispose();
             }
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             static void Write(Type t, ref NativeArray<char> container, ref int written)
             {
                 if (t.DeclaringType != null)
@@ -99,26 +92,33 @@ namespace Bindings.Editor.Internal
                     written += literal.Length;
                     return;
                 }
-                var newSize = container.Length + literal.Length;
-                var newContainer = new NativeArray<char>(newSize, Allocator.Temp);
-                container.AsSpan().CopyTo(newContainer);
-                literal.CopyTo(newContainer.AsSpan()[written..]);
-                written += literal.Length;
-                container.Dispose();
-                container = newContainer;
+                GrowCore(ref container, ref written, literal);
+
+                static void GrowCore(ref NativeArray<char> container, ref int written, ReadOnlySpan<char> literal)
+                {
+                    var newSize = container.Length + literal.Length;
+                    var newContainer = new NativeArray<char>(newSize, Allocator.Temp);
+                    container.AsSpan().CopyTo(newContainer);
+                    literal.CopyTo(newContainer.AsSpan()[written..]);
+                    written += literal.Length;
+                    container.Dispose();
+                    container = newContainer;
+                }
             }
         }
 
         private sealed class FastTypeEqualityComparer : IEqualityComparer<Type>
         {
-            public static readonly FastTypeEqualityComparer Default = new FastTypeEqualityComparer();
+            public static readonly FastTypeEqualityComparer Default = new();
 
             private FastTypeEqualityComparer()
             {
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(Type x, Type y) => x.TypeHandle.Equals(y.TypeHandle);
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int GetHashCode(Type x) => x.TypeHandle.GetHashCode();
         }
     }

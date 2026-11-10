@@ -23,6 +23,7 @@ namespace <#= Context.Namespace #>
     private global::<#= field.TypePart #> <#= field.FieldName #> = null!;
 <# } #>
 
+    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     void global::Bindings.IView<<#= ViewModelFullName #>>.Initialize(<#= ViewModelFullName #> viewModel)
     {
         _viewModel = viewModel;

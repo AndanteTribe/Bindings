@@ -54,7 +54,9 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
             this.Write(" = null!;\n");
  } 
-            this.Write("\n    void global::Bindings.IView<");
+            this.Write("\n    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.C" +
+                    "ompilerServices.MethodImplOptions.AggressiveInlining)]\n    void global::Bindings" +
+                    ".IView<");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
             this.Write(">.Initialize(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));

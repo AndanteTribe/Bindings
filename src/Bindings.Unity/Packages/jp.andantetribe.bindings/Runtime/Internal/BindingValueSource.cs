@@ -2,6 +2,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks.Sources;
 
@@ -18,12 +19,17 @@ namespace Bindings.Internal
         };
         public CancellationTokenRegistration Registration { get; set; }
 
-        public short Version => _core.Version;
+        public short Version
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _core.Version;
+        }
 
         private BindingValueSource()
         {
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BindingValueSource Create()
         {
             if (s_head == null)
@@ -37,6 +43,7 @@ namespace Bindings.Internal
             return instance;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetResult() => _core.SetResult(Unit.Default);
 
         public void SetCancel() => _core.SetException(new OperationCanceledException(Registration.Token));
@@ -46,7 +53,7 @@ namespace Bindings.Internal
         {
             try
             {
-                _core.GetResult(token);
+                _ = _core.GetResult(token);
             }
             finally
             {
@@ -54,8 +61,10 @@ namespace Bindings.Internal
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         ValueTaskSourceStatus IValueTaskSource.GetStatus(short token) => _core.GetStatus(token);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         void IValueTaskSource.OnCompleted(Action<object?> continuation, object? state, short token, ValueTaskSourceOnCompletedFlags flags)
             => _core.OnCompleted(continuation, state, token, flags);
 

@@ -1,6 +1,7 @@
 #nullable enable
 
 using System;
+using System.Runtime.CompilerServices;
 #if ENABLE_VCONTAINER
 using System.Collections.Generic;
 using VContainer;
@@ -40,16 +41,20 @@ namespace Bindings
         /// <exception cref="ArgumentOutOfRangeException">The assigned value is <see cref="float.NaN"/>.</exception>
         public float ScrollRatio
         {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get => _scrollRatio;
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             set
             {
                 if (float.IsNaN(value))
                 {
-                    throw new ArgumentOutOfRangeException(nameof(value));
+                    ThrowNaN();
                 }
 
                 _scrollRatio = Math.Clamp(value, 0, 1);
                 _publisher.Publish(new ScrollToRatioMessage(_scrollRatio));
+
+                static void ThrowNaN() => throw new ArgumentOutOfRangeException(nameof(value));
             }
         }
 
@@ -57,10 +62,7 @@ namespace Bindings
         {
             public readonly float Ratio;
 
-            public ScrollToRatioMessage(float ratio)
-            {
-                Ratio = ratio;
-            }
+            public ScrollToRatioMessage(float ratio) => Ratio = ratio;
         }
     }
 

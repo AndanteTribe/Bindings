@@ -16,6 +16,16 @@ namespace Bindings.Internal
             var awaiter = task.GetAwaiter();
             if (awaiter.IsCompleted)
             {
+                CompleteSynchronously(awaiter);
+            }
+            else
+            {
+                RegisterContinuation(awaiter);
+            }
+
+            // Keep consumption protected even when a custom source reports success but throws in GetResult.
+            static void CompleteSynchronously(ValueTaskAwaiter awaiter)
+            {
                 try
                 {
                     awaiter.GetResult();
@@ -32,10 +42,9 @@ namespace Bindings.Internal
                     }
                 }
             }
-            else
-            {
-                awaiter.UnsafeOnCompleted(State.Create(awaiter).Continuation);
-            }
+
+            static void RegisterContinuation(ValueTaskAwaiter awaiter)
+                => awaiter.UnsafeOnCompleted(State.Create(awaiter).Continuation);
         }
 
         private sealed class State
@@ -49,6 +58,7 @@ namespace Bindings.Internal
 
             private State() => Continuation = Complete;
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public static State Create(ValueTaskAwaiter awaiter)
             {
                 if (s_head == null)

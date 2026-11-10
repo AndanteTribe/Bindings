@@ -1,9 +1,8 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 
@@ -47,7 +46,6 @@ namespace Bindings.Editor.Internal
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static object[] GetConstructorArguments(Type type, object binder)
         {
             var parameters = type.GetConstructors().Single().GetParameters();
