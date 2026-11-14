@@ -422,8 +422,6 @@ namespace Bindings
                     public const string sprite = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Image) + "." + nameof(G_UnityEngine.UI.Image.sprite);
                     public const string type = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Image) + "." + nameof(G_UnityEngine.UI.Image.type);
                     public const string useSpriteMesh = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Image) + "." + nameof(G_UnityEngine.UI.Image.useSpriteMesh);
-                    [System.Obsolete("eventAlphaThreshold has been deprecated. Use eventMinimumAlphaThreshold instead (UnityUpgradable) -> alphaHitTestMinimumThreshold")]
-                    public const string eventAlphaThreshold = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Image) + "." + nameof(G_UnityEngine.UI.Image.eventAlphaThreshold);
                     public const string isMaskingGraphic = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.isMaskingGraphic);
                     public const string maskable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.maskable);
                     public const string onCullStateChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.onCullStateChanged);
@@ -460,6 +458,7 @@ namespace Bindings
                     public const string onEndEdit = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onEndEdit);
                     public const string onSubmit = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onSubmit);
                     public const string onValidateInput = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onValidateInput);
+                    public const string onValueChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onValueChanged);
                     public const string placeholder = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.placeholder);
                     public const string readOnly = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.readOnly);
                     public const string selectionAnchorPosition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.selectionAnchorPosition);
@@ -469,8 +468,6 @@ namespace Bindings
                     public const string shouldHideMobileInput = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.shouldHideMobileInput);
                     public const string text = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.text);
                     public const string textComponent = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.textComponent);
-                    [System.Obsolete("onValueChange has been renamed to onValueChanged")]
-                    public const string onValueChange = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onValueChange);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
@@ -491,6 +488,8 @@ namespace Bindings
                     public const string flexibleWidth = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.flexibleWidth);
                     public const string ignoreLayout = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.ignoreLayout);
                     public const string layoutPriority = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.layoutPriority);
+                    public const string maxHeight = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.maxHeight);
+                    public const string maxWidth = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.maxWidth);
                     public const string minHeight = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.minHeight);
                     public const string minWidth = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.minWidth);
                     public const string preferredHeight = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.LayoutElement) + "." + nameof(G_UnityEngine.UI.LayoutElement.preferredHeight);
@@ -580,6 +579,31 @@ namespace Bindings
                 {
                     public const string texture = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.RawImage) + "." + nameof(G_UnityEngine.UI.RawImage.texture);
                     public const string uvRect = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.RawImage) + "." + nameof(G_UnityEngine.UI.RawImage.uvRect);
+                    public const string isMaskingGraphic = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.isMaskingGraphic);
+                    public const string maskable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.maskable);
+                    public const string onCullStateChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.onCullStateChanged);
+                    public const string color = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.color);
+                    public const string material = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.material);
+                    public const string raycastPadding = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.raycastPadding);
+                    public const string raycastTarget = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.raycastTarget);
+                    public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
+                    public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
+                    public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
+                    public const string name = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.name);
+                }
+            }
+        }
+
+        public static partial class UnityEngine
+        {
+            public static partial class UI
+            {
+                public static class RaycastReceiver
+                {
+                    public const string color = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.color);
+                    public const string material = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.material);
+                    public const string raycastPadding = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.raycastPadding);
+                    public const string raycastTarget = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Graphic) + "." + nameof(G_UnityEngine.UI.Graphic.raycastTarget);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -596,6 +620,23 @@ namespace Bindings
                 {
                     public const string padding = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.RectMask2D) + "." + nameof(G_UnityEngine.UI.RectMask2D.padding);
                     public const string softness = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.RectMask2D) + "." + nameof(G_UnityEngine.UI.RectMask2D.softness);
+                    public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
+                    public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
+                    public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
+                    public const string name = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.name);
+                }
+            }
+        }
+
+        public static partial class UnityEngine
+        {
+            public static partial class UI
+            {
+                public static class SafeArea
+                {
+                    public const string Alignment = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.SafeArea) + "." + nameof(G_UnityEngine.UI.SafeArea.Alignment);
+                    public const string Edges = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.SafeArea) + "." + nameof(G_UnityEngine.UI.SafeArea.Edges);
+                    public const string ReferenceOrientation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.SafeArea) + "." + nameof(G_UnityEngine.UI.SafeArea.ReferenceOrientation);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -809,6 +850,21 @@ namespace Bindings
             }
         }
 
+        public static partial class UnityEngine
+        {
+            public static partial class UIElements
+            {
+                public static class WorldDocumentRaycaster
+                {
+                    public const string camera = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UIElements) + "." + nameof(G_UnityEngine.UIElements.WorldDocumentRaycaster) + "." + nameof(G_UnityEngine.UIElements.WorldDocumentRaycaster.camera);
+                    public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
+                    public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
+                    public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
+                    public const string name = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.name);
+                }
+            }
+        }
+
         public static partial class TMPro
         {
             public static class TMP_Dropdown
@@ -900,11 +956,13 @@ namespace Bindings
                 public const string alignment = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.alignment);
                 public const string alpha = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.alpha);
                 public const string autoSizeTextContainer = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.autoSizeTextContainer);
+                public const string characterHorizontalScale = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.characterHorizontalScale);
                 public const string characterSpacing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.characterSpacing);
                 public const string characterWidthAdjustment = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.characterWidthAdjustment);
                 public const string colorGradient = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.colorGradient);
                 public const string colorGradientPreset = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.colorGradientPreset);
                 public const string emojiFallbackSupport = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.emojiFallbackSupport);
+                public const string enableAdvancedText = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableAdvancedText);
                 public const string enableAutoSizing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableAutoSizing);
                 public const string enableCulling = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableCulling);
                 public const string enableVertexGradient = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableVertexGradient);
@@ -964,10 +1022,6 @@ namespace Bindings
                 public const string verticalMapping = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.verticalMapping);
                 public const string wordSpacing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.wordSpacing);
                 public const string wordWrappingRatios = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.wordWrappingRatios);
-                [System.Obsolete("The \"enableKerning\" property has been deprecated. Use the \"fontFeatures\" property to control what features are enabled on the text component.")]
-                public const string enableKerning = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableKerning);
-                [System.Obsolete("The enabledWordWrapping property is now obsolete. Please use the textWrappingMode property instead.")]
-                public const string enableWordWrapping = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableWordWrapping);
                 public const string isMaskingGraphic = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.isMaskingGraphic);
                 public const string maskable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.maskable);
                 public const string onCullStateChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.onCullStateChanged);
@@ -990,11 +1044,13 @@ namespace Bindings
                 public const string alignment = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.alignment);
                 public const string alpha = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.alpha);
                 public const string autoSizeTextContainer = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.autoSizeTextContainer);
+                public const string characterHorizontalScale = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.characterHorizontalScale);
                 public const string characterSpacing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.characterSpacing);
                 public const string characterWidthAdjustment = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.characterWidthAdjustment);
                 public const string colorGradient = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.colorGradient);
                 public const string colorGradientPreset = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.colorGradientPreset);
                 public const string emojiFallbackSupport = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.emojiFallbackSupport);
+                public const string enableAdvancedText = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableAdvancedText);
                 public const string enableAutoSizing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableAutoSizing);
                 public const string enableCulling = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableCulling);
                 public const string enableVertexGradient = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableVertexGradient);
@@ -1054,10 +1110,6 @@ namespace Bindings
                 public const string verticalMapping = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.verticalMapping);
                 public const string wordSpacing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.wordSpacing);
                 public const string wordWrappingRatios = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.wordWrappingRatios);
-                [System.Obsolete("The \"enableKerning\" property has been deprecated. Use the \"fontFeatures\" property to control what features are enabled on the text component.")]
-                public const string enableKerning = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableKerning);
-                [System.Obsolete("The enabledWordWrapping property is now obsolete. Please use the textWrappingMode property instead.")]
-                public const string enableWordWrapping = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.enableWordWrapping);
                 public const string isMaskingGraphic = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.isMaskingGraphic);
                 public const string maskable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.maskable);
                 public const string onCullStateChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.MaskableGraphic) + "." + nameof(G_UnityEngine.UI.MaskableGraphic.onCullStateChanged);

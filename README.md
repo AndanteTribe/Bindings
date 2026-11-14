@@ -14,8 +14,8 @@ It provides a Roslyn Source Generator that automatically generates ViewModel and
 Bind requests triggered by `PublishRebindMessage()` are **batched** internally and executed all at once just before the Canvas renders (`Canvas.preWillRenderCanvases`), avoiding redundant updates within a single frame.
 
 ## Requirements
-- Unity 6000.0 or later
-- Unity uGUI 2.0.0 or later
+- Unity 6000.7 or later
+- Unity uGUI 2.7.0 or later
 
 ## Installation
 Open `Window > Package Manager`, select `[+] > Add package from git URL`, and enter the following URL:

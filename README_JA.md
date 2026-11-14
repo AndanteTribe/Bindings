@@ -14,8 +14,8 @@ Roslyn ソースジェネレーターを利用し、アノテーションを付�
 `PublishRebindMessage()` によって発行されたバインド要求は内部でキューに積まれ、Canvas レンダリング直前（`Canvas.preWillRenderCanvases`）に一括実行されます。これにより、1フレーム内での無駄な更新が回避されます。
 
 ## 要件
-- Unity 6000.0 以上
-- Unity uGUI 2.0.0 以上
+- Unity 6000.7 以上
+- Unity uGUI 2.7.0 以上
 
 ## インストール
 `Window > Package Manager` から Package Manager ウィンドウを開き、`[+] > Add package from git URL` を選択して以下の URL を入力します。
