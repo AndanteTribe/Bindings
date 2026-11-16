@@ -44,7 +44,12 @@ namespace Bindings.Internal
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void SetResult() => _core.SetResult(Unit.Default);
+        public void SetResult()
+        {
+            Registration.Dispose();
+            Registration = default;
+            _core.SetResult(Unit.Default);
+        }
 
         public void SetCancel() => _core.SetException(new OperationCanceledException(Registration.Token));
 

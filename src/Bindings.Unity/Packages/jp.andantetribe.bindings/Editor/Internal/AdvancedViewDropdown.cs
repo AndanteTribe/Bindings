@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using System;
 using UnityEditor.IMGUI.Controls;
@@ -33,7 +33,7 @@ namespace Bindings.Editor.Internal
                 if (nameSpace != currentNameSpace)
                 {
                     currentNameSpace = nameSpace;
-                    nameSpaceParent = new AdvancedDropdownItem(currentNameSpace){ icon = IconConst.ScriptIcon };
+                    nameSpaceParent = new AdvancedDropdownItem(currentNameSpace) { icon = IconConst.ScriptIcon };
                     root.AddChild(nameSpaceParent);
                 }
 

@@ -3,6 +3,8 @@
 
 namespace System.Threading
 {
+    // Framework API compatibility is outside runtime binding coverage.
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     internal static class CancellationTokenExtensions
     {
         public static CancellationTokenRegistration UnsafeRegister(this CancellationToken cancellationToken, Action<object?> callback, object? state)

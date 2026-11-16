@@ -166,7 +166,7 @@ namespace Bindings
             }
             finally
             {
-                nextChangedViews.Remove(view);
+                _ = nextChangedViews.Remove(view);
             }
 
             await view.BindAsync(cancellationToken);

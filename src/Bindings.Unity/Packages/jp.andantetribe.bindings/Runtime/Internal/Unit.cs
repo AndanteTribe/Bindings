@@ -5,6 +5,8 @@ using System.Runtime.CompilerServices;
 
 namespace Bindings.Internal
 {
+    // This marker carries no state; its representation is not runtime binding behavior.
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     internal readonly struct Unit : IEquatable<Unit>
     {
         public static readonly Unit Default = default;

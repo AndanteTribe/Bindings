@@ -102,10 +102,8 @@ namespace Bindings
                     var itemScope = (IScopedObjectResolver)itemResolver;
                     itemScope.Parent.Resolve<DisposableBag>().Add(itemScope);
                 });
-                using (var binding = new BinderRegistration(builder, _publisher, false))
-                {
-                    _configureItem(binding, _item);
-                }
+                using var binding = new BinderRegistration(builder, _publisher, false);
+                _configureItem(binding, _item);
             }
 
             public void Return()

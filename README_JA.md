@@ -475,7 +475,7 @@ scrollViewModel.ScrollRatio = 0.5f; // Scroll to the middle.
 
 項目が非表示になると項目 Binder は別の項目に再利用されますが、項目 ViewModel は保持されます。非表示中のメッセージは配信されないため、再表示時にバインドで復元したい状態は項目 ViewModel に保存してください。
 
-## VContainer サポート
+## VContainerサポート（1.19.0以降）
 
 [VContainer](https://github.com/hadashiA/VContainer) を使用する場合は、`RegisterBinder` で Binder と ViewModel をまとめて登録できます。`Initialize` は自動呼び出しされますが、`Binder.Run()` は利用側で呼ぶか、**Run On Start** を有効にしてください。
 
@@ -505,7 +505,7 @@ public class GameLifetimeScope : LifetimeScope
 - 戻り値は VContainer の `RegistrationBuilder` です。`AsSelf`・`As<IViewModel>`・`Keyed`・`WithParameter` などを使用できます。サービスのインターフェイスは自動追加されません。
 - ViewModel の Lifetime は既定で `Lifetime.Scoped` です。`WithViewModel<T>(lifetime)` で変更できます。
 - **コンテナを Build する前に `using` ブロックを終了**してください。登録はブロック終了時に確定し、例外で抜けた場合もロールバックしません。登録スコープのコピー・ボックス化・`default` での作成・二重破棄は避けてください。
-- 複数の Binder を同じコンテナに登録する場合は、`RegisterBinder(binder, keyed: true)` で Binder 自身をキーにできます（VContainer 1.19.0 以降）。
+- 複数の Binder を同じコンテナに登録する場合は、`RegisterBinder(binder, keyed: true)` で Binder 自身をキーにできます。
 
 ### 単軸仮想スクロールの登録
 

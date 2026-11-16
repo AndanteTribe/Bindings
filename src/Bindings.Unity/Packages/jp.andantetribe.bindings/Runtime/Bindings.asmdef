@@ -16,7 +16,7 @@
     "versionDefines": [
         {
             "name": "jp.hadashikick.vcontainer",
-            "expression": "",
+            "expression": "1.19.0",
             "define": "ENABLE_VCONTAINER"
         },
         {
