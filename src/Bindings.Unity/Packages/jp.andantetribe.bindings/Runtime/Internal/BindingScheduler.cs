@@ -51,7 +51,7 @@ namespace Bindings.Internal
             source.Registration = cancellationToken.UnsafeRegister(static s =>
             {
                 var source = (BindingValueSource)s!;
-                s_queue.Remove(source);
+                _ = s_queue.Remove(source);
                 source.SetCancel();
             }, source);
 

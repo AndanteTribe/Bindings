@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using UnityEditor;
 using UnityEngine;

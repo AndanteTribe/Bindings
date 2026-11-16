@@ -60,8 +60,8 @@ namespace Bindings.Editor
             };
             removeBtn.RegisterCallback<ClickEvent, SerializedProperty>(static (_, prop) =>
             {
-                prop.DeleteCommand();
-                prop.serializedObject.ApplyModifiedProperties();
+                _ = prop.DeleteCommand();
+                _ = prop.serializedObject.ApplyModifiedProperties();
             }, property);
             foldoutCheck.parent.Add(removeBtn);
             root.Add(new VisualElement()

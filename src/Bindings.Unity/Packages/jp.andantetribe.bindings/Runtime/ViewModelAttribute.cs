@@ -14,6 +14,8 @@ namespace Bindings
     /// the trailing <c>ViewModel</c> with <c>View</c>, preserving any following digits.
     /// </remarks>
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]
+    // Declarative generator input, covered by the source generator's tests.
+    [System.Diagnostics.CodeAnalysis.ExcludeFromCodeCoverage]
     public sealed class ViewModelAttribute : Attribute
     {
         /// <summary>

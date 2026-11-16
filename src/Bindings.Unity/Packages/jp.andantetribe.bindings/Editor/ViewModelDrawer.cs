@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 
 using Bindings.Editor.Internal;
 using UnityEditor;
