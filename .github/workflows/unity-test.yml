@@ -1,0 +1,72 @@
+name: unity-test
+on:
+  pull_request:
+    types:
+      - labeled
+  push:
+    branches:
+      - main
+    paths:
+      - src/**
+      - .github/workflows/unity-test.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' && github.event.label.name == 'request-ci' || github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      # ghasec-ignore: unpinned-action
+      - uses: AndanteTribe/Actions/actions/checkout@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Unity Cache
+        # ghasec-ignore: unpinned-action
+        uses: AndanteTribe/Actions/actions/unity-cache@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
+        with:
+          unity-project-path: src/Bindings.Unity
+      - name: Free disk space
+        run: |
+          curl -sL https://raw.githubusercontent.com/game-ci/docker/main/.github/workflows/scripts/free_disk_space.sh -o free_disk_space.sh
+          chmod +x free_disk_space.sh
+          ./free_disk_space.sh
+          rm -f free_disk_space.sh
+      # ghasec-ignore: unpinned-action
+      - uses: AndanteTribe/Actions/actions/unity-test-runner@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
+        id: tests
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        with:
+          projectPath: src/Bindings.Unity
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          unityVersion: auto
+          testMode: playMode
+          coverageOptions: 'generateHtmlReport;generateAdditionalReports;assemblyFilters:+Bindings'
+      # ghasec-ignore: unpinned-action
+      - uses: AndanteTribe/Actions/actions/upload-artifact@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
+        if: always()
+        with:
+          name: Test results
+          path: ${{ steps.tests.outputs.artifactsPath }}
+          retention-days: 2
+      # ghasec-ignore: unpinned-action
+      - uses: AndanteTribe/Actions/actions/upload-artifact@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
+        if: always()
+        with:
+          name: Coverage Results
+          path: ${{ steps.tests.outputs.coveragePath }}
+          retention-days: 2
+      - name: Upload Coverage Report
+        env:
+          COVERAGE_PATH: ${{ steps.tests.outputs.coveragePath }}
+        run: |
+          while IFS= read -r file; do
+            cat "$file" >> "$GITHUB_STEP_SUMMARY"
+          done < <(find "$COVERAGE_PATH" -name "Summary.md" 2>/dev/null)
