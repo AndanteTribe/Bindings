@@ -211,7 +211,7 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
         {
             lock (helpers)
             {
-                helpers.Add(method);
+                _ = helpers.Add(method);
             }
         }
 
@@ -328,7 +328,7 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
 
         lock (used)
         {
-            used.Add(member);
+            _ = used.Add(member);
         }
     }
 

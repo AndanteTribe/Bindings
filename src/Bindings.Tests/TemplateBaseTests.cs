@@ -21,11 +21,7 @@ public class TemplateBaseTests
     [InlineData("Model2")]
     public void ViewNameRejectsNamesWithoutViewModel(string name)
     {
-        var template = new ViewTemplate(
-            MinimalContext(className: name),
-            Array.Empty<string>(),
-            Array.Empty<string>(),
-            Array.Empty<(string, string, string)>());
+        var template = new ViewTemplate(MinimalContext(className: name), [], [], []);
         Assert.Null(template.ViewClassName);
     }
 
@@ -38,7 +34,7 @@ public class TemplateBaseTests
         string ns = "Test.Space",
         GenerationContext.ViewModelTypeKind type = GenerationContext.ViewModelTypeKind.Class,
         IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)>? schemaMethods = null) =>
-        new GenerationContext(
+        new(
             className: className,
             @namespace: ns,
             canGenerate: true,
@@ -52,12 +48,7 @@ public class TemplateBaseTests
             schemaMethods: schemaMethods ?? Array.Empty<(string, GenerationContext.BindingInfo)>(),
             diagnostics: Array.Empty<Diagnostic>());
 
-    private static ViewTemplate MinimalViewTemplate() =>
-        new ViewTemplate(
-            MinimalContext(),
-            Array.Empty<string>(),
-            Array.Empty<string>(),
-            Array.Empty<(string, string, string)>());
+    private static ViewTemplate MinimalViewTemplate() => new(MinimalContext(), [], [], []);
 
     [Fact]
     public void MethodBindingsPreserveGroupAndListenerOrderForInterleavedEvents()
@@ -70,9 +61,9 @@ public class TemplateBaseTests
                 ("Third", new("Example.Control.onClick", 0, "", "")),
                 ("Fourth", new("Example.Control.onClick", 1, "", "")),
             ]),
-            Array.Empty<string>(),
+            [],
             ["_control", "_control", "_control", "_other"],
-            Array.Empty<(string, string, string)>());
+            []);
 
         var expected = string.Join(Environment.NewLine,
             "    _control.onClick.RemoveAllListeners();",
@@ -132,8 +123,7 @@ public class TemplateBaseTests
     [Fact]
     public void ViewModelTemplate_GenerationEnvironment_NullSetThenGetTriggersLazyInit()
     {
-        var tmpl = new ViewModelTemplate(MinimalContext());
-        tmpl.GenerationEnvironment = null!;
+        var tmpl = new ViewModelTemplate(MinimalContext()) { GenerationEnvironment = null! };
         var env = tmpl.GenerationEnvironment;
         Assert.NotNull(env);
     }
@@ -177,8 +167,7 @@ public class TemplateBaseTests
     [Fact]
     public void ViewModelTemplate_WriteFormatArgs_AppendsFormattedText()
     {
-        var tmpl = new ViewModelTemplate(MinimalContext());
-        tmpl.GenerationEnvironment = null!;
+        var tmpl = new ViewModelTemplate(MinimalContext()) { GenerationEnvironment = null! };
         tmpl.Write("{0} {1}", "hello", "world");
         Assert.Equal("hello world", tmpl.GenerationEnvironment.ToString());
     }
@@ -190,8 +179,7 @@ public class TemplateBaseTests
     [Fact]
     public void ViewModelTemplate_WriteLineString_PrependsIndent()
     {
-        var tmpl = new ViewModelTemplate(MinimalContext());
-        tmpl.GenerationEnvironment = null!;
+        var tmpl = new ViewModelTemplate(MinimalContext()) { GenerationEnvironment = null! };
         tmpl.PushIndent("  ");
         tmpl.WriteLine("content");
         Assert.StartsWith("  content", tmpl.GenerationEnvironment.ToString());
@@ -200,8 +188,7 @@ public class TemplateBaseTests
     [Fact]
     public void ViewModelTemplate_WriteLineFormatArgs_PrependsIndentAndFormats()
     {
-        var tmpl = new ViewModelTemplate(MinimalContext());
-        tmpl.GenerationEnvironment = null!;
+        var tmpl = new ViewModelTemplate(MinimalContext()) { GenerationEnvironment = null! };
         tmpl.PushIndent("  ");
         tmpl.WriteLine("{0}+{1}", "a", "b");
         Assert.StartsWith("  a+b", tmpl.GenerationEnvironment.ToString());
@@ -248,7 +235,7 @@ public class TemplateBaseTests
     public void ViewModelTemplate_ToStringWithCulture_Null_ThrowsArgumentNullException()
     {
         var tmpl = new ViewModelTemplate(MinimalContext());
-        Assert.Throws<ArgumentNullException>(() => tmpl.ToStringHelper.ToStringWithCulture(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => tmpl.ToStringHelper.ToStringWithCulture(null!));
     }
 
     private sealed class NonConvertibleTestObject
@@ -391,7 +378,7 @@ public class TemplateBaseTests
     public void ViewTemplate_ToStringWithCulture_Null_ThrowsArgumentNullException()
     {
         var tmpl = MinimalViewTemplate();
-        Assert.Throws<ArgumentNullException>(() => tmpl.ToStringHelper.ToStringWithCulture(null!));
+        _ = Assert.Throws<ArgumentNullException>(() => tmpl.ToStringHelper.ToStringWithCulture(null!));
     }
 
     [Fact]
@@ -424,8 +411,7 @@ public class TemplateBaseTests
     [Fact]
     public void CompilerError_IsWarning_CanBeSetToTrue()
     {
-        var err = new System.CodeDom.Compiler.CompilerError();
-        err.IsWarning = true;
+        var err = new System.CodeDom.Compiler.CompilerError { IsWarning = true };
         Assert.True(err.IsWarning);
     }
 

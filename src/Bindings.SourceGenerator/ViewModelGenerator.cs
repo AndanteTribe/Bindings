@@ -269,12 +269,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(context.Namespace))
         {
-            builder.Append(context.Namespace).Append('.');
+            _ = builder.Append(context.Namespace).Append('.');
         }
 
         for (var i = 0; i < context.ContainingTypes.Count; i++)
         {
-            builder.Append(context.ContainingTypes[i].TypeName).Append('.');
+            _ = builder.Append(context.ContainingTypes[i].TypeName).Append('.');
         }
 
         return builder.Append(typeName).Append(".g.cs").ToString();
@@ -311,25 +311,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// </summary>
     private static string? GetAccessibilityKeyword(Accessibility accessibility)
     {
-        switch (accessibility)
+        return accessibility switch
         {
-            case Accessibility.NotApplicable:
-                return null;
-            case Accessibility.Private:
-                return "private";
-            case Accessibility.ProtectedAndInternal:
-                return "private protected";
-            case Accessibility.Protected:
-                return "protected";
-            case Accessibility.Internal:
-                return "internal";
-            case Accessibility.ProtectedOrInternal:
-                return "protected internal";
-            case Accessibility.Public:
-                return "public";
-            default:
-                return null;
-        }
+            Accessibility.NotApplicable => null,
+            Accessibility.Private => "private",
+            Accessibility.ProtectedAndInternal => "private protected",
+            Accessibility.Protected => "protected",
+            Accessibility.Internal => "internal",
+            Accessibility.ProtectedOrInternal => "protected internal",
+            Accessibility.Public => "public",
+            _ => null,
+        };
     }
 
     /// <summary>
@@ -472,20 +464,18 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var methodAssignments = new string[methodCount];
 
         // Collect entries directly into type groups, preserving first appearance order.
-        var entriesByType = new Dictionary<string, List<(bool IsMethod, int Index, int Id, string Tooltip, string MemberName)>>();
-        var orderedTypeGroups = new List<(
-            string TypePart,
-            List<(bool IsMethod, int Index, int Id, string Tooltip, string MemberName)> Entries)>();
+        var entriesByType = new Dictionary<string, List<(bool, int, int, string, string)>>();
+        var orderedTypeGroups = new List<(string, List<(bool, int, int, string, string)>)>();
         for (var i = 0; i < fieldCount; i++)
         {
-            var field = data.SchemaFields[i];
-            AddEntry(field.Binding, false, i, field.FieldName);
+            var (fieldName, _, binding) = data.SchemaFields[i];
+            AddEntry(binding, false, i, fieldName);
         }
 
         for (var i = 0; i < methodCount; i++)
         {
-            var method = data.SchemaMethods[i];
-            AddEntry(method.Binding, true, i, method.MethodName);
+            var (methodName, binding) = data.SchemaMethods[i];
+            AddEntry(binding, true, i, methodName);
         }
 
         void AddEntry(GenerationContext.BindingInfo binding, bool isMethod, int index, string memberName)
@@ -493,7 +483,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             var typePart = GetComponentTypePart(binding.BindingPath);
             if (!entriesByType.TryGetValue(typePart, out var entries))
             {
-                entries = new List<(bool IsMethod, int Index, int Id, string Tooltip, string MemberName)>();
+                entries = [];
                 entriesByType.Add(typePart, entries);
                 orderedTypeGroups.Add((typePart, entries));
             }
@@ -512,60 +502,60 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             var componentBase = TypePartToFieldBase(typePart);
 
             var explicitGroupIndexes = new Dictionary<int, int>();
-            foreach (var entry in entries)
+            foreach (var (isMethod, index, id, tooltip, memberName) in entries)
             {
-                if (entry.Id >= 0 && explicitGroupIndexes.TryGetValue(entry.Id, out var groupIndex))
+                if (id >= 0 && explicitGroupIndexes.TryGetValue(id, out var groupIndex))
                 {
-                    componentGroups[groupIndex].Entries.Add((entry.IsMethod, entry.Index, entry.Tooltip));
+                    componentGroups[groupIndex].Entries.Add((isMethod, index, tooltip));
                     continue;
                 }
 
-                var candidateName = BuildComponentFieldNameCandidate(entry.MemberName, componentBase);
+                var candidateName = BuildComponentFieldNameCandidate(memberName, componentBase);
                 var groupEntries = new List<(bool IsMethod, int Index, string Tooltip)>
                 {
-                    (entry.IsMethod, entry.Index, entry.Tooltip),
+                    (isMethod, index, tooltip),
                 };
                 componentGroups.Add((typePart, candidateName, groupEntries));
 
-                if (entry.Id >= 0)
+                if (id >= 0)
                 {
-                    explicitGroupIndexes.Add(entry.Id, componentGroups.Count - 1);
+                    explicitGroupIndexes.Add(id, componentGroups.Count - 1);
                 }
             }
         }
 
         var candidateCounts = new Dictionary<string, int>();
-        foreach (var group in componentGroups)
+        foreach (var (_, candidateName, _) in componentGroups)
         {
-            candidateCounts.TryGetValue(group.CandidateName, out var count);
-            candidateCounts[group.CandidateName] = count + 1;
+            _ = candidateCounts.TryGetValue(candidateName, out var count);
+            candidateCounts[candidateName] = count + 1;
         }
 
         // Retain the parsed type and resolved tooltip for each assigned View field.
-        var fieldMetadata = new Dictionary<string, (string TypePart, string Tooltip)>();
+        var fieldMetadata = new Dictionary<string, (string, string)>();
         // Track fields that have conflicting tooltip values (HashSet for O(1) lookup)
         var conflictingTooltipFields = new HashSet<string>();
         var candidateNumbers = new Dictionary<string, int>();
         var usedFieldNames = new HashSet<string>();
 
-        foreach (var group in componentGroups)
+        foreach (var (typePart, candidateName, entries) in componentGroups)
         {
-            var fieldName = group.CandidateName;
+            var fieldName = candidateName;
             if (candidateCounts[fieldName] > 1 || !usedFieldNames.Add(fieldName))
             {
-                candidateNumbers.TryGetValue(group.CandidateName, out var number);
+                _ = candidateNumbers.TryGetValue(candidateName, out var number);
                 do
                 {
                     number++;
-                    fieldName = group.CandidateName + number;
+                    fieldName = candidateName + number;
                 }
                 while (!usedFieldNames.Add(fieldName));
 
-                candidateNumbers[group.CandidateName] = number;
+                candidateNumbers[candidateName] = number;
             }
 
             var resolvedTooltip = string.Empty;
-            foreach (var entry in group.Entries)
+            foreach (var entry in entries)
             {
                 Assign(entry, fieldName, fieldAssignments, methodAssignments);
                 var tooltip = entry.Tooltip;
@@ -581,10 +571,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 else if (resolvedTooltip != tooltip)
                 {
                     // HashSet.Add is a no-op when the element already exists
-                    conflictingTooltipFields.Add(fieldName);
+                    _ = conflictingTooltipFields.Add(fieldName);
                 }
             }
-            fieldMetadata.Add(fieldName, (group.TypePart, resolvedTooltip));
+            fieldMetadata.Add(fieldName, (typePart, resolvedTooltip));
         }
 
         // Build the ordered field declaration list (deduplicated, initial-appearance order)
@@ -677,7 +667,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         string[] methodAssignments,
         List<(string TypePart, string FieldName, string Tooltip)> orderedFields)
     {
-        var template = new ViewTemplate(context, fieldAssignments, methodAssignments, orderedFields.ToArray());
+        var template = new ViewTemplate(context, fieldAssignments, methodAssignments, [.. orderedFields]);
         return SourceText.From(template.TransformText(), Encoding.UTF8);
     }
 }

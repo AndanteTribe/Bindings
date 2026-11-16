@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -28,13 +27,13 @@ public partial class ViewModelTemplate(GenerationContext context)
             var sb = new StringBuilder("global::");
             if (!string.IsNullOrEmpty(Context.Namespace))
             {
-                sb.Append(Context.Namespace).Append('.');
+                _ = sb.Append(Context.Namespace).Append('.');
             }
             for (var i = 0; i < Context.ContainingTypes.Count; i++)
             {
-                sb.Append(Context.ContainingTypes[i].TypeName).Append('.');
+                _ = sb.Append(Context.ContainingTypes[i].TypeName).Append('.');
             }
-            sb.Append(Context.ClassName);
+            _ = sb.Append(Context.ClassName);
             return sb.ToString();
         }
     }
@@ -50,9 +49,9 @@ public partial class ViewModelTemplate(GenerationContext context)
             for (var i = 0; i < Context.RequiredFields.Count; i++)
             {
                 var (typeFullName, fieldName, _) = Context.RequiredFields[i];
-                sb.Append(typeFullName).Append(' ').Append(ToParamName(fieldName)).Append(", ");
+                _ = sb.Append(typeFullName).Append(' ').Append(ToParamName(fieldName)).Append(", ");
             }
-            sb.Append("global::Bindings.IMvvmPublisher publisher");
+            _ = sb.Append("global::Bindings.IMvvmPublisher publisher");
             return sb.ToString();
         }
     }
@@ -135,13 +134,13 @@ public partial class ViewTemplate(
             var sb = new StringBuilder("global::");
             if (!string.IsNullOrEmpty(Context.Namespace))
             {
-                sb.Append(Context.Namespace).Append('.');
+                _ = sb.Append(Context.Namespace).Append('.');
             }
             for (var i = 0; i < Context.ContainingTypes.Count; i++)
             {
-                sb.Append(Context.ContainingTypes[i].TypeName).Append('.');
+                _ = sb.Append(Context.ContainingTypes[i].TypeName).Append('.');
             }
-            sb.Append(Context.ClassName);
+            _ = sb.Append(Context.ClassName);
             return sb.ToString();
         }
     }
@@ -200,31 +199,31 @@ public partial class ViewTemplate(
             switch (binding.BindingPath)
             {
                 case "TMPro.TMP_Text.text":
-                    sb.Append(indent);
-                    sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
+                    _ = sb.Append(indent);
+                    _ = sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
                     if (!string.IsNullOrEmpty(binding.Format))
                     {
-                        sb.Append(", \"").Append(binding.Format).Append('"');
+                        _ = sb.Append(", \"").Append(binding.Format).Append('"');
                     }
-                    sb.Append(");");
+                    _ = sb.Append(");");
                     break;
                 case "UnityEngine.GameObject.activeSelf":
-                    sb.Append(indent);
-                    sb.Append(viewField).Append(".SetActive(_viewModel.").Append(propName).Append(");");
+                    _ = sb.Append(indent);
+                    _ = sb.Append(viewField).Append(".SetActive(_viewModel.").Append(propName).Append(");");
                     break;
                 case "UnityEngine.RectTransform.rect.size":
-                    sb.Append(indent);
-                    sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.").Append(propName).Append(".x);");
-                    sb.AppendLine();
-                    sb.Append(indent);
-                    sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.").Append(propName).Append(".y);");
+                    _ = sb.Append(indent);
+                    _ = sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.").Append(propName).Append(".x);");
+                    _ = sb.AppendLine();
+                    _ = sb.Append(indent);
+                    _ = sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.").Append(propName).Append(".y);");
                     break;
                 default:
                     var (_, memberName) = SplitBindingPath(binding.BindingPath);
-                    sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(" = _viewModel.").Append(propName).Append(";");
+                    _ = sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(" = _viewModel.").Append(propName).Append(";");
                     break;
             }
-            sb.AppendLine();
+            _ = sb.AppendLine();
         }
         // Remove trailing newline so the template's surrounding whitespace is consistent
         if (sb.Length > 0 && sb[sb.Length - 1] == '\n')
@@ -242,7 +241,7 @@ public partial class ViewTemplate(
     /// </summary>
     public string WriteMethodBindings(string indent)
     {
-        var orderedGroups = new List<(string ViewField, string MemberName, List<string> Methods)>();
+        var orderedGroups = new List<(string, string, List<string>)>();
         var groups = new Dictionary<(string, string), List<string>>();
 
         for (var i = 0; i < Context.SchemaMethods.Count; i++)
@@ -254,7 +253,7 @@ public partial class ViewTemplate(
 
             if (!groups.TryGetValue(key, out var methods))
             {
-                methods = new List<string>();
+                methods = [];
                 groups.Add(key, methods);
                 orderedGroups.Add((viewField, memberName, methods));
             }
@@ -264,12 +263,12 @@ public partial class ViewTemplate(
         var sb = new StringBuilder();
         foreach (var (viewField, memberName, methods) in orderedGroups)
         {
-            sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".RemoveAllListeners();");
-            sb.AppendLine();
+            _ = sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".RemoveAllListeners();");
+            _ = sb.AppendLine();
             foreach (var methodName in methods)
             {
-                sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".AddListener(_viewModel.").Append(methodName).Append(");");
-                sb.AppendLine();
+                _ = sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".AddListener(_viewModel.").Append(methodName).Append(");");
+                _ = sb.AppendLine();
             }
         }
         // Remove trailing newline so the template's surrounding whitespace is consistent
