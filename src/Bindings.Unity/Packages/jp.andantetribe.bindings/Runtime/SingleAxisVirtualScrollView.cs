@@ -70,7 +70,14 @@ namespace Bindings
             var length = Mathf.Max(0, stepCount * pitch - _spacing);
             content.SetSizeWithCurrentAnchors(_axis, length);
 
-            await ResizeItemsAsync(count, cancellationToken);
+            if (_items.Length > count)
+            {
+                TrimItems(count);
+            }
+            else if (_items.Length < count)
+            {
+                await AddItemsAsync(count, cancellationToken);
+            }
             _boundPublishers = publishers;
             _scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
             ScrollTo(viewModel.ScrollRatio);
@@ -99,46 +106,40 @@ namespace Bindings
             OnScrollValueChanged(_scrollRect.normalizedPosition);
         }
 
-        private async ValueTask ResizeItemsAsync(int count, CancellationToken cancellationToken)
+        private void TrimItems(int count)
         {
-            if (_items.Length > count)
+            foreach (var item in _items[count..].Span)
             {
-                TrimItems(count);
-                void TrimItems(int c)
-                {
-                    foreach (var item in _items[c..].Span)
-                    {
-                        UnityEngine.Object.Destroy(item.gameObject);
-                    }
-                    _items = _items[..c];
-                }
+                UnityEngine.Object.Destroy(item.gameObject);
             }
-            else if (_items.Length < count)
-            {
-                var addedItems = await UnityEngine.Object.InstantiateAsync(
-                    _itemPrefab,
-                    count - _items.Length,
+            _items = _items[..count];
+        }
+
+        private async ValueTask AddItemsAsync(int count, CancellationToken cancellationToken)
+        {
+            var addedItems = await UnityEngine.Object.InstantiateAsync(
+                _itemPrefab,
+                count - _items.Length,
 #if ENABLE_ORIGINAL_IMMUTABLE
-                    new InstantiateParameters { parent = _scrollRect.content, originalImmutable = true },
+                new InstantiateParameters { parent = _scrollRect.content, originalImmutable = true },
 #else
-                    new InstantiateParameters { parent = _scrollRect.content, },
+                new InstantiateParameters { parent = _scrollRect.content, },
 #endif
-                    cancellationToken);
-                foreach (var item in addedItems)
-                {
-                    item.gameObject.SetActive(false);
-                }
-                if (_items.IsEmpty)
-                {
-                    _items = addedItems;
-                }
-                else
-                {
-                    var items = new Binder[count];
-                    _items.CopyTo(items);
-                    addedItems.AsSpan().CopyTo(items.AsSpan(_items.Length));
-                    _items = items;
-                }
+                cancellationToken);
+            foreach (var item in addedItems)
+            {
+                item.gameObject.SetActive(false);
+            }
+            if (_items.IsEmpty)
+            {
+                _items = addedItems;
+            }
+            else
+            {
+                var items = new Binder[count];
+                _items.CopyTo(items);
+                addedItems.AsSpan().CopyTo(items.AsSpan(_items.Length));
+                _items = items;
             }
         }
 
