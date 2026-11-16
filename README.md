@@ -475,7 +475,7 @@ Values are clamped to 0–1; `NaN` is not accepted. Reading this property return
 
 When an item leaves the visible area, its Binder can be reused for another item, but its ViewModels are retained. Messages are not delivered while the item is hidden. Keep state that should be restored on redisplay in the item ViewModels so binding can restore it.
 
-## VContainer Support
+## VContainer Support (1.19.0 or later)
 
 When using [VContainer](https://github.com/hadashiA/VContainer), use `RegisterBinder` to register a Binder and its ViewModels together. `Initialize` is called automatically; call `Binder.Run()` yourself or enable **Run On Start**.
 
@@ -505,7 +505,7 @@ Call `WithViewModel<T>()` multiple times on the same scope. The Binder receives 
 - Each call returns VContainer's `RegistrationBuilder`, supporting `AsSelf`, `As<IViewModel>`, `Keyed`, and `WithParameter`. Service interfaces are not added automatically.
 - The default ViewModel lifetime is `Lifetime.Scoped`. Change it with `WithViewModel<T>(lifetime)`.
 - **End the `using` block before building the container.** Registrations commit when the block ends, including exception unwinding; this is not a rollback transaction. Do not copy, box, default-construct, or dispose the registration scope twice.
-- For multiple Binders in one container, `RegisterBinder(binder, keyed: true)` uses the Binder instance as its key (requires VContainer 1.19.0 or later).
+- For multiple Binders in one container, `RegisterBinder(binder, keyed: true)` uses the Binder instance as its key.
 
 ### Registering a Virtual Scroll
 
