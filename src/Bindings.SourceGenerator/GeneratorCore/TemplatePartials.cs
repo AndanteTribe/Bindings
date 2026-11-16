@@ -2,282 +2,282 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Bindings.GeneratorCore
+namespace Bindings.GeneratorCore;
+
+/// <summary>
+/// Context fields and helper methods for the <see cref="ViewModelTemplate"/> partial class.
+/// </summary>
+public partial class ViewModelTemplate(GenerationContext context)
 {
     /// <summary>
-    /// Context fields and helper methods for the <see cref="ViewModelTemplate"/> partial class.
+    /// The generation context for the [ViewModel] type being processed.
     /// </summary>
-    public partial class ViewModelTemplate(GenerationContext context)
+    public readonly GenerationContext Context = context;
+
+    public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
+    public string TypeKeyword => Context.Type == GenerationContext.ViewModelTypeKind.Class ? "class" : "struct";
+
+    /// <summary>
+    /// The fully-qualified type name of the ViewModel with the global:: prefix,
+    /// including any containing type names for nested types.
+    /// </summary>
+    public string ViewModelFullName
     {
-        /// <summary>
-        /// The generation context for the [ViewModel] type being processed.
-        /// </summary>
-        public readonly GenerationContext Context = context;
-
-        public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
-        public string TypeKeyword => Context.IsStruct ? "struct" : "class";
-
-        /// <summary>
-        /// The fully-qualified type name of the ViewModel with the global:: prefix,
-        /// including any containing type names for nested types.
-        /// </summary>
-        public string ViewModelFullName
+        get
         {
-            get
+            var sb = new StringBuilder("global::");
+            if (!string.IsNullOrEmpty(Context.Namespace))
             {
-                var sb = new StringBuilder("global::");
-                if (!string.IsNullOrEmpty(Context.Namespace))
-                {
-                    sb.Append(Context.Namespace).Append('.');
-                }
-                foreach (var (_, _, typeName) in Context.ContainingTypes)
-                {
-                    sb.Append(typeName).Append('.');
-                }
-                sb.Append(Context.ClassName);
-                return sb.ToString();
+                sb.Append(Context.Namespace).Append('.');
             }
-        }
-
-        /// <summary>
-        /// Comma-separated constructor parameter list: [Required] fields first, then publisher.
-        /// </summary>
-        public string ConstructorParamList
-        {
-            get
+            for (var i = 0; i < Context.ContainingTypes.Count; i++)
             {
-                var sb = new StringBuilder();
-                foreach (var (typeFullName, fieldName, _) in Context.RequiredFields.AsSpan())
-                {
-                    sb.Append(typeFullName).Append(' ').Append(ToParamName(fieldName)).Append(", ");
-                }
-                sb.Append("global::Bindings.IMvvmPublisher publisher");
-                return sb.ToString();
+                sb.Append(Context.ContainingTypes[i].TypeName).Append('.');
             }
+            sb.Append(Context.ClassName);
+            return sb.ToString();
         }
-
-        /// <summary>
-        /// Schema fields used to generate ViewModel properties, deduplicated by source field name.
-        /// Multiple Schema attributes on one field still remain in <see cref="GenerationContext.SchemaFields"/>
-        /// so the View can generate every declared binding.
-        /// </summary>
-        public IEnumerable<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)> SchemaPropertyFields
-        {
-            get
-            {
-                var fieldNames = new HashSet<string>();
-                for (var i = 0; i < Context.SchemaFields.Length; i++)
-                {
-                    var schemaField = Context.SchemaFields[i];
-                    if (fieldNames.Add(schemaField.FieldName))
-                    {
-                        yield return schemaField;
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Returns the ViewModel property name derived from a field name (first letter uppercased).
-        /// e.g. _count → Count, m_Count → Count
-        /// </summary>
-        public static string ToPropertyName(string fieldName) =>
-            TemplateHelpers.ToPropertyName(fieldName);
-
-        /// <summary>
-        /// Returns the constructor parameter name derived from a field name (first letter lowercased).
-        /// e.g. _count → count, m_Count → count
-        /// </summary>
-        public static string ToParamName(string fieldName) =>
-            TemplateHelpers.ToParamName(fieldName);
     }
 
     /// <summary>
-    /// Context fields and helper methods for the <see cref="ViewTemplate"/> partial class.
+    /// Comma-separated constructor parameter list: [Required] fields first, then publisher.
     /// </summary>
-    public partial class ViewTemplate(
-        GenerationContext context,
-        string[] fieldAssignments,
-        string[] methodAssignments,
-        (string TypePart, string FieldName, string Tooltip)[] orderedFields)
+    public string ConstructorParamList
     {
-        /// <summary>
-        /// The generation context for the [ViewModel] type being processed.
-        /// </summary>
-        public readonly GenerationContext Context = context;
-
-        /// <summary>
-        /// View component field name assigned to each SchemaFields[i] entry.
-        /// </summary>
-        public readonly string[] FieldAssignments = fieldAssignments;
-
-        /// <summary>
-        /// View component field name assigned to each SchemaMethods[i] entry.
-        /// </summary>
-        public readonly string[] MethodAssignments = methodAssignments;
-
-        /// <summary>
-        /// Ordered (deduplicated) list of View component fields to declare, with type and tooltip.
-        /// </summary>
-        public readonly (string TypePart, string FieldName, string Tooltip)[] OrderedFields = orderedFields;
-
-        public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
-
-        /// <summary>
-        /// The fully-qualified type name of the ViewModel with the global:: prefix,
-        /// including any containing type names for nested types.
-        /// </summary>
-        public string ViewModelFullName
-        {
-            get
-            {
-                var sb = new StringBuilder("global::");
-                if (!string.IsNullOrEmpty(Context.Namespace))
-                {
-                    sb.Append(Context.Namespace).Append('.');
-                }
-                foreach (var (_, _, typeName) in Context.ContainingTypes)
-                {
-                    sb.Append(typeName).Append('.');
-                }
-                sb.Append(Context.ClassName);
-                return sb.ToString();
-            }
-        }
-
-        /// <summary>
-        /// The View class name derived from the ViewModel class name.
-        /// </summary>
-        public string ViewClassName => TemplateHelpers.GetViewName(Context.ClassName)!;
-
-        /// <summary>
-        /// Initializer expression for the _viewModel field.
-        /// Classes use " = null!"; structs are value types with no initializer needed.
-        /// </summary>
-        public string VmFieldInit => Context.IsStruct ? "" : " = null!";
-
-        /// <summary>
-        /// Returns the ViewModel property name derived from a field name (first letter uppercased).
-        /// </summary>
-        public static string ToPropertyName(string fieldName) =>
-            TemplateHelpers.ToPropertyName(fieldName);
-
-        /// <summary>
-        /// Splits a binding path and returns (TypePart, MemberName).
-        /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
-        /// The nested RectTransform.rect.size path is normalized to the RectTransform component type.
-        /// </summary>
-        public static (string TypePart, string MemberName) SplitBindingPath(string path)
-        {
-            if (path == "UnityEngine.RectTransform.rect.size")
-            {
-                return ("UnityEngine.RectTransform", "rect.size");
-            }
-
-            var lastDot = path.LastIndexOf('.');
-            if (lastDot < 0)
-            {
-                return (path, "");
-            }
-
-            return (path.Substring(0, lastDot), path.Substring(lastDot + 1));
-        }
-
-        /// <summary>
-        /// Generates field binding statements for all [Schema] fields.
-        /// Each statement is prefixed with <paramref name="indent"/>.
-        /// </summary>
-        public string WriteFieldBindings(string indent)
+        get
         {
             var sb = new StringBuilder();
-            for (var i = 0; i < Context.SchemaFields.Length; i++)
+            for (var i = 0; i < Context.RequiredFields.Count; i++)
             {
-                var (fieldName, _, bindingPath, _, format, _) = Context.SchemaFields[i];
-                var viewField = FieldAssignments[i];
-                var propName = ToPropertyName(fieldName);
-
-                switch (bindingPath)
-                {
-                    case "TMPro.TMP_Text.text":
-                        sb.Append(indent);
-                        sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
-                        if (!string.IsNullOrEmpty(format))
-                        {
-                            sb.Append(", \"").Append(format).Append('"');
-                        }
-                        sb.Append(");");
-                        break;
-                    case "UnityEngine.GameObject.activeSelf":
-                        sb.Append(indent);
-                        sb.Append(viewField).Append(".SetActive(_viewModel.").Append(propName).Append(");");
-                        break;
-                    case "UnityEngine.RectTransform.rect.size":
-                        sb.Append(indent);
-                        sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.").Append(propName).Append(".x);");
-                        sb.AppendLine();
-                        sb.Append(indent);
-                        sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.").Append(propName).Append(".y);");
-                        break;
-                    default:
-                        var (_, memberName) = SplitBindingPath(bindingPath);
-                        sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(" = _viewModel.").Append(propName).Append(";");
-                        break;
-                }
-                sb.AppendLine();
+                var (typeFullName, fieldName, _) = Context.RequiredFields[i];
+                sb.Append(typeFullName).Append(' ').Append(ToParamName(fieldName)).Append(", ");
             }
-            // Remove trailing newline so the template's surrounding whitespace is consistent
-            if (sb.Length > 0 && sb[sb.Length - 1] == '\n')
-            {
-                sb.Length--;
-            }
-
+            sb.Append("global::Bindings.IMvvmPublisher publisher");
             return sb.ToString();
         }
+    }
 
-        /// <summary>
-        /// Generates method binding statements for all [Schema] methods, grouped by (viewField, memberName).
-        /// RemoveAllListeners is called once per group, followed by AddListener for each method.
-        /// Each statement is prefixed with <paramref name="indent"/>.
-        /// </summary>
-        public string WriteMethodBindings(string indent)
+    /// <summary>
+    /// Schema fields used to generate ViewModel properties, deduplicated by source field name.
+    /// Multiple Schema attributes on one field still remain in <see cref="GenerationContext.SchemaFields"/>
+    /// so the View can generate every declared binding.
+    /// </summary>
+    public IEnumerable<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)> SchemaPropertyFields
+    {
+        get
         {
-            var groupOrder = new List<(string ViewField, string MemberName)>();
-            var groups = new Dictionary<(string, string), List<string>>();
-
-            for (var i = 0; i < Context.SchemaMethods.Length; i++)
+            var fieldNames = new HashSet<string>();
+            for (var i = 0; i < Context.SchemaFields.Count; i++)
             {
-                var (methodName, bindingPath, _, _) = Context.SchemaMethods[i];
-                var viewField = MethodAssignments[i];
-                var (_, memberName) = SplitBindingPath(bindingPath);
-                var key = (viewField, memberName);
-
-                if (!groups.ContainsKey(key))
+                var schemaField = Context.SchemaFields[i];
+                if (fieldNames.Add(schemaField.FieldName))
                 {
-                    groups[key] = new List<string>();
-                    groupOrder.Add(key);
+                    yield return schemaField;
                 }
-                groups[key].Add(methodName);
             }
+        }
+    }
 
-            var sb = new StringBuilder();
-            foreach (var key in groupOrder)
+    /// <summary>
+    /// Returns the ViewModel property name derived from a field name (first letter uppercased).
+    /// e.g. _count → Count, m_Count → Count
+    /// </summary>
+    public static string ToPropertyName(string fieldName) =>
+        TemplateHelpers.ToPropertyName(fieldName);
+
+    /// <summary>
+    /// Returns the constructor parameter name derived from a field name (first letter lowercased).
+    /// e.g. _count → count, m_Count → count
+    /// </summary>
+    public static string ToParamName(string fieldName) =>
+        TemplateHelpers.ToParamName(fieldName);
+}
+
+/// <summary>
+/// Context fields and helper methods for the <see cref="ViewTemplate"/> partial class.
+/// </summary>
+public partial class ViewTemplate(
+    GenerationContext context,
+    string[] fieldAssignments,
+    string[] methodAssignments,
+    (string TypePart, string FieldName, string Tooltip)[] orderedFields)
+{
+    /// <summary>
+    /// The generation context for the [ViewModel] type being processed.
+    /// </summary>
+    public readonly GenerationContext Context = context;
+
+    /// <summary>
+    /// View component field name assigned to each SchemaFields[i] entry.
+    /// </summary>
+    public readonly string[] FieldAssignments = fieldAssignments;
+
+    /// <summary>
+    /// View component field name assigned to each SchemaMethods[i] entry.
+    /// </summary>
+    public readonly string[] MethodAssignments = methodAssignments;
+
+    /// <summary>
+    /// Ordered (deduplicated) list of View component fields to declare, with type and tooltip.
+    /// </summary>
+    public readonly (string TypePart, string FieldName, string Tooltip)[] OrderedFields = orderedFields;
+
+    public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
+
+    /// <summary>
+    /// The fully-qualified type name of the ViewModel with the global:: prefix,
+    /// including any containing type names for nested types.
+    /// </summary>
+    public string ViewModelFullName
+    {
+        get
+        {
+            var sb = new StringBuilder("global::");
+            if (!string.IsNullOrEmpty(Context.Namespace))
             {
-                var (viewField, memberName) = key;
-                sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".RemoveAllListeners();");
-                sb.AppendLine();
-                foreach (var methodName in groups[key])
-                {
-                    sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".AddListener(_viewModel.").Append(methodName).Append(");");
+                sb.Append(Context.Namespace).Append('.');
+            }
+            for (var i = 0; i < Context.ContainingTypes.Count; i++)
+            {
+                sb.Append(Context.ContainingTypes[i].TypeName).Append('.');
+            }
+            sb.Append(Context.ClassName);
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>
+    /// The View class name derived from the ViewModel class name.
+    /// </summary>
+    public string ViewClassName => TemplateHelpers.GetViewName(Context.ClassName)!;
+
+    /// <summary>
+    /// Initializer expression for the _viewModel field.
+    /// Classes use " = null!"; structs are value types with no initializer needed.
+    /// </summary>
+    public string VmFieldInit => Context.Type == GenerationContext.ViewModelTypeKind.Class ? " = null!" : "";
+
+    /// <summary>
+    /// Returns the ViewModel property name derived from a field name (first letter uppercased).
+    /// </summary>
+    public static string ToPropertyName(string fieldName) =>
+        TemplateHelpers.ToPropertyName(fieldName);
+
+    /// <summary>
+    /// Splits a binding path and returns (TypePart, MemberName).
+    /// e.g. "TMPro.TMP_Text.text" → ("TMPro.TMP_Text", "text")
+    /// The nested RectTransform.rect.size path is normalized to the RectTransform component type.
+    /// </summary>
+    public static (string TypePart, string MemberName) SplitBindingPath(string path)
+    {
+        if (path == "UnityEngine.RectTransform.rect.size")
+        {
+            return ("UnityEngine.RectTransform", "rect.size");
+        }
+
+        var lastDot = path.LastIndexOf('.');
+        if (lastDot < 0)
+        {
+            return (path, "");
+        }
+
+        return (path.Substring(0, lastDot), path.Substring(lastDot + 1));
+    }
+
+    /// <summary>
+    /// Generates field binding statements for all [Schema] fields.
+    /// Each statement is prefixed with <paramref name="indent"/>.
+    /// </summary>
+    public string WriteFieldBindings(string indent)
+    {
+        var sb = new StringBuilder();
+        for (var i = 0; i < Context.SchemaFields.Count; i++)
+        {
+            var (fieldName, _, binding) = Context.SchemaFields[i];
+            var viewField = FieldAssignments[i];
+            var propName = ToPropertyName(fieldName);
+
+            switch (binding.BindingPath)
+            {
+                case "TMPro.TMP_Text.text":
+                    sb.Append(indent);
+                    sb.Append("global::Bindings.TextMeshProExtensions.SetValue(").Append(viewField).Append(", _viewModel.").Append(propName);
+                    if (!string.IsNullOrEmpty(binding.Format))
+                    {
+                        sb.Append(", \"").Append(binding.Format).Append('"');
+                    }
+                    sb.Append(");");
+                    break;
+                case "UnityEngine.GameObject.activeSelf":
+                    sb.Append(indent);
+                    sb.Append(viewField).Append(".SetActive(_viewModel.").Append(propName).Append(");");
+                    break;
+                case "UnityEngine.RectTransform.rect.size":
+                    sb.Append(indent);
+                    sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Horizontal, _viewModel.").Append(propName).Append(".x);");
                     sb.AppendLine();
-                }
+                    sb.Append(indent);
+                    sb.Append(viewField).Append(".SetSizeWithCurrentAnchors(global::UnityEngine.RectTransform.Axis.Vertical, _viewModel.").Append(propName).Append(".y);");
+                    break;
+                default:
+                    var (_, memberName) = SplitBindingPath(binding.BindingPath);
+                    sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(" = _viewModel.").Append(propName).Append(";");
+                    break;
             }
-            // Remove trailing newline so the template's surrounding whitespace is consistent
-            if (sb.Length > 0 && sb[sb.Length - 1] == '\n')
-            {
-                sb.Length--;
-            }
-
-            return sb.ToString();
+            sb.AppendLine();
         }
+        // Remove trailing newline so the template's surrounding whitespace is consistent
+        if (sb.Length > 0 && sb[sb.Length - 1] == '\n')
+        {
+            sb.Length--;
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Generates method binding statements for all [Schema] methods, grouped by (viewField, memberName).
+    /// RemoveAllListeners is called once per group, followed by AddListener for each method.
+    /// Each statement is prefixed with <paramref name="indent"/>.
+    /// </summary>
+    public string WriteMethodBindings(string indent)
+    {
+        var orderedGroups = new List<(string ViewField, string MemberName, List<string> Methods)>();
+        var groups = new Dictionary<(string, string), List<string>>();
+
+        for (var i = 0; i < Context.SchemaMethods.Count; i++)
+        {
+            var (methodName, binding) = Context.SchemaMethods[i];
+            var viewField = MethodAssignments[i];
+            var (_, memberName) = SplitBindingPath(binding.BindingPath);
+            var key = (viewField, memberName);
+
+            if (!groups.TryGetValue(key, out var methods))
+            {
+                methods = new List<string>();
+                groups.Add(key, methods);
+                orderedGroups.Add((viewField, memberName, methods));
+            }
+            methods.Add(methodName);
+        }
+
+        var sb = new StringBuilder();
+        foreach (var (viewField, memberName, methods) in orderedGroups)
+        {
+            sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".RemoveAllListeners();");
+            sb.AppendLine();
+            foreach (var methodName in methods)
+            {
+                sb.Append(indent).Append(viewField).Append('.').Append(memberName).Append(".AddListener(_viewModel.").Append(methodName).Append(");");
+                sb.AppendLine();
+            }
+        }
+        // Remove trailing newline so the template's surrounding whitespace is consistent
+        if (sb.Length > 0 && sb[sb.Length - 1] == '\n')
+        {
+            sb.Length--;
+        }
+
+        return sb.ToString();
     }
 }

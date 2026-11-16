@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Microsoft.CodeAnalysis;
 
 namespace Bindings;
@@ -7,17 +8,38 @@ public sealed class GenerationContext(
     string @namespace,
     bool canGenerate,
     string accessibility,
-    (string Accessibility, string TypeKeyword, string TypeName)[] containingTypes,
-    bool isStruct,
-    bool isReadOnly,
+    IReadOnlyList<(string Accessibility, string TypeKeyword, string TypeName)> containingTypes,
+    GenerationContext.ViewModelTypeKind type,
     bool requireBindImplementation,
     bool alreadySerializable,
-    (string TypeFullName, string FieldName, string TypeOfName)[] requiredFields,
-    (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] schemaFields,
-    (string MethodName, string BindingPath, int Id, string Tooltip)[] schemaMethods,
-    (DiagnosticDescriptor Descriptor, Location Location, string[] Args)[] diagnostics,
+    IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> requiredFields,
+    IReadOnlyList<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)> schemaFields,
+    IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)> schemaMethods,
+    IReadOnlyList<Diagnostic> diagnostics,
     bool generateVContainerInjector = false)
 {
+    /// <summary>
+    /// Binding arguments of a Schema attribute. Format is empty for method bindings.
+    /// </summary>
+    public readonly struct BindingInfo(string bindingPath, int id, string format, string tooltip)
+    {
+        public readonly string BindingPath = bindingPath;
+        public readonly int Id = id;
+        public readonly string Format = format;
+        public readonly string Tooltip = tooltip;
+    }
+
+    /// <summary>
+    /// Supported ViewModel declaration kinds, including struct mutability.
+    /// </summary>
+    public enum ViewModelTypeKind : byte
+    {
+        Invalid = 0,
+        Class = 1,
+        Struct = 2,
+        ReadOnlyStruct = 3,
+    }
+
     /// <summary>
     /// Class name of the target type.
     /// </summary>
@@ -45,18 +67,12 @@ public sealed class GenerationContext(
     /// Each entry holds the declared accessibility keyword, type keyword ("class" or "struct"),
     /// and simple type name.
     /// </summary>
-    public readonly (string Accessibility, string TypeKeyword, string TypeName)[] ContainingTypes = containingTypes;
+    public readonly IReadOnlyList<(string Accessibility, string TypeKeyword, string TypeName)> ContainingTypes = containingTypes;
 
     /// <summary>
-    /// Whether the target is a struct. When false, the target is a class.
+    /// Declaration kind of the target, including struct mutability.
     /// </summary>
-    public readonly bool IsStruct = isStruct;
-
-    /// <summary>
-    /// Whether the target is a struct with the readonly modifier.
-    /// When true, no set accessor is generated for [Schema] field properties.
-    /// </summary>
-    public readonly bool IsReadOnly = isReadOnly;
+    public readonly ViewModelTypeKind Type = type;
 
     /// <summary>
     /// Argument of ViewModelAttribute (requireBindImplementation).
@@ -76,24 +92,24 @@ public sealed class GenerationContext(
     /// of each required field or property, in declaration order.
     /// TypeOfName excludes nullable reference annotations while preserving nullable value types.
     /// </summary>
-    public readonly (string TypeFullName, string FieldName, string TypeOfName)[] RequiredFields = requiredFields;
+    public readonly IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> RequiredFields = requiredFields;
 
     /// <summary>
     /// Attribute arguments for each field annotated with SchemaAttribute, in declaration order.
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same member.
     /// </summary>
-    public readonly (string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)[] SchemaFields = schemaFields;
+    public readonly IReadOnlyList<(string FieldName, string FieldTypeName, BindingInfo Binding)> SchemaFields = schemaFields;
 
     /// <summary>
     /// Attribute arguments for each method annotated with SchemaAttribute, in declaration order.
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same method.
-    /// Format is omitted because it is not needed for methods.
+    /// Binding.Format is empty because it is not needed for methods.
     /// </summary>
-    public readonly (string MethodName, string BindingPath, int Id, string Tooltip)[] SchemaMethods = schemaMethods;
+    public readonly IReadOnlyList<(string MethodName, BindingInfo Binding)> SchemaMethods = schemaMethods;
 
     /// <summary>
     /// Diagnostics collected during metadata extraction (BND001, BND002, BND004).
     /// These are reported in RegisterSourceOutput so they appear in the IDE/build output.
     /// </summary>
-    public readonly (DiagnosticDescriptor Descriptor, Location Location, string[] Args)[] Diagnostics = diagnostics;
+    public readonly IReadOnlyList<Diagnostic> Diagnostics = diagnostics;
 }

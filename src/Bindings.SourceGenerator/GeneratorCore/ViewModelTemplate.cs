@@ -17,22 +17,23 @@ namespace Bindings.GeneratorCore {
         public virtual string TransformText() {
             this.GenerationEnvironment = null;
             this.Write("#nullable enable\n");
- if (HasNamespace) { 
+ if (HasNamespace) {
             this.Write("namespace ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
- } 
- foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) {
+ }
+ for (var i = 0; i < Context.ContainingTypes.Count; i++) {
+    var (accessibility, typeKeyword, typeName) = Context.ContainingTypes[i];
             this.Write(this.ToStringHelper.ToStringWithCulture( accessibility ));
             this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
             this.Write("\n{\n");
- } 
- if (!Context.AlreadySerializable) { 
+ }
+ if (!Context.AlreadySerializable) {
             this.Write("#if UNITY_EDITOR\n[global::System.Serializable]\n#endif\n");
- } 
+ }
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
             this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( TypeKeyword ));
@@ -50,37 +51,38 @@ namespace Bindings.GeneratorCore {
                     "");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
             this.Write(";\n");
- if (!Context.IsReadOnly) { 
+ if (Context.Type != GenerationContext.ViewModelTypeKind.ReadOnlyStruct) {
             this.Write("        [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtim" +
                     "e.CompilerServices.MethodImplOptions.AggressiveInlining)]\n        set\n        {\n" +
                     "            ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
             this.Write(" = value;\n            PublishRebindMessage();\n        }\n");
- } 
+ }
             this.Write("    }\n");
- } 
+ }
             this.Write("\n    public ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write("(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ConstructorParamList ));
             this.Write(")\n    {\n");
- foreach (var field in Context.RequiredFields) { 
+ for (var i = 0; i < Context.RequiredFields.Count; i++) {
+    var field = Context.RequiredFields[i];
             this.Write("        ");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
             this.Write(" = ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(field.FieldName) ));
             this.Write(";\n");
- } 
+ }
             this.Write("        _publisher = publisher;\n");
- if (!Context.IsStruct) { 
+ if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {
             this.Write("        OnPostConstruct();\n");
- } 
+ }
             this.Write("    }\n\n    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Run" +
                     "time.CompilerServices.MethodImplOptions.AggressiveInlining)]\n    public void Not" +
                     "ifyCompletedBind() => OnPostBind();\n\n    partial void OnPostBind();\n");
- if (!Context.IsStruct) { 
+ if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {
             this.Write("\n    partial void OnPostConstruct();\n");
- } 
+ }
             this.Write("\n    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.C" +
                     "ompilerServices.MethodImplOptions.AggressiveInlining)]\n    private void PublishR" +
                     "ebindMessage()\n    {\n        _publisher.PublishRebindMessage<");
@@ -96,7 +98,8 @@ if (Context.GenerateVContainerInjector) {
             return new ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
             this.Write("(\n");
-foreach (var field in Context.RequiredFields) {
+for (var i = 0; i < Context.RequiredFields.Count; i++) {
+    var field = Context.RequiredFields[i];
             this.Write("                (");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.TypeFullName ));
             this.Write(")global::VContainer.IObjectResolverExtensions.ResolveOrParameter(resolver, typeof" +
@@ -117,12 +120,12 @@ foreach (var field in Context.RequiredFields) {
 ");
 }
             this.Write("}\n");
- foreach (var _ in Context.ContainingTypes) { 
+ for (var i = 0; i < Context.ContainingTypes.Count; i++) {
             this.Write("}\n");
- } 
- if (HasNamespace) { 
+ }
+ if (HasNamespace) {
             this.Write("}\n");
- } 
+ }
             return this.GenerationEnvironment.ToString();
         }
         

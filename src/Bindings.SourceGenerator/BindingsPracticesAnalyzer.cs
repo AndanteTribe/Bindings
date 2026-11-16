@@ -297,7 +297,7 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        IOperation current = context.Operation;
+        var current = context.Operation;
         while (current.Parent is IConversionOperation or IParenthesizedOperation)
         {
             current = current.Parent;

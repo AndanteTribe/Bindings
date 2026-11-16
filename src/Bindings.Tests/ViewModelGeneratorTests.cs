@@ -405,7 +405,7 @@ namespace VContainer
                 candidate.Name == "GetAccessibilityKeyword"
                 && candidate.GetParameters().Length == 4
                 && candidate.GetParameters()[0].ParameterType == typeof(INamedTypeSymbol));
-        var diagnostics = new List<(DiagnosticDescriptor Descriptor, Location Location, string[] Args)>();
+        var diagnostics = new List<Diagnostic>();
         var result = Assert.IsType<(string Keyword, bool IsSupported)>(method.Invoke(
             null,
             new object[] { missingType, missingTypeSyntax.GetLocation(), "MissingViewModel", diagnostics }));
@@ -413,8 +413,7 @@ namespace VContainer
         Assert.Equal(string.Empty, result.Keyword);
         Assert.False(result.IsSupported);
 
-        var diagnosticData = Assert.Single(diagnostics);
-        var diagnostic = Diagnostic.Create(diagnosticData.Descriptor, diagnosticData.Location, diagnosticData.Args);
+        var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("BND004", diagnostic.Id);
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("NotApplicable", diagnostic.GetMessage());
@@ -843,6 +842,59 @@ namespace Bindings.Sample
             ?.GetText().ToString();
         Assert.NotNull(viewSource);
         Assert.Contains("[global::UnityEngine.Tooltip(\"Increment\")]", viewSource);
+    }
+
+    [Theory]
+    [InlineData("", "Later", "Later", false)]
+    [InlineData("Same", "Same", "Same", false)]
+    [InlineData("First", "Second", "First", true)]
+    [InlineData("First", "", "First", false)]
+    [InlineData("", "", "", false)]
+    public void SharedFieldAndMethodResolveTooltipInFieldFirstOrder(
+        string fieldTooltip, string methodTooltip, string expectedTooltip, bool hasConflict)
+    {
+        var userCode = $$"""
+            namespace Bindings.Sample
+            {
+                [Bindings.ViewModel]
+                public partial class SharedTooltipViewModel
+                {
+                    [Bindings.Schema("UnityEngine.UI.Button.onClick", id: 1, tooltip: "{{methodTooltip}}")]
+                    public void Click() { }
+
+                    [Bindings.Schema("UnityEngine.UI.Button.interactable", id: 1, tooltip: "{{fieldTooltip}}")]
+                    private bool _enabled;
+                }
+            }
+            """;
+
+        var (_, viewSource) = RunGenerator(userCode, out var runResult);
+
+        Assert.NotNull(viewSource);
+        Assert.DoesNotContain(runResult.Diagnostics, static diagnostic => diagnostic.Id == "CS8785");
+        var conflicts = runResult.Diagnostics.Where(static diagnostic => diagnostic.Id == "BND003").ToArray();
+        if (hasConflict)
+        {
+            var conflict = Assert.Single(conflicts);
+            Assert.Equal(DiagnosticSeverity.Error, conflict.Severity);
+            Assert.Contains("_enabledButton", conflict.GetMessage());
+        }
+        else
+        {
+            Assert.Empty(conflicts);
+        }
+
+        Assert.Equal(1, viewSource.Split("private global::UnityEngine.UI.Button ").Length - 1);
+        Assert.Contains("_enabledButton.onClick.AddListener(_viewModel.Click);", viewSource);
+        if (expectedTooltip.Length == 0)
+        {
+            Assert.DoesNotContain("[global::UnityEngine.Tooltip(", viewSource);
+        }
+        else
+        {
+            Assert.Contains($"[global::UnityEngine.Tooltip(\"{expectedTooltip}\")]", viewSource);
+            Assert.Equal(1, viewSource.Split("[global::UnityEngine.Tooltip(").Length - 1);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -1555,6 +1607,41 @@ namespace Bindings.Sample
     // -------------------------------------------------------------------------
     // Field and method with same explicit id share one View field (Case B combined)
     // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InterleavedComponentTypesPreserveNamingDeclarationAndBindingOrder()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class InterleavedViewModel
+    {
+        [Bindings.Schema(""First.Widget.Value"", tooltip: ""First binding"")]
+        [Bindings.Schema(""Second.Widget.Value"", tooltip: ""Second binding"")]
+        [Bindings.Schema(""First.Widget.Value"", tooltip: ""Third binding"")]
+        private int _value;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        // Names are assigned by type group, while declarations and bindings retain schema order.
+        var firstDeclaration = viewSource.IndexOf("private global::First.Widget _valueWidget1");
+        var secondDeclaration = viewSource.IndexOf("private global::Second.Widget _valueWidget3");
+        var thirdDeclaration = viewSource.IndexOf("private global::First.Widget _valueWidget2");
+        Assert.True(firstDeclaration >= 0);
+        Assert.True(secondDeclaration > firstDeclaration);
+        Assert.True(thirdDeclaration > secondDeclaration);
+
+        var firstBinding = viewSource.IndexOf("_valueWidget1.Value = _viewModel.Value;");
+        var secondBinding = viewSource.IndexOf("_valueWidget3.Value = _viewModel.Value;");
+        var thirdBinding = viewSource.IndexOf("_valueWidget2.Value = _viewModel.Value;");
+        Assert.True(firstBinding >= 0);
+        Assert.True(secondBinding > firstBinding);
+        Assert.True(thirdBinding > secondBinding);
+    }
 
     [Fact]
     public void FieldAndMethodWithSameExplicitIdShareViewField()

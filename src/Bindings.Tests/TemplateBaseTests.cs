@@ -36,22 +36,21 @@ public class TemplateBaseTests
     private static GenerationContext MinimalContext(
         string className = "Count1ViewModel",
         string ns = "Test.Space",
-        bool isStruct = false,
-        bool isReadOnly = false) =>
+        GenerationContext.ViewModelTypeKind type = GenerationContext.ViewModelTypeKind.Class,
+        IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)>? schemaMethods = null) =>
         new GenerationContext(
             className: className,
             @namespace: ns,
             canGenerate: true,
             accessibility: "public",
             containingTypes: Array.Empty<(string, string, string)>(),
-            isStruct: isStruct,
-            isReadOnly: isReadOnly,
+            type: type,
             requireBindImplementation: false,
             alreadySerializable: false,
             requiredFields: Array.Empty<(string, string, string)>(),
-            schemaFields: Array.Empty<(string, string, string, int, string, string)>(),
-            schemaMethods: Array.Empty<(string, string, int, string)>(),
-            diagnostics: Array.Empty<(DiagnosticDescriptor, Location, string[])>());
+            schemaFields: Array.Empty<(string, string, GenerationContext.BindingInfo)>(),
+            schemaMethods: schemaMethods ?? Array.Empty<(string, GenerationContext.BindingInfo)>(),
+            diagnostics: Array.Empty<Diagnostic>());
 
     private static ViewTemplate MinimalViewTemplate() =>
         new ViewTemplate(
@@ -59,6 +58,34 @@ public class TemplateBaseTests
             Array.Empty<string>(),
             Array.Empty<string>(),
             Array.Empty<(string, string, string)>());
+
+    [Fact]
+    public void MethodBindingsPreserveGroupAndListenerOrderForInterleavedEvents()
+    {
+        var template = new ViewTemplate(
+            MinimalContext(schemaMethods:
+            [
+                ("First", new("Example.Control.onClick", 0, "", "")),
+                ("Second", new("Example.Control.onSubmit", 0, "", "")),
+                ("Third", new("Example.Control.onClick", 0, "", "")),
+                ("Fourth", new("Example.Control.onClick", 1, "", "")),
+            ]),
+            Array.Empty<string>(),
+            ["_control", "_control", "_control", "_other"],
+            Array.Empty<(string, string, string)>());
+
+        var expected = string.Join(Environment.NewLine,
+            "    _control.onClick.RemoveAllListeners();",
+            "    _control.onClick.AddListener(_viewModel.First);",
+            "    _control.onClick.AddListener(_viewModel.Third);",
+            "    _control.onSubmit.RemoveAllListeners();",
+            "    _control.onSubmit.AddListener(_viewModel.Second);",
+            "    _other.onClick.RemoveAllListeners();",
+            "    _other.onClick.AddListener(_viewModel.Fourth);");
+
+        // The writer removes the final LF but retains CR on Windows.
+        Assert.Equal((expected + Environment.NewLine).TrimEnd('\n'), template.WriteMethodBindings("    "));
+    }
 
     // -------------------------------------------------------------------------
     // ViewModelTemplateBase: Session property get/set

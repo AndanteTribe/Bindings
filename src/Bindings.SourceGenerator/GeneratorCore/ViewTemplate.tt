@@ -1,41 +1,42 @@
 <#@ template debug="false" hostspecific="false" linePragmas="false" language="C#" #>
 <#@ import namespace="Bindings.GeneratorCore" #>
 #nullable enable
-<# if (HasNamespace) { #>
+<# if (HasNamespace) {#>
 namespace <#= Context.Namespace #>
 {
-<# } #>
-<# foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) {#>
+<# }#>
+<# for (var i = 0; i < Context.ContainingTypes.Count; i++) {
+    var (accessibility, typeKeyword, typeName) = Context.ContainingTypes[i];#>
 <#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
-<# } #>
+<# }#>
 [global::System.Serializable]
 <#= Context.Accessibility #> sealed partial class <#= ViewClassName #> : global::Bindings.IView<<#= ViewModelFullName #>>
 {
     [global::System.NonSerialized]
     private <#= ViewModelFullName #> _viewModel<#= VmFieldInit #>;
-<# foreach (var field in OrderedFields) { #>
+<# foreach (var field in OrderedFields) {#>
 
-<# if (!string.IsNullOrEmpty(field.Tooltip)) { #>
+<# if (!string.IsNullOrEmpty(field.Tooltip)) {#>
     [global::UnityEngine.Tooltip("<#= field.Tooltip #>")]
-<# } #>
+<# }#>
     [global::UnityEngine.SerializeField]
     private global::<#= field.TypePart #> <#= field.FieldName #> = null!;
-<# } #>
+<# }#>
 
     [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     void global::Bindings.IView<<#= ViewModelFullName #>>.Initialize(<#= ViewModelFullName #> viewModel)
     {
         _viewModel = viewModel;
     }
-<# if (!Context.RequireBindImplementation) { #>
+<# if (!Context.RequireBindImplementation) {#>
 
     global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(global::System.Threading.CancellationToken _)
     {
         BindAll();
         return default;
     }
-<# } #>
+<# }#>
 
     private void BindAll()
     {
@@ -47,22 +48,23 @@ namespace <#= Context.Namespace #>
 
     partial void OnPostBind();
 }
-<# foreach (var _ in Context.ContainingTypes) { #>
+<# for (var i = 0; i < Context.ContainingTypes.Count; i++) {#>
 }
-<# } #>
-<# if (HasNamespace) { #>
+<# }#>
+<# if (HasNamespace) {#>
 }
-<# } #>
+<# }#>
 
 #if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
-<# if (HasNamespace) { #>
+<# if (HasNamespace) {#>
 namespace <#= Context.Namespace #>
 {
-<# } #>
-<# foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) {#>
+<# }#>
+<# for (var i = 0; i < Context.ContainingTypes.Count; i++) {
+    var (accessibility, typeKeyword, typeName) = Context.ContainingTypes[i];#>
 <#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
-<# } #>
+<# }#>
 <#= Context.Accessibility #> sealed partial class <#= ViewClassName #> : global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>
 {
     void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
@@ -73,10 +75,10 @@ namespace <#= Context.Namespace #>
         _viewModel.NotifyCompletedBind();
     }
 }
-<# foreach (var _ in Context.ContainingTypes) { #>
+<# for (var i = 0; i < Context.ContainingTypes.Count; i++) {#>
 }
-<# } #>
-<# if (HasNamespace) { #>
+<# }#>
+<# if (HasNamespace) {#>
 }
-<# } #>
+<# }#>
 #endif
