@@ -1,19 +1,20 @@
 <#@ template debug="false" hostspecific="false" linePragmas="false" language="C#" #>
 <#@ import namespace="Bindings.GeneratorCore" #>
 #nullable enable
-<# if (HasNamespace) { #>
+<# if (HasNamespace) {#>
 namespace <#= Context.Namespace #>
 {
-<# } #>
-<# foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) {#>
+<# }#>
+<# for (var i = 0; i < Context.ContainingTypes.Count; i++) {
+    var (accessibility, typeKeyword, typeName) = Context.ContainingTypes[i];#>
 <#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
-<# } #>
-<# if (!Context.AlreadySerializable) { #>
+<# }#>
+<# if (!Context.AlreadySerializable) {#>
 #if UNITY_EDITOR
 [global::System.Serializable]
 #endif
-<# } #>
+<# }#>
 <#= Context.Accessibility #> partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
     private readonly global::Bindings.IMvvmPublisher _publisher;
@@ -23,36 +24,37 @@ namespace <#= Context.Namespace #>
     {
         [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         get => <#= schemaField.FieldName #>;
-<# if (!Context.IsReadOnly) { #>
+<# if (Context.Type != GenerationContext.ViewModelTypeKind.ReadOnlyStruct) {#>
         [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         set
         {
             <#= schemaField.FieldName #> = value;
             PublishRebindMessage();
         }
-<# } #>
+<# }#>
     }
-<# } #>
+<# }#>
 
     public <#= Context.ClassName #>(<#= ConstructorParamList #>)
     {
-<# foreach (var field in Context.RequiredFields) { #>
+<# for (var i = 0; i < Context.RequiredFields.Count; i++) {
+    var field = Context.RequiredFields[i];#>
         <#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
-<# } #>
+<# }#>
         _publisher = publisher;
-<# if (!Context.IsStruct) { #>
+<# if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {#>
         OnPostConstruct();
-<# } #>
+<# }#>
     }
 
     [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     public void NotifyCompletedBind() => OnPostBind();
 
     partial void OnPostBind();
-<# if (!Context.IsStruct) { #>
+<# if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {#>
 
     partial void OnPostConstruct();
-<# } #>
+<# }#>
 
     [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
     private void PublishRebindMessage()
@@ -67,7 +69,8 @@ namespace <#= Context.Namespace #>
         public object CreateInstance(global::VContainer.IObjectResolver resolver, global::System.Collections.Generic.IReadOnlyList<global::VContainer.IInjectParameter> parameters)
         {
             return new <#= ViewModelFullName #>(
-<#foreach (var field in Context.RequiredFields) {#>
+<#for (var i = 0; i < Context.RequiredFields.Count; i++) {
+    var field = Context.RequiredFields[i];#>
                 (<#= field.TypeFullName #>)global::VContainer.IObjectResolverExtensions.ResolveOrParameter(resolver, typeof(<#= field.TypeOfName #>), "<#= ToParamName(field.FieldName) #>", parameters),
 <#}#>
                 (global::Bindings.IMvvmPublisher)global::VContainer.IObjectResolverExtensions.ResolveOrParameter(resolver, typeof(global::Bindings.IMvvmPublisher), "publisher", parameters));
@@ -80,9 +83,9 @@ namespace <#= Context.Namespace #>
     }
 <#}#>
 }
-<# foreach (var _ in Context.ContainingTypes) { #>
+<# for (var i = 0; i < Context.ContainingTypes.Count; i++) {#>
 }
-<# } #>
-<# if (HasNamespace) { #>
+<# }#>
+<# if (HasNamespace) {#>
 }
-<# } #>
+<# }#>

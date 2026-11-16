@@ -35,9 +35,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             static (ctx, data) =>
             {
                 // Report all diagnostics collected during the transform phase.
-                foreach (var (descriptor, location, args) in data.Diagnostics)
+                for (var i = 0; i < data.Diagnostics.Count; i++)
                 {
-                    ctx.ReportDiagnostic(Diagnostic.Create(descriptor, location, [.. args]));
+                    ctx.ReportDiagnostic(data.Diagnostics[i]);
                 }
 
                 if (!data.CanGenerate)
@@ -71,7 +71,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var compilation = ctx.SemanticModel.Compilation;
         var requiredAttribute = compilation.GetTypeByMetadataName(TypeNames.RequiredAttribute);
         var schemaAttribute = compilation.GetTypeByMetadataName(TypeNames.SchemaAttribute);
-        var isStruct = typeSymbol.TypeKind == TypeKind.Struct;
+        var viewModelType = typeSymbol switch
+        {
+            { TypeKind: TypeKind.Struct, IsReadOnly: true } => GenerationContext.ViewModelTypeKind.ReadOnlyStruct,
+            { TypeKind: TypeKind.Struct } => GenerationContext.ViewModelTypeKind.Struct,
+            _ => GenerationContext.ViewModelTypeKind.Class,
+        };
         var typeLocation = ctx.TargetNode.GetLocation();
 
         // 1. Extract [ViewModel] attribute argument (requireBindImplementation)
@@ -85,34 +90,33 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : typeSymbol.ContainingNamespace.ToDisplayString();
 
         // 4. Validate accessibility
-        var diagnostics = new List<(DiagnosticDescriptor, Location, string[])>();
+        var diagnostics = new List<Diagnostic>();
         var (accessibility, canGenerate) = GetAccessibilityKeyword(typeSymbol, typeLocation, typeSymbol.Name, diagnostics);
 
         // 5. Collect containing types (outermost first)
-        var containingTypesList = new List<(string Accessibility, string TypeKeyword, string TypeName)>();
+        var containingTypes = new List<(string Accessibility, string TypeKeyword, string TypeName)>();
         var enclosing = typeSymbol.ContainingType;
         while (enclosing != null)
         {
             var keyword = enclosing.TypeKind == TypeKind.Struct ? "struct" : "class";
             var (enclosingAccessibility, isSupported) = GetAccessibilityKeyword(enclosing, typeLocation, typeSymbol.Name, diagnostics);
             canGenerate = canGenerate && isSupported;
-            containingTypesList.Insert(0, (enclosingAccessibility, keyword, enclosing.Name));
+            containingTypes.Insert(0, (enclosingAccessibility, keyword, enclosing.Name));
             enclosing = enclosing.ContainingType;
         }
-        var containingTypes = containingTypesList.ToArray();
 
         // 6. Validate the ViewModel class name
         if (TemplateHelpers.GetViewName(typeSymbol.Name) == null)
         {
-            diagnostics.Add((DiagnosticDescriptors.Bnd001, typeLocation, [typeSymbol.Name]));
+            diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd001, typeLocation, typeSymbol.Name));
             canGenerate = false;
         }
 
         // 7. Walk members to collect [Required] / [Schema] information
         // [Schema] is only valid on fields and methods; properties are excluded.
         var requiredFields = new List<(string TypeFullName, string FieldName, string TypeOfName)>();
-        var schemaFields = new List<(string FieldName, string FieldTypeName, string BindingPath, int Id, string Format, string Tooltip)>();
-        var schemaMethods = new List<(string MethodName, string BindingPath, int Id, string Tooltip)>();
+        var schemaFields = new List<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)>();
+        var schemaMethods = new List<(string MethodName, GenerationContext.BindingInfo Binding)>();
 
         foreach (var member in typeSymbol.GetMembers())
         {
@@ -138,16 +142,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             if (id < -1)
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
-                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, [id.ToString()]));
+                                diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd002, attrLoc, id.ToString()));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaFields.Add((
                                 FieldName: field.Name,
                                 FieldTypeName: field.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
-                                BindingPath: GetBindingPath(attr),
-                                Id: id,
-                                Format: GetSchemaFormat(attr),
-                                Tooltip: GetSchemaTooltip(attr)));
+                                Binding: new GenerationContext.BindingInfo(
+                                    bindingPath: GetBindingPath(attr),
+                                    id: id,
+                                    format: GetSchemaFormat(attr),
+                                    tooltip: GetSchemaTooltip(attr))));
                         }
                     }
                     break;
@@ -178,14 +183,16 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                             if (id < -1)
                             {
                                 var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
-                                diagnostics.Add((DiagnosticDescriptors.Bnd002, attrLoc, [id.ToString()]));
+                                diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd002, attrLoc, id.ToString()));
                                 id = -1; // treat as unset to avoid further errors
                             }
                             schemaMethods.Add((
                                 MethodName: method.Name,
-                                BindingPath: GetBindingPath(attr),
-                                Id: id,
-                                Tooltip: GetSchemaTooltip(attr)));
+                                Binding: new GenerationContext.BindingInfo(
+                                    bindingPath: GetBindingPath(attr),
+                                    id: id,
+                                    format: string.Empty,
+                                    tooltip: GetSchemaTooltip(attr))));
                         }
                     }
                     break;
@@ -199,14 +206,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             canGenerate: canGenerate,
             accessibility: accessibility,
             containingTypes: containingTypes,
-            isStruct: isStruct,
-            isReadOnly: typeSymbol.IsReadOnly,
+            type: viewModelType,
             requireBindImplementation: requireBind,
             alreadySerializable: alreadySerializable,
-            requiredFields: requiredFields.ToArray(),
-            schemaFields: schemaFields.ToArray(),
-            schemaMethods: schemaMethods.ToArray(),
-            diagnostics: diagnostics.ToArray(),
+            requiredFields: requiredFields,
+            schemaFields: schemaFields,
+            schemaMethods: schemaMethods,
+            diagnostics: diagnostics,
             generateVContainerInjector: CanGenerateVContainerInjector(compilation, typeSymbol));
     }
 
@@ -263,12 +269,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var builder = new StringBuilder();
         if (!string.IsNullOrEmpty(context.Namespace))
         {
-            builder.Append(context.Namespace).Append('.');
+            _ = builder.Append(context.Namespace).Append('.');
         }
 
-        for (var i = 0; i < context.ContainingTypes.Length; i++)
+        for (var i = 0; i < context.ContainingTypes.Count; i++)
         {
-            builder.Append(context.ContainingTypes[i].TypeName).Append('.');
+            _ = builder.Append(context.ContainingTypes[i].TypeName).Append('.');
         }
 
         return builder.Append(typeName).Append(".g.cs").ToString();
@@ -282,7 +288,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         INamedTypeSymbol typeSymbol,
         Location fallbackLocation,
         string viewModelName,
-        List<(DiagnosticDescriptor, Location, string[])> diagnostics)
+        List<Diagnostic> diagnostics)
     {
         var keyword = GetAccessibilityKeyword(typeSymbol.DeclaredAccessibility);
         if (keyword != null)
@@ -291,14 +297,12 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         }
 
         var location = typeSymbol.Locations.Length > 0 ? typeSymbol.Locations[0] : fallbackLocation;
-        diagnostics.Add((
+        diagnostics.Add(Diagnostic.Create(
             DiagnosticDescriptors.Bnd004,
             location,
-            [
-                typeSymbol.ToDisplayString(),
-                typeSymbol.DeclaredAccessibility.ToString(),
-                viewModelName,
-            ]));
+            typeSymbol.ToDisplayString(),
+            typeSymbol.DeclaredAccessibility.ToString(),
+            viewModelName));
         return (string.Empty, false);
     }
 
@@ -307,25 +311,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// </summary>
     private static string? GetAccessibilityKeyword(Accessibility accessibility)
     {
-        switch (accessibility)
+        return accessibility switch
         {
-            case Accessibility.NotApplicable:
-                return null;
-            case Accessibility.Private:
-                return "private";
-            case Accessibility.ProtectedAndInternal:
-                return "private protected";
-            case Accessibility.Protected:
-                return "protected";
-            case Accessibility.Internal:
-                return "internal";
-            case Accessibility.ProtectedOrInternal:
-                return "protected internal";
-            case Accessibility.Public:
-                return "public";
-            default:
-                return null;
-        }
+            Accessibility.NotApplicable => null,
+            Accessibility.Private => "private",
+            Accessibility.ProtectedAndInternal => "private protected",
+            Accessibility.Protected => "protected",
+            Accessibility.Internal => "internal",
+            Accessibility.ProtectedOrInternal => "protected internal",
+            Accessibility.Public => "public",
+            _ => null,
+        };
     }
 
     /// <summary>
@@ -461,136 +457,105 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         HashSet<string> ConflictingTooltipFields)
         BuildComponentFieldAssignments(GenerationContext data)
     {
-        var fieldCount = data.SchemaFields.Length;
-        var methodCount = data.SchemaMethods.Length;
+        var fieldCount = data.SchemaFields.Count;
+        var methodCount = data.SchemaMethods.Count;
 
         var fieldAssignments = new string[fieldCount];
         var methodAssignments = new string[methodCount];
 
-        // Pre-compute the type part for each schema entry
-        var fieldTypeParts = new string[fieldCount];
-        var methodTypeParts = new string[methodCount];
+        // Collect entries directly into type groups, preserving first appearance order.
+        var entriesByType = new Dictionary<string, List<(bool, int, int, string, string)>>();
+        var orderedTypeGroups = new List<(string, List<(bool, int, int, string, string)>)>();
         for (var i = 0; i < fieldCount; i++)
         {
-            fieldTypeParts[i] = GetComponentTypePart(data.SchemaFields[i].BindingPath);
+            var (fieldName, _, binding) = data.SchemaFields[i];
+            AddEntry(binding, false, i, fieldName);
         }
 
         for (var i = 0; i < methodCount; i++)
         {
-            methodTypeParts[i] = GetComponentTypePart(data.SchemaMethods[i].BindingPath);
+            var (methodName, binding) = data.SchemaMethods[i];
+            AddEntry(binding, true, i, methodName);
         }
 
-        // Build an ordered list of unique type parts (fields first, then methods)
-        var typePartSet = new HashSet<string>();
-        var typePartOrder = new List<string>();
-        for (var i = 0; i < fieldCount; i++)
+        void AddEntry(GenerationContext.BindingInfo binding, bool isMethod, int index, string memberName)
         {
-            if (typePartSet.Add(fieldTypeParts[i]))
+            var typePart = GetComponentTypePart(binding.BindingPath);
+            if (!entriesByType.TryGetValue(typePart, out var entries))
             {
-                typePartOrder.Add(fieldTypeParts[i]);
+                entries = [];
+                entriesByType.Add(typePart, entries);
+                orderedTypeGroups.Add((typePart, entries));
             }
-        }
-
-        for (var i = 0; i < methodCount; i++)
-        {
-            if (typePartSet.Add(methodTypeParts[i]))
-            {
-                typePartOrder.Add(methodTypeParts[i]);
-            }
+            entries.Add((isMethod, index, binding.Id, binding.Tooltip, memberName));
         }
 
         var componentGroups = new List<(
+            string TypePart,
             string CandidateName,
             List<(bool IsMethod, int Index, string Tooltip)> Entries)>();
 
         // Build logical component groups. An explicit id groups entries within the same component type;
         // each unset id represents an independent component.
-        foreach (var typePart in typePartOrder)
+        foreach (var (typePart, entries) in orderedTypeGroups)
         {
             var componentBase = TypePartToFieldBase(typePart);
 
-            // Collect entries belonging to this type part (fields first, then methods, in appearance order)
-            var entries = new List<(bool IsMethod, int Index, int Id, string Tooltip, string MemberName)>();
-            for (var i = 0; i < fieldCount; i++)
-            {
-                if (fieldTypeParts[i] == typePart)
-                {
-                    entries.Add((
-                        false,
-                        i,
-                        data.SchemaFields[i].Id,
-                        data.SchemaFields[i].Tooltip,
-                        data.SchemaFields[i].FieldName));
-                }
-            }
-
-            for (var i = 0; i < methodCount; i++)
-            {
-                if (methodTypeParts[i] == typePart)
-                {
-                    entries.Add((
-                        true,
-                        i,
-                        data.SchemaMethods[i].Id,
-                        data.SchemaMethods[i].Tooltip,
-                        data.SchemaMethods[i].MethodName));
-                }
-            }
-
             var explicitGroupIndexes = new Dictionary<int, int>();
-            foreach (var entry in entries)
+            foreach (var (isMethod, index, id, tooltip, memberName) in entries)
             {
-                if (entry.Id >= 0 && explicitGroupIndexes.TryGetValue(entry.Id, out var groupIndex))
+                if (id >= 0 && explicitGroupIndexes.TryGetValue(id, out var groupIndex))
                 {
-                    componentGroups[groupIndex].Entries.Add((entry.IsMethod, entry.Index, entry.Tooltip));
+                    componentGroups[groupIndex].Entries.Add((isMethod, index, tooltip));
                     continue;
                 }
 
-                var candidateName = BuildComponentFieldNameCandidate(entry.MemberName, componentBase);
+                var candidateName = BuildComponentFieldNameCandidate(memberName, componentBase);
                 var groupEntries = new List<(bool IsMethod, int Index, string Tooltip)>
                 {
-                    (entry.IsMethod, entry.Index, entry.Tooltip),
+                    (isMethod, index, tooltip),
                 };
-                componentGroups.Add((candidateName, groupEntries));
+                componentGroups.Add((typePart, candidateName, groupEntries));
 
-                if (entry.Id >= 0)
+                if (id >= 0)
                 {
-                    explicitGroupIndexes.Add(entry.Id, componentGroups.Count - 1);
+                    explicitGroupIndexes.Add(id, componentGroups.Count - 1);
                 }
             }
         }
 
         var candidateCounts = new Dictionary<string, int>();
-        foreach (var group in componentGroups)
+        foreach (var (_, candidateName, _) in componentGroups)
         {
-            candidateCounts.TryGetValue(group.CandidateName, out var count);
-            candidateCounts[group.CandidateName] = count + 1;
+            _ = candidateCounts.TryGetValue(candidateName, out var count);
+            candidateCounts[candidateName] = count + 1;
         }
 
-        // Track tooltip per assigned View field name (first non-empty value wins)
-        var fieldTooltips = new Dictionary<string, string>();
+        // Retain the parsed type and resolved tooltip for each assigned View field.
+        var fieldMetadata = new Dictionary<string, (string, string)>();
         // Track fields that have conflicting tooltip values (HashSet for O(1) lookup)
         var conflictingTooltipFields = new HashSet<string>();
         var candidateNumbers = new Dictionary<string, int>();
         var usedFieldNames = new HashSet<string>();
 
-        foreach (var group in componentGroups)
+        foreach (var (typePart, candidateName, entries) in componentGroups)
         {
-            var fieldName = group.CandidateName;
+            var fieldName = candidateName;
             if (candidateCounts[fieldName] > 1 || !usedFieldNames.Add(fieldName))
             {
-                candidateNumbers.TryGetValue(group.CandidateName, out var number);
+                _ = candidateNumbers.TryGetValue(candidateName, out var number);
                 do
                 {
                     number++;
-                    fieldName = group.CandidateName + number;
+                    fieldName = candidateName + number;
                 }
                 while (!usedFieldNames.Add(fieldName));
 
-                candidateNumbers[group.CandidateName] = number;
+                candidateNumbers[candidateName] = number;
             }
 
-            foreach (var entry in group.Entries)
+            var resolvedTooltip = string.Empty;
+            foreach (var entry in entries)
             {
                 Assign(entry, fieldName, fieldAssignments, methodAssignments);
                 var tooltip = entry.Tooltip;
@@ -599,16 +564,17 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                     continue;
                 }
 
-                if (!fieldTooltips.TryGetValue(fieldName, out var existingTooltip))
+                if (string.IsNullOrEmpty(resolvedTooltip))
                 {
-                    fieldTooltips[fieldName] = tooltip;
+                    resolvedTooltip = tooltip;
                 }
-                else if (existingTooltip != tooltip)
+                else if (resolvedTooltip != tooltip)
                 {
                     // HashSet.Add is a no-op when the element already exists
-                    conflictingTooltipFields.Add(fieldName);
+                    _ = conflictingTooltipFields.Add(fieldName);
                 }
             }
+            fieldMetadata.Add(fieldName, (typePart, resolvedTooltip));
         }
 
         // Build the ordered field declaration list (deduplicated, initial-appearance order)
@@ -619,8 +585,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             var fn = fieldAssignments[i];
             if (seenNames.Add(fn))
             {
-                fieldTooltips.TryGetValue(fn, out var tt);
-                orderedFields.Add((fieldTypeParts[i], fn, tt ?? string.Empty));
+                var (typePart, tooltip) = fieldMetadata[fn];
+                orderedFields.Add((typePart, fn, tooltip));
             }
         }
         for (var i = 0; i < methodCount; i++)
@@ -628,8 +594,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             var fn = methodAssignments[i];
             if (seenNames.Add(fn))
             {
-                fieldTooltips.TryGetValue(fn, out var tt);
-                orderedFields.Add((methodTypeParts[i], fn, tt ?? string.Empty));
+                var (typePart, tooltip) = fieldMetadata[fn];
+                orderedFields.Add((typePart, fn, tooltip));
             }
         }
 
@@ -701,7 +667,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         string[] methodAssignments,
         List<(string TypePart, string FieldName, string Tooltip)> orderedFields)
     {
-        var template = new ViewTemplate(context, fieldAssignments, methodAssignments, orderedFields.ToArray());
+        var template = new ViewTemplate(context, fieldAssignments, methodAssignments, [.. orderedFields]);
         return SourceText.From(template.TransformText(), Encoding.UTF8);
     }
 }

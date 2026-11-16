@@ -211,7 +211,7 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
         {
             lock (helpers)
             {
-                helpers.Add(method);
+                _ = helpers.Add(method);
             }
         }
 
@@ -297,7 +297,7 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
             return;
         }
 
-        IOperation current = context.Operation;
+        var current = context.Operation;
         while (current.Parent is IConversionOperation or IParenthesizedOperation)
         {
             current = current.Parent;
@@ -328,7 +328,7 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
 
         lock (used)
         {
-            used.Add(member);
+            _ = used.Add(member);
         }
     }
 

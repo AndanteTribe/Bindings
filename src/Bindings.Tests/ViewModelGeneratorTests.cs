@@ -160,7 +160,7 @@ namespace UnityEngine.UI
             new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(ValueTask).Assembly.Location),
             },
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
@@ -228,7 +228,7 @@ namespace VContainer
         // Namespace declarations in the user source must not enclose the VContainer stubs.
         if (ns.Length > 0)
         {
-            code = "namespace Example { " + code.Substring(ns.Length) + " }";
+            code = "namespace Example { " + code[ns.Length..] + " }";
             (source, _) = RunGenerator(code + VContainerStubs);
         }
         Assert.Equal(expected, source!.Contains("private sealed class __BindingsInjector : global::VContainer.IInjector"));
@@ -323,7 +323,7 @@ namespace VContainer
             new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(ValueTask).Assembly.Location),
             },
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
@@ -345,13 +345,11 @@ namespace VContainer
             new[]
             {
                 MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
-                MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.ValueTask).Assembly.Location),
+                MetadataReference.CreateFromFile(typeof(ValueTask).Assembly.Location),
             },
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
-        return finalCompilation.GetDiagnostics()
-            .Where(static d => d.Severity == DiagnosticSeverity.Error)
-            .ToArray();
+        return [.. finalCompilation.GetDiagnostics().Where(static d => d.Severity == DiagnosticSeverity.Error)];
     }
 
     [Theory]
@@ -405,16 +403,15 @@ namespace VContainer
                 candidate.Name == "GetAccessibilityKeyword"
                 && candidate.GetParameters().Length == 4
                 && candidate.GetParameters()[0].ParameterType == typeof(INamedTypeSymbol));
-        var diagnostics = new List<(DiagnosticDescriptor Descriptor, Location Location, string[] Args)>();
-        var result = Assert.IsType<(string Keyword, bool IsSupported)>(method.Invoke(
+        var diagnostics = new List<Diagnostic>();
+        var (keyword, isSupported) = Assert.IsType<(string, bool)>(method.Invoke(
             null,
-            new object[] { missingType, missingTypeSyntax.GetLocation(), "MissingViewModel", diagnostics }));
+            [missingType, missingTypeSyntax.GetLocation(), "MissingViewModel", diagnostics]));
 
-        Assert.Equal(string.Empty, result.Keyword);
-        Assert.False(result.IsSupported);
+        Assert.Equal(string.Empty, keyword);
+        Assert.False(isSupported);
 
-        var diagnosticData = Assert.Single(diagnostics);
-        var diagnostic = Diagnostic.Create(diagnosticData.Descriptor, diagnosticData.Location, diagnosticData.Args);
+        var diagnostic = Assert.Single(diagnostics);
         Assert.Equal("BND004", diagnostic.Id);
         Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
         Assert.Contains("NotApplicable", diagnostic.GetMessage());
@@ -441,7 +438,7 @@ namespace Bindings.Sample
     }
 }";
 
-        RunGenerator(userCode, out var runResult, out var compilation);
+        _ = RunGenerator(userCode, out var runResult, out var compilation);
         var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
 
         Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
@@ -469,7 +466,7 @@ public sealed class PrimitiveHost
     private int _count;
 }";
 
-        RunGenerator(userCode, out _, out var compilation);
+        _ = RunGenerator(userCode, out _, out var compilation);
 
         Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
     }
@@ -492,7 +489,7 @@ public sealed class ViewModelHost
     private CountReferenceViewModel _viewModel;
 }";
 
-        RunGenerator(userCode, out var runResult, out var compilation);
+        _ = RunGenerator(userCode, out var runResult, out var compilation);
         var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
 
         Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
@@ -520,7 +517,7 @@ public sealed class PrimitiveHost
     private object _value;
 }";
 
-        RunGenerator(userCode, out _, out var compilation);
+        _ = RunGenerator(userCode, out _, out var compilation);
 
         Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
     }
@@ -834,7 +831,7 @@ namespace Bindings.Sample
         // BND003 should be reported
         var bnd003 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND003");
         Assert.NotNull(bnd003);
-        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd003.Severity);
+        Assert.Equal(DiagnosticSeverity.Error, bnd003.Severity);
         Assert.Contains("_incrementButton", bnd003.GetMessage());
 
         // View field should still be generated with the first tooltip
@@ -843,6 +840,59 @@ namespace Bindings.Sample
             ?.GetText().ToString();
         Assert.NotNull(viewSource);
         Assert.Contains("[global::UnityEngine.Tooltip(\"Increment\")]", viewSource);
+    }
+
+    [Theory]
+    [InlineData("", "Later", "Later", false)]
+    [InlineData("Same", "Same", "Same", false)]
+    [InlineData("First", "Second", "First", true)]
+    [InlineData("First", "", "First", false)]
+    [InlineData("", "", "", false)]
+    public void SharedFieldAndMethodResolveTooltipInFieldFirstOrder(
+        string fieldTooltip, string methodTooltip, string expectedTooltip, bool hasConflict)
+    {
+        var userCode = $$"""
+            namespace Bindings.Sample
+            {
+                [Bindings.ViewModel]
+                public partial class SharedTooltipViewModel
+                {
+                    [Bindings.Schema("UnityEngine.UI.Button.onClick", id: 1, tooltip: "{{methodTooltip}}")]
+                    public void Click() { }
+
+                    [Bindings.Schema("UnityEngine.UI.Button.interactable", id: 1, tooltip: "{{fieldTooltip}}")]
+                    private bool _enabled;
+                }
+            }
+            """;
+
+        var (_, viewSource) = RunGenerator(userCode, out var runResult);
+
+        Assert.NotNull(viewSource);
+        Assert.DoesNotContain(runResult.Diagnostics, static diagnostic => diagnostic.Id == "CS8785");
+        var conflicts = runResult.Diagnostics.Where(static diagnostic => diagnostic.Id == "BND003").ToArray();
+        if (hasConflict)
+        {
+            var conflict = Assert.Single(conflicts);
+            Assert.Equal(DiagnosticSeverity.Error, conflict.Severity);
+            Assert.Contains("_enabledButton", conflict.GetMessage());
+        }
+        else
+        {
+            Assert.Empty(conflicts);
+        }
+
+        Assert.Equal(1, viewSource.Split("private global::UnityEngine.UI.Button ").Length - 1);
+        Assert.Contains("_enabledButton.onClick.AddListener(_viewModel.Click);", viewSource);
+        if (expectedTooltip.Length == 0)
+        {
+            Assert.DoesNotContain("[global::UnityEngine.Tooltip(", viewSource);
+        }
+        else
+        {
+            Assert.Contains($"[global::UnityEngine.Tooltip(\"{expectedTooltip}\")]", viewSource);
+            Assert.Equal(1, viewSource.Split("[global::UnityEngine.Tooltip(").Length - 1);
+        }
     }
 
     // -------------------------------------------------------------------------
@@ -930,7 +980,7 @@ namespace Bindings.Sample
         // BND001 must be reported as an Error
         var bnd001 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND001");
         Assert.NotNull(bnd001);
-        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd001.Severity);
+        Assert.Equal(DiagnosticSeverity.Error, bnd001.Severity);
         Assert.Contains(name, bnd001.GetMessage());
         Assert.Contains("does not end with \"ViewModel\"", bnd001.GetMessage(CultureInfo.InvariantCulture));
         Assert.Contains("optionally followed by ASCII digits (0-9)", bnd001.GetMessage(CultureInfo.InvariantCulture));
@@ -986,7 +1036,7 @@ namespace Bindings.Sample
     [InlineData("struct", "CountViewModelExtra")]
     public void TypesWithoutViewModelAttributeDoNotRequireSuffix(string kind, string name)
     {
-        RunGenerator($"public {kind} {name} {{ }}", out var result);
+        _ = RunGenerator($"public {kind} {name} {{ }}", out var result);
 
         Assert.Empty(result.Diagnostics);
         Assert.Empty(result.Results.Single().GeneratedSources);
@@ -995,7 +1045,7 @@ namespace Bindings.Sample
     [Fact]
     public void BND001InvalidSuffixDoesNotStopOtherViewModels()
     {
-        RunGenerator("""
+        _ = RunGenerator("""
             [Bindings.ViewModel] public partial class CounterViewModelExtra { }
             [Bindings.ViewModel] public partial class CounterViewModel { }
             """, out var result);
@@ -1046,7 +1096,7 @@ namespace Bindings.Sample
         // BND002 must be reported as an Error
         var bnd002 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND002");
         Assert.NotNull(bnd002);
-        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd002.Severity);
+        Assert.Equal(DiagnosticSeverity.Error, bnd002.Severity);
         Assert.Contains("-2", bnd002.GetMessage());
     }
 
@@ -1342,7 +1392,7 @@ namespace Second
     public partial class SharedViewModel { }
 }";
 
-        RunGenerator(userCode, out var runResult);
+        _ = RunGenerator(userCode, out var runResult);
 
         Assert.DoesNotContain(runResult.Diagnostics, static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var hintNames = runResult.GeneratedTrees
@@ -1378,7 +1428,7 @@ namespace Common
     }
 }";
 
-        RunGenerator(userCode, out var runResult);
+        _ = RunGenerator(userCode, out var runResult);
 
         Assert.DoesNotContain(runResult.Diagnostics, static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var hintNames = runResult.GeneratedTrees
@@ -1548,13 +1598,48 @@ namespace Bindings.Sample
 
         var bnd002 = runResult.Diagnostics.FirstOrDefault(static d => d.Id == "BND002");
         Assert.NotNull(bnd002);
-        Assert.Equal(Microsoft.CodeAnalysis.DiagnosticSeverity.Error, bnd002.Severity);
+        Assert.Equal(DiagnosticSeverity.Error, bnd002.Severity);
         Assert.Contains("-3", bnd002.GetMessage());
     }
 
     // -------------------------------------------------------------------------
     // Field and method with same explicit id share one View field (Case B combined)
     // -------------------------------------------------------------------------
+
+    [Fact]
+    public void InterleavedComponentTypesPreserveNamingDeclarationAndBindingOrder()
+    {
+        const string userCode = @"
+namespace Bindings.Sample
+{
+    [Bindings.ViewModel]
+    public partial class InterleavedViewModel
+    {
+        [Bindings.Schema(""First.Widget.Value"", tooltip: ""First binding"")]
+        [Bindings.Schema(""Second.Widget.Value"", tooltip: ""Second binding"")]
+        [Bindings.Schema(""First.Widget.Value"", tooltip: ""Third binding"")]
+        private int _value;
+    }
+}";
+
+        var (_, viewSource) = RunGenerator(userCode);
+
+        Assert.NotNull(viewSource);
+        // Names are assigned by type group, while declarations and bindings retain schema order.
+        var firstDeclaration = viewSource.IndexOf("private global::First.Widget _valueWidget1");
+        var secondDeclaration = viewSource.IndexOf("private global::Second.Widget _valueWidget3");
+        var thirdDeclaration = viewSource.IndexOf("private global::First.Widget _valueWidget2");
+        Assert.True(firstDeclaration >= 0);
+        Assert.True(secondDeclaration > firstDeclaration);
+        Assert.True(thirdDeclaration > secondDeclaration);
+
+        var firstBinding = viewSource.IndexOf("_valueWidget1.Value = _viewModel.Value;");
+        var secondBinding = viewSource.IndexOf("_valueWidget3.Value = _viewModel.Value;");
+        var thirdBinding = viewSource.IndexOf("_valueWidget2.Value = _viewModel.Value;");
+        Assert.True(firstBinding >= 0);
+        Assert.True(secondBinding > firstBinding);
+        Assert.True(thirdBinding > secondBinding);
+    }
 
     [Fact]
     public void FieldAndMethodWithSameExplicitIdShareViewField()

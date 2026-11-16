@@ -17,19 +17,20 @@ namespace Bindings.GeneratorCore {
         public virtual string TransformText() {
             this.GenerationEnvironment = null;
             this.Write("#nullable enable\n");
- if (HasNamespace) { 
+ if (HasNamespace) {
             this.Write("namespace ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
- } 
- foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) {
+ }
+ for (var i = 0; i < Context.ContainingTypes.Count; i++) {
+    var (accessibility, typeKeyword, typeName) = Context.ContainingTypes[i];
             this.Write(this.ToStringHelper.ToStringWithCulture( accessibility ));
             this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
             this.Write("\n{\n");
- } 
+ }
             this.Write("[global::System.Serializable]\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
             this.Write(" sealed partial class ");
@@ -41,19 +42,19 @@ namespace Bindings.GeneratorCore {
             this.Write(" _viewModel");
             this.Write(this.ToStringHelper.ToStringWithCulture( VmFieldInit ));
             this.Write(";\n");
- foreach (var field in OrderedFields) { 
+ foreach (var field in OrderedFields) {
             this.Write("\n");
- if (!string.IsNullOrEmpty(field.Tooltip)) { 
+ if (!string.IsNullOrEmpty(field.Tooltip)) {
             this.Write("    [global::UnityEngine.Tooltip(\"");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.Tooltip ));
             this.Write("\")]\n");
- } 
+ }
             this.Write("    [global::UnityEngine.SerializeField]\n    private global::");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.TypePart ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
             this.Write(" = null!;\n");
- } 
+ }
             this.Write("\n    [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.C" +
                     "ompilerServices.MethodImplOptions.AggressiveInlining)]\n    void global::Bindings" +
                     ".IView<");
@@ -61,37 +62,38 @@ namespace Bindings.GeneratorCore {
             this.Write(">.Initialize(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewModelFullName ));
             this.Write(" viewModel)\n    {\n        _viewModel = viewModel;\n    }\n");
- if (!Context.RequireBindImplementation) { 
+ if (!Context.RequireBindImplementation) {
             this.Write("\n    global::System.Threading.Tasks.ValueTask global::Bindings.IView.BindAsync(gl" +
                     "obal::System.Threading.CancellationToken _)\n    {\n        BindAll();\n        ret" +
                     "urn default;\n    }\n");
- } 
+ }
             this.Write("\n    private void BindAll()\n    {\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings("        ") ));
             this.Write("\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( WriteMethodBindings("        ") ));
             this.Write("\n        OnPostBind();\n        _viewModel.NotifyCompletedBind();\n    }\n\n    parti" +
                     "al void OnPostBind();\n}\n");
- foreach (var _ in Context.ContainingTypes) { 
+ for (var i = 0; i < Context.ContainingTypes.Count; i++) {
             this.Write("}\n");
- } 
- if (HasNamespace) { 
+ }
+ if (HasNamespace) {
             this.Write("}\n");
- } 
+ }
             this.Write("\n#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT\n");
- if (HasNamespace) { 
+ if (HasNamespace) {
             this.Write("namespace ");
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Namespace ));
             this.Write("\n{\n");
- } 
- foreach (var (accessibility, typeKeyword, typeName) in Context.ContainingTypes) {
+ }
+ for (var i = 0; i < Context.ContainingTypes.Count; i++) {
+    var (accessibility, typeKeyword, typeName) = Context.ContainingTypes[i];
             this.Write(this.ToStringHelper.ToStringWithCulture( accessibility ));
             this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeKeyword ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
             this.Write("\n{\n");
- } 
+ }
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
             this.Write(" sealed partial class ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ViewClassName ));
@@ -101,12 +103,12 @@ namespace Bindings.GeneratorCore {
                     "his);\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings("        ") ));
             this.Write("\n        OnPostBind();\n        _viewModel.NotifyCompletedBind();\n    }\n}\n");
- foreach (var _ in Context.ContainingTypes) { 
+ for (var i = 0; i < Context.ContainingTypes.Count; i++) {
             this.Write("}\n");
- } 
- if (HasNamespace) { 
+ }
+ if (HasNamespace) {
             this.Write("}\n");
- } 
+ }
             this.Write("#endif\n");
             return this.GenerationEnvironment.ToString();
         }
