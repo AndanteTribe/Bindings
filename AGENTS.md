@@ -68,7 +68,7 @@ Source Generator の診断を追加または変更するときは、実装だけ
 - `DiagnosticDescriptor.HelpLinkUri` は `https://github.com/AndanteTribe/Bindings/blob/{sha}/docs/diagnostics/{ID}.md` を指す。日本語への切り替えはページ内の相互リンクで行う。
 - Analyzer自身の `AssemblyInformationalVersionAttribute` を実行時に読み、SDKが `+` に続けて付与する40桁のGitコミットSHAを使用する。解析対象のCompilationや実行環境のGitを参照しない。SHAがない、または不正な形式の場合は `main` へフォールバックする。
 - `IncludeSourceRevisionInInformationalVersion=true` を維持する。ヘルプURLのためのAnalyzerのVersion設定・package.jsonとの同期・独自のURL定数生成は不要。
-- ローカルビルドもビルド元のコミットを参照し、未コミットの文書変更はリンク先に含まれない。リリース前に診断ページをmainへコミット・pushする。既存release.ymlはorigin/mainから作成したブランチでビルドするため、そのmainコミットの文書を参照でき、タグ公開を待つ必要はない。
+- ローカルビルドもビルド元のコミットを参照し、未コミットの文書変更はリンク先に含まれない。リリース前に診断ページを実行対象ブランチへコミット・pushする。release.ymlは手動実行時に選択したブランチからリリース用ブランチを作成し、同じブランチをPRのマージ先にする。そのコミットの文書を参照できるため、タグ公開を待つ必要はない。
 
 ## Source Generator の Release ビルドと Unity への DLL 配置
 
