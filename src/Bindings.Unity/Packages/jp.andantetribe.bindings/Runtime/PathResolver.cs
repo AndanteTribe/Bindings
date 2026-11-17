@@ -2,11 +2,12 @@
 #pragma warning disable IDE1006
 
 using System.Diagnostics.CodeAnalysis;
-using G_TMPro = global::TMPro;
-using G_UnityEngine = UnityEngine;
 
 namespace Bindings
 {
+    using G_UnityEngine = global::UnityEngine;
+    using G_TMPro = global::TMPro;
+
     /// <summary>
     /// Provides refactoring-safe Unity component member paths for <see cref="SchemaAttribute"/>.
     /// </summary>
