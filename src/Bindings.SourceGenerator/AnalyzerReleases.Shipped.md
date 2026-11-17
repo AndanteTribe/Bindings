@@ -18,3 +18,4 @@ BNDP001 | Bindings.Practices | Error | UseGeneratedSelfRebindHelper. [Documentat
 BNDP002 | Bindings.Practices | Error | ViewMustNotConstructViewModel. [Documentation](../../docs/diagnostics/BNDP002.md)
 BNDP003 | Bindings.Practices | Error | ViewModelMustNotMerelyAggregateViewModels. [Documentation](../../docs/diagnostics/BNDP003.md)
 BNDP004 | Bindings.Practices | Error | DoNotWrapSchemaPropertyAssignments. [Documentation](../../docs/diagnostics/BNDP004.md)
+BNDP005 | Bindings.Practices | Error | ViewModelsMustNotUseUiComponents. [Documentation](../../docs/diagnostics/BNDP005.md)
