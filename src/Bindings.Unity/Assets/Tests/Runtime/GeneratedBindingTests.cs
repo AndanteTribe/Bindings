@@ -51,7 +51,7 @@ namespace Bindings.Tests
     internal partial class IntegrationViewModel
     {
         [Schema(PathResolver.UnityEngine.UI.Image.fillAmount)]
-        private float _amount;
+        public partial float Amount { get; set; }
 
         public int Clicks { get; private set; }
 

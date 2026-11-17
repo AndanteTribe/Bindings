@@ -398,11 +398,12 @@ public class BindingsPracticesAnalyzerTests
 
     private sealed class GeneratorReference : AnalyzerReference
     {
+        private readonly ImmutableArray<ISourceGenerator> _generators = [new ViewModelGenerator().AsSourceGenerator()];
         public override string FullPath => string.Empty;
         public override object Id => typeof(GeneratorReference);
         public override ImmutableArray<DiagnosticAnalyzer> GetAnalyzers(string language) => ImmutableArray<DiagnosticAnalyzer>.Empty;
         public override ImmutableArray<DiagnosticAnalyzer> GetAnalyzersForAllLanguages() => ImmutableArray<DiagnosticAnalyzer>.Empty;
-        public override ImmutableArray<ISourceGenerator> GetGenerators(string language) => ImmutableArray.Create(new ViewModelGenerator().AsSourceGenerator());
+        public override ImmutableArray<ISourceGenerator> GetGenerators(string language) => _generators;
     }
 
     private static Document CreateDocument(AdhocWorkspace workspace, string source, bool useGenerator = false)

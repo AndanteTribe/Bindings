@@ -36,7 +36,7 @@ internal static class DiagnosticDescriptors
 
             for (var i = separator + 1; i < informationalVersion.Length; i++)
             {
-                if (informationalVersion[i] is not (>= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F'))
+                if (informationalVersion[i] is not ((>= '0' and <= '9') or (>= 'a' and <= 'f') or (>= 'A' and <= 'F')))
                 {
                     return;
                 }
@@ -133,16 +133,29 @@ internal static class DiagnosticDescriptors
             customTags: [Category]);
 
     /// <summary>
-    /// BND007: emitted when user code directly accesses a [Schema] field in a ViewModel.
+    /// BND008: emitted for unsupported Schema property declarations.
     /// </summary>
-    public static readonly DiagnosticDescriptor Bnd007 = new(
-            id: "BND007",
-            title: new LocalizableResourceString("Bnd007Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            messageFormat: new LocalizableResourceString("Bnd007Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+    public static readonly DiagnosticDescriptor Bnd008 = new(
+            id: "BND008",
+            title: new LocalizableResourceString("Bnd008Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+            messageFormat: new LocalizableResourceString("Bnd008Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
             category: Category,
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
-            helpLinkUri: Documentation.BaseUrl + "BND007.md",
+            helpLinkUri: Documentation.BaseUrl + "BND008.md",
+            customTags: [Category]);
+
+    /// <summary>
+    /// BND009: Schema property serialization is owned by the generator.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bnd009 = new(
+            id: "BND009",
+            title: new LocalizableResourceString("Bnd009Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+            messageFormat: new LocalizableResourceString("Bnd009Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+            category: Category,
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true,
+            helpLinkUri: Documentation.BaseUrl + "BND009.md",
             customTags: [Category]);
 
     /// <summary>

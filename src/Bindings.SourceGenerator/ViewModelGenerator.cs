@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Bindings.GeneratorCore;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -87,7 +89,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var alreadySerializable = typeSymbol.HasAttribute(compilation.GetTypeByMetadataName(TypeNames.SerializableAttribute));
 
         // 3. Namespace (empty string when the type is in the global namespace)
-        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : typeSymbol.ContainingNamespace.ToDisplayString();
+        var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace ? "" : typeSymbol.ContainingNamespace.ToDisplayString();
 
         // 4. Validate accessibility
         var diagnostics = new List<Diagnostic>();
@@ -113,9 +115,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         }
 
         // 7. Walk members to collect [Required] / [Schema] information
-        // [Schema] is only valid on fields and methods; properties are excluded.
+        // Schema bindings belong to partial property definitions and methods.
         var requiredFields = new List<(string TypeFullName, string FieldName, string TypeOfName)>();
-        var schemaFields = new List<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)>();
+        var schemaProperties = new List<(string PropertyName, string PropertyTypeName, string Modifiers, string Getter, string Setter, GenerationContext.BindingInfo Binding)>();
         var schemaMethods = new List<(string MethodName, GenerationContext.BindingInfo Binding)>();
 
         foreach (var member in typeSymbol.GetMembers())
@@ -135,31 +137,35 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 FieldName: field.Name,
                                 TypeOfName: field.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
                         }
-                        else if (attr.IsAttribute(schemaAttribute))
-                        {
-                            var id = GetSchemaId(attr);
-                            // BND002: id < -1 is invalid
-                            if (id < -1)
-                            {
-                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
-                                diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd002, attrLoc, id.ToString()));
-                                id = -1; // treat as unset to avoid further errors
-                            }
-                            schemaFields.Add((
-                                FieldName: field.Name,
-                                FieldTypeName: field.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
-                                Binding: new GenerationContext.BindingInfo(
-                                    bindingPath: GetBindingPath(attr),
-                                    id: id,
-                                    format: GetSchemaFormat(attr),
-                                    tooltip: GetSchemaTooltip(attr))));
-                        }
                     }
                     break;
                 }
-                // [Required] on properties is still supported; [Schema] on properties is excluded.
                 case IPropertySymbol prop:
                 {
+                    var declaration = prop.DeclaringSyntaxReferences.FirstOrDefault()?.GetSyntax(ct) as PropertyDeclarationSyntax;
+                    if (prop.HasAttribute(schemaAttribute) && !IsSupportedSchemaProperty(prop, declaration))
+                    {
+                        diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd008, prop.Locations.FirstOrDefault() ?? typeLocation, prop.Name));
+                        canGenerate = false;
+                        break;
+                    }
+
+                    if (prop.HasAttribute(schemaAttribute))
+                    {
+                        var serializeField = compilation.GetTypeByMetadataName(TypeNames.SerializeField);
+                        var semanticModel = compilation.GetSemanticModel(declaration!.SyntaxTree);
+                        foreach (var attribute in declaration.AttributeLists.SelectMany(static list => list.Attributes))
+                        {
+                            if (serializeField != null
+                                && semanticModel.GetSymbolInfo(attribute, ct).Symbol is IMethodSymbol constructor
+                                && SymbolEqualityComparer.Default.Equals(constructor.ContainingType, serializeField))
+                            {
+                                diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd009, attribute.GetLocation(), prop.Name));
+                                canGenerate = false;
+                            }
+                        }
+                    }
+
                     foreach (var attr in prop.GetAttributes())
                     {
                         if (attr.IsAttribute(requiredAttribute))
@@ -168,6 +174,30 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 TypeFullName: prop.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
                                 FieldName: prop.Name,
                                 TypeOfName: prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                        }
+                        else if (attr.IsAttribute(schemaAttribute))
+                        {
+                            var id = GetSchemaId(attr);
+                            if (id < -1)
+                            {
+                                var attrLoc = attr.ApplicationSyntaxReference?.GetSyntax(ct).GetLocation() ?? typeLocation;
+                                diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd002, attrLoc, id.ToString()));
+                                id = -1;
+                            }
+                            var getter = declaration!.AccessorList!.Accessors.First(static accessor => accessor.IsKind(SyntaxKind.GetAccessorDeclaration));
+                            var setter = declaration.AccessorList.Accessors.FirstOrDefault(static accessor =>
+                                accessor.IsKind(SyntaxKind.SetAccessorDeclaration) || accessor.IsKind(SyntaxKind.InitAccessorDeclaration));
+                            schemaProperties.Add((
+                                PropertyName: declaration.Identifier.Text,
+                                PropertyTypeName: prop.Type.ToDisplayString(s_fullyQualifiedNullableFormat),
+                                Modifiers: string.Join(" ", declaration.Modifiers.Select(static token => token.Text)),
+                                Getter: string.Join(" ", getter.Modifiers.Select(static token => token.Text).Concat(["get"])),
+                                Setter: setter == null ? "" : string.Join(" ", setter.Modifiers.Select(static token => token.Text).Concat([setter.Keyword.Text])),
+                                Binding: new GenerationContext.BindingInfo(
+                                    bindingPath: GetBindingPath(attr),
+                                    id: id,
+                                    format: GetSchemaFormat(attr),
+                                    tooltip: GetSchemaTooltip(attr))));
                         }
                     }
                     break;
@@ -191,7 +221,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 Binding: new GenerationContext.BindingInfo(
                                     bindingPath: GetBindingPath(attr),
                                     id: id,
-                                    format: string.Empty,
+                                    format: "",
                                     tooltip: GetSchemaTooltip(attr))));
                         }
                     }
@@ -210,11 +240,22 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             requireBindImplementation: requireBind,
             alreadySerializable: alreadySerializable,
             requiredFields: requiredFields,
-            schemaFields: schemaFields,
+            schemaProperties: schemaProperties,
             schemaMethods: schemaMethods,
             diagnostics: diagnostics,
             generateVContainerInjector: CanGenerateVContainerInjector(compilation, typeSymbol));
     }
+
+    private static bool IsSupportedSchemaProperty(IPropertySymbol property, PropertyDeclarationSyntax? declaration) =>
+        declaration != null
+        && declaration.Modifiers.Any(SyntaxKind.PartialKeyword)
+        && !property.IsStatic && !property.IsIndexer && !property.ReturnsByRef && !property.ReturnsByRefReadonly
+        && property.DeclaredAccessibility == Accessibility.Public
+        && property.GetMethod?.DeclaredAccessibility == Accessibility.Public
+        && declaration.AccessorList != null
+        && declaration.AccessorList.Accessors.All(static accessor => accessor.Body == null && accessor.ExpressionBody == null)
+        && !declaration.Modifiers.Any(SyntaxKind.AbstractKeyword)
+        && !declaration.Modifiers.Any(SyntaxKind.ExternKeyword);
 
     private static bool CanGenerateVContainerInjector(Compilation compilation, INamedTypeSymbol type)
     {
@@ -303,7 +344,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             typeSymbol.ToDisplayString(),
             typeSymbol.DeclaredAccessibility.ToString(),
             viewModelName));
-        return (string.Empty, false);
+        return ("", false);
     }
 
     /// <summary>
@@ -340,7 +381,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     {
         if (attr.ConstructorArguments.Length == 0)
         {
-            return string.Empty;
+            return "";
         }
 
         // String overload: first argument is the binding path string
@@ -359,7 +400,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             return idx >= 0 ? rawExpr.Substring(idx + keyword.Length) : rawExpr;
         }
 
-        return string.Empty;
+        return "";
     }
 
     /// <summary>
@@ -374,7 +415,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// Returns an empty string when no format is specified.
     /// </summary>
     private static string GetSchemaFormat(AttributeData attr) =>
-        attr.ConstructorArguments.Length > 2 && attr.ConstructorArguments[2].Value is string fmt ? fmt : string.Empty;
+        attr.ConstructorArguments.Length > 2 && attr.ConstructorArguments[2].Value is string fmt ? fmt : "";
 
     /// <summary>
     /// Retrieves the tooltip string from SchemaAttribute's ConstructorArguments.
@@ -384,7 +425,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// Returns an empty string when no tooltip is specified.
     /// </summary>
     private static string GetSchemaTooltip(AttributeData attr) =>
-        attr.ConstructorArguments.Length > 3 && attr.ConstructorArguments[3].Value is string tooltip ? tooltip : string.Empty;
+        attr.ConstructorArguments.Length > 3 && attr.ConstructorArguments[3].Value is string tooltip ? tooltip : "";
 
     // -------------------------------------------------------------------------
     // Identifier conversion helpers
@@ -432,7 +473,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     // -------------------------------------------------------------------------
 
     /// <summary>
-    /// Assigns a View component field name to each schema entry (SchemaField / SchemaMethod).
+    /// Assigns a View component field name to each schema entry (property / method).
     ///
     /// Each field name combines the ViewModel member name and the component type:
     ///   _{memberBase}{ComponentBase}
@@ -444,7 +485,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// different non-empty tooltip strings, the conflicting field names are returned in ConflictingTooltipFields.
     ///
     /// Return values:
-    ///   FieldAssignments[i]       — View field name corresponding to SchemaFields[i]
+    ///   FieldAssignments[i]       — View field name corresponding to SchemaProperties[i]
     ///   MethodAssignments[i]      — View field name corresponding to SchemaMethods[i]
     ///   OrderedFields             — (TypePart, FieldName, Tooltip) list of fields to declare in the View
     ///                               (deduplicated, initial-appearance order; tooltip is the first non-empty value)
@@ -457,7 +498,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         HashSet<string> ConflictingTooltipFields)
         BuildComponentFieldAssignments(GenerationContext data)
     {
-        var fieldCount = data.SchemaFields.Count;
+        var fieldCount = data.SchemaProperties.Count;
         var methodCount = data.SchemaMethods.Count;
 
         var fieldAssignments = new string[fieldCount];
@@ -468,8 +509,8 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var orderedTypeGroups = new List<(string, List<(bool, int, int, string, string)>)>();
         for (var i = 0; i < fieldCount; i++)
         {
-            var (fieldName, _, binding) = data.SchemaFields[i];
-            AddEntry(binding, false, i, fieldName);
+            var property = data.SchemaProperties[i];
+            AddEntry(property.Binding, false, i, property.PropertyName.TrimStart('@'));
         }
 
         for (var i = 0; i < methodCount; i++)
@@ -554,7 +595,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 candidateNumbers[candidateName] = number;
             }
 
-            var resolvedTooltip = string.Empty;
+            var resolvedTooltip = "";
             foreach (var entry in entries)
             {
                 Assign(entry, fieldName, fieldAssignments, methodAssignments);

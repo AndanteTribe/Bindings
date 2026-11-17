@@ -26,7 +26,7 @@ ViewModelのメソッドが、引数を自分自身の異なる公開Schemaプ�
 public partial class CounterViewModel
 {
     [Schema(PathResolver.TMPro.TMP_Text.text)]
-    private int _count;
+    public partial int Count { get; set; }
 
     public void SetCount(int count) => Count = count;
 }
@@ -53,7 +53,7 @@ viewModel.Count = count;
 
 - 全引数をそれぞれ異なるプロパティへ正確に1回ずつコピーし、未使用の引数がないこと。`ref`・`in`・`out` 引数は除外します。
 - プロパティが現在のインスタンス（`this`・無修飾・`base`）に属し、publicかつpublicの非init setterを持つこと。子や別インスタンスへの代入は対象外です。
-- プロパティ名と型が、そのプロパティの所属型で宣言したSchemaフィールドの生成名・型に対応すること。通常のプロパティ・フィールド直接書き込み・staticプロパティ・インデクサー・getterのみ・非公開setterは対象外です。
+- プロパティ自身が実際の Schema 属性を持つこと（partial プロパティの統合された属性も含みます）。Schema のないプロパティ・フィールド直接書き込み・staticプロパティ・インデクサー・getterのみ・非公開setterは対象外です。
 - 引数とプロパティの型が、nullable参照型注釈も含め一致すること。括弧は許可します。同じ型へのキャストも含め、明示的・暗黙的な変換があれば報告しません。
 - 本体全体が、引数ごとに1つの単純代入式文だけで構成されること。式形式のメソッドにも対応します。明示的なreturn・ローカル宣言・呼び出し・制御フロー・複合代入・引数やプロパティの重複がある場合は報告しません。
 

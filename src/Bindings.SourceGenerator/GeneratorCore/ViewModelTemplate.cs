@@ -41,22 +41,23 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write(" : global::Bindings.IViewModel\n{\n    private readonly global::Bindings.IMvvmPubli" +
                     "sher _publisher;\n");
- foreach (var schemaField in SchemaPropertyFields) {
-            this.Write("\n    public ");
-            this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldTypeName ));
+ foreach (var property in DistinctSchemaProperties) {
+            this.Write("\n#if UNITY_EDITOR\n    [field: global::UnityEngine.SerializeField]\n#endif\n    ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( property.Modifiers ));
             this.Write(" ");
-            this.Write(this.ToStringHelper.ToStringWithCulture( ToPropertyName(schemaField.FieldName) ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( property.PropertyTypeName ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( property.PropertyName ));
             this.Write("\n    {\n        [global::System.Runtime.CompilerServices.MethodImpl(global::System" +
-                    ".Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n        get => " +
-                    "");
-            this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
-            this.Write(";\n");
- if (Context.Type != GenerationContext.ViewModelTypeKind.ReadOnlyStruct) {
+                    ".Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]\n        ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( property.Getter ));
+            this.Write(" => field;\n");
+ if (property.Setter.Length > 0) {
             this.Write("        [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtim" +
-                    "e.CompilerServices.MethodImplOptions.AggressiveInlining)]\n        set\n        {\n" +
-                    "            ");
-            this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldName ));
-            this.Write(" = value;\n            PublishRebindMessage();\n        }\n");
+                    "e.CompilerServices.MethodImplOptions.AggressiveInlining)]\n        ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( property.Setter ));
+            this.Write("\n        {\n            field = value;\n            PublishRebindMessage();\n       " +
+                    " }\n");
  }
             this.Write("    }\n");
  }
@@ -64,7 +65,7 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write("(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ConstructorParamList ));
-            this.Write(")\n    {\n");
+            this.Write(")\n    {\n        _publisher = publisher;\n");
  for (var i = 0; i < Context.RequiredFields.Count; i++) {
     var field = Context.RequiredFields[i];
             this.Write("        ");
@@ -73,7 +74,6 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(field.FieldName) ));
             this.Write(";\n");
  }
-            this.Write("        _publisher = publisher;\n");
  if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {
             this.Write("        OnPostConstruct();\n");
  }

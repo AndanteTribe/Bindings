@@ -8,13 +8,11 @@ namespace Bindings.Sample
     [ViewModel]
     public partial class GaugeViewModel
     {
-        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text, tooltip: "最大値")]
-        private uint _max;
+        public partial uint Max { get; set; }
 
-        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text, tooltip: "現在値")]
-        private uint _current;
+        public partial uint Current { get; set; }
 
         public void AnimateTo(uint current)
         {

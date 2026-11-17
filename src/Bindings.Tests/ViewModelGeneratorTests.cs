@@ -16,6 +16,232 @@ namespace Bindings.Tests;
 /// </summary>
 public class ViewModelGeneratorTests
 {
+    [Theory]
+    [InlineData("public partial int Count { get; set; }")]
+    [InlineData("public partial int Count { get; private set; }")]
+    [InlineData("public partial int Count { get; init; }")]
+    [InlineData("public partial int Count { get; private init; }")]
+    [InlineData("public partial int Count { get; }")]
+    [InlineData("public virtual partial int Count { get; protected set; }")]
+    [InlineData("public partial int Count { get; set; } = 7;")]
+    [InlineData("public partial int @event { get; set; }")]
+    [InlineData("public partial int lowerCase { get; set; }")]
+    [InlineData("public partial int _value { get; set; }")]
+    [InlineData("public /* property */ partial int Count { get; private /* accessor */ set; }")]
+    [InlineData("public partial int Count { private set; get; }")]
+    public void PartialPropertySignaturesCompile(string property)
+    {
+        var (vm, view) = RunGenerator(
+            "[Bindings.ViewModel] public partial class TestViewModel { [Bindings.Schema(\"TMPro.TMP_Text.text\")] " + property + " }",
+            out var result, out var output);
+        Assert.Empty(result.Diagnostics);
+        Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        Assert.Contains("get => field;", vm!);
+        var definition = output.SyntaxTrees.SelectMany(static tree => tree.GetRoot().DescendantNodes())
+            .OfType<PropertyDeclarationSyntax>().First(static syntax => syntax.Modifiers.Any(SyntaxKind.PartialKeyword));
+        Assert.Contains("_viewModel." + definition.Identifier.Text, view!);
+    }
+
+    [Theory]
+    [InlineData("class", "get;")]
+    [InlineData("struct", "get;")]
+    [InlineData("struct", "get; set;")]
+    [InlineData("struct", "get; init;")]
+    [InlineData("readonly struct", "get;")]
+    public void RequiredPartialPropertiesCompileInClassesAndStructs(string kind, string accessors)
+    {
+        _ = RunGenerator($$"""
+            [Bindings.ViewModel] public partial {{kind}} TestViewModel
+            {
+                [Bindings.Required, Bindings.Schema("TMPro.TMP_Text.text")]
+                public partial int Count { {{accessors}} }
+            }
+            """.Replace("partial readonly struct", "readonly partial struct"),
+            out var result, out var output);
+        Assert.Empty(result.Diagnostics);
+        Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void PartialPropertiesAcrossFilesDoNotDependOnInputOrder(bool reverse)
+    {
+        var sources = new[]
+        {
+            "[Bindings.ViewModel] public partial class TestViewModel { }",
+            "public partial class TestViewModel { [Bindings.Schema(\"TMPro.TMP_Text.text\")] public partial int Count { get; set; } }",
+            "public partial class TestViewModel { public void Increment() { Count++; } }",
+        };
+        var compilation = BindingsUsageAnalyzerTests.CreateCompilation("")
+            .AddSyntaxTrees((reverse ? sources.Reverse() : sources).Select(static source => CSharpSyntaxTree.ParseText(source)));
+        var driver = CSharpGeneratorDriver.Create(new ViewModelGenerator()).RunGeneratorsAndUpdateCompilation(compilation, out var output, out var diagnostics);
+        Assert.Empty(diagnostics);
+        Assert.Equal(2, driver.GetRunResult().GeneratedTrees.Length);
+        Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+    }
+
+    [Theory]
+    [InlineData("public int Count { get; set; }")]
+    [InlineData("private partial int Count { get; set; }")]
+    [InlineData("public static partial int Count { get; set; }")]
+    [InlineData("public partial int Count { private get; set; }")]
+    [InlineData("public partial int Count { set; }")]
+    [InlineData("public partial int Count => 1;")]
+    [InlineData("public partial int Count { get => 1; set { } }")]
+    [InlineData("public partial int Count { get { return 1; } set; }")]
+    [InlineData("public abstract partial int Count { get; set; }")]
+    [InlineData("public extern partial int Count { get; set; }")]
+    [InlineData("public partial ref int Count { get; }")]
+    [InlineData("public partial ref readonly int Count { get; }")]
+    [InlineData("public partial int this[int index] { get; set; }")]
+    public void InvalidSchemaPropertiesStopOnlyTheirViewModel(string property)
+    {
+        var compilation = CSharpCompilation.Create("Invalid",
+            new[]
+            {
+                CSharpSyntaxTree.ParseText(AttributeStubs + RuntimeStubs),
+                CSharpSyntaxTree.ParseText("[Bindings.ViewModel] public partial class BadViewModel { [Bindings.Schema(\"TMPro.TMP_Text.text\")] " + property + " }"),
+                CSharpSyntaxTree.ParseText("[Bindings.ViewModel] public partial class GoodViewModel { }"),
+            }, new[] { MetadataReference.CreateFromFile(typeof(object).Assembly.Location) },
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var result = CSharpGeneratorDriver.Create(new ViewModelGenerator()).RunGenerators(compilation).GetRunResult();
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("BND008", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Contains("public instance partial property definition", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Contains("No source will be generated", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal(2, result.GeneratedTrees.Length);
+        Assert.All(result.GeneratedTrees, static tree => Assert.Contains("GoodView", tree.FilePath));
+    }
+
+    [Fact]
+    public void SchemaOnFieldsIsRejectedByAttributeUsage()
+    {
+        var (vm, _) = RunGenerator("""
+            [Bindings.ViewModel] public partial class TestViewModel
+            {
+                [Bindings.Schema("TMPro.TMP_Text.text")] private int _count;
+            }
+            """, out var result, out var output);
+        Assert.Empty(result.Diagnostics);
+        Assert.Contains(output.GetDiagnostics(), static diagnostic => diagnostic.Id == "CS0592");
+        Assert.DoesNotContain("partial int Count", vm!);
+    }
+
+    [Fact]
+    public void PartialPropertiesStoreValuesAndNotifyForRequiredSetAndInitAssignments()
+    {
+        _ = RunGenerator("""
+            [Bindings.ViewModel] public partial class TestViewModel
+            {
+                [Bindings.Required, Bindings.Schema("TMPro.TMP_Text.text")]
+                public partial int Count { get; set; }
+                [Bindings.Schema("TMPro.TMP_Text.text")]
+                public partial int Initial { get; init; } = 3;
+            }
+            public class Publisher : Bindings.IMvvmPublisher
+            {
+                public int Calls;
+                public void PublishRebindMessage<T>() where T : Bindings.IViewModel { Calls++; }
+                public void Publish<T>(T message) { }
+            }
+            public static class Entry
+            {
+                public static bool Verify()
+                {
+                    var publisher = new Publisher();
+                    var initial = new TestViewModel(0, publisher).Initial;
+                    var model = new TestViewModel(5, publisher) { Initial = 7 };
+                    model.Count = 5;
+                    model.Count++;
+                    return initial == 3 && model.Count == 6 && model.Initial == 7 && publisher.Calls == 5;
+                }
+            }
+            """, out var result, out var output);
+        Assert.Empty(result.Diagnostics);
+        using var stream = new System.IO.MemoryStream();
+        var emit = output.Emit(stream);
+        Assert.True(emit.Success, string.Join("\n", emit.Diagnostics));
+        var assembly = Assembly.Load(stream.ToArray());
+        Assert.Equal(true, assembly.GetType("Entry")!.GetMethod("Verify")!.Invoke(null, null));
+        var field = assembly.GetType("TestViewModel")!.GetField("<Initial>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        Assert.DoesNotContain(field.GetCustomAttributesData(), static attribute => attribute.AttributeType.FullName == "UnityEngine.SerializeField");
+    }
+
+    [Theory]
+    [InlineData(false, "get; set;")]
+    [InlineData(true, "get; set;")]
+    [InlineData(true, "get; private set;")]
+    [InlineData(true, "get; init;")]
+    [InlineData(true, "get;")]
+    public void SchemaBackingFieldSerializationIsEditorOnly(bool editor, string accessors)
+    {
+        var (source, _) = RunGenerator($$"""
+            [Bindings.ViewModel] public partial class TestViewModel
+            {
+                [Bindings.Schema("TMPro.TMP_Text.text")]
+                [Bindings.Schema("TMPro.TMP_Text.text")]
+                public partial int Count { {{accessors}} }
+            }
+            """, out var result, out var output);
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal(1, source!.Split("[field: global::UnityEngine.SerializeField]").Length - 1);
+        var options = CSharpParseOptions.Default.WithPreprocessorSymbols(editor ? new[] { "UNITY_EDITOR" } : System.Array.Empty<string>());
+        output = output.RemoveAllSyntaxTrees().AddSyntaxTrees(output.SyntaxTrees.Select(tree =>
+            CSharpSyntaxTree.ParseText(tree.GetText(), options, tree.FilePath)));
+        Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
+        var field = Assert.Single(output.GetTypeByMetadataName("TestViewModel")!.GetMembers().OfType<IFieldSymbol>(),
+            static field => field.AssociatedSymbol is IPropertySymbol);
+        Assert.Equal(editor ? 1 : 0, field.GetAttributes().Count(static attribute =>
+            attribute.AttributeClass?.ToDisplayString() == "UnityEngine.SerializeField"));
+    }
+
+    [Theory]
+    [InlineData("[field: UnityEngine.SerializeField]")]
+    [InlineData("[UnityEngine.SerializeField]")]
+    [InlineData("[property: UnityEngine.SerializeField]")]
+    [InlineData("[field: Serialized]")]
+    public void UserSchemaSerializationStopsOnlyItsViewModel(string attribute)
+    {
+        var compilation = BindingsUsageAnalyzerTests.CreateCompilation("")
+            .AddSyntaxTrees(
+                CSharpSyntaxTree.ParseText("[Bindings.ViewModel] public partial class BadViewModel { }"),
+                CSharpSyntaxTree.ParseText($$"""
+                    using Serialized = UnityEngine.SerializeField;
+                    public partial class BadViewModel
+                    {
+                        {{attribute}}
+                        [Bindings.Schema("TMPro.TMP_Text.text")]
+                        public partial int Count { get; set; }
+                    }
+                    [Bindings.ViewModel] public partial class GoodViewModel { }
+                    """));
+        var result = CSharpGeneratorDriver.Create(new ViewModelGenerator()).RunGenerators(compilation).GetRunResult();
+        var diagnostic = Assert.Single(result.Diagnostics);
+        Assert.Equal("BND009", diagnostic.Id);
+        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
+        Assert.Contains("Remove SerializeField", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Contains("No source will be generated", diagnostic.GetMessage(CultureInfo.InvariantCulture));
+        Assert.Equal(2, result.GeneratedTrees.Length);
+        Assert.All(result.GeneratedTrees, static tree => Assert.Contains("GoodView", tree.FilePath));
+    }
+
+    [Fact]
+    public void OtherAttributesAndNonSchemaSerializationRemainAllowed()
+    {
+        _ = RunGenerator("""
+            [Bindings.ViewModel] public partial class TestViewModel
+            {
+                [field: UnityEngine.SerializeField] public int Other { get; set; }
+                [field: System.Obsolete]
+                [Bindings.Schema("TMPro.TMP_Text.text")]
+                public partial int Count { get; set; }
+            }
+            """, out var result);
+        Assert.Empty(result.Diagnostics);
+    }
+
     // -------------------------------------------------------------------------
     // Stub definitions for testing (substitutes for Unity-dependent types)
     // -------------------------------------------------------------------------
@@ -35,7 +261,7 @@ namespace Bindings
     [AttributeUsage(AttributeTargets.Field | AttributeTargets.Property)]
     public sealed class RequiredAttribute : Attribute { }
 
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class SchemaAttribute : Attribute
     {
         public readonly string BindingPath;
@@ -428,7 +654,7 @@ namespace Bindings.Sample
     public partial class CountSerializedViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 
     public sealed class ViewModelHost
@@ -480,7 +706,7 @@ public sealed class PrimitiveHost
 public partial class CountReferenceViewModel
 {
     [Bindings.Schema(""TMPro.TMP_Text.text"")]
-    private int _count;
+    public partial int Count { get; set; }
 }
 
 public sealed class ViewModelHost
@@ -539,7 +765,7 @@ namespace Bindings.Sample
         private readonly object _model;
 
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
 
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
         public void Increment() { }
@@ -579,7 +805,7 @@ namespace Bindings.Sample
         private readonly object _model;
 
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
 
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
         public void Increment() { }
@@ -615,7 +841,7 @@ namespace Bindings.Sample
     public readonly partial struct CountReadOnlyViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private readonly int _count;
+        public partial int Count { get; }
     }
 }";
 
@@ -623,13 +849,13 @@ namespace Bindings.Sample
 
         Assert.NotNull(vmSource);
         // get accessor is generated
-        Assert.Contains("get => _count;", vmSource);
+        Assert.Contains("get => field;", vmSource);
         // set accessor is NOT generated (readonly struct)
         Assert.DoesNotContain("set", vmSource);
     }
 
     [Fact]
-    public void NullableReferenceSchemaFieldPreservesNullablePropertyType()
+    public void NullableReferenceSchemaPropertyPreservesNullableType()
     {
         const string userCode = @"
 #nullable enable
@@ -639,14 +865,14 @@ namespace Bindings.Sample
     public partial class CountNullableTextViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private string? _rightButtonText;
+        public partial string? RightButtonText { get; set; }
     }
 }";
 
         var (vmSource, _) = RunGenerator(userCode);
 
         Assert.NotNull(vmSource);
-        Assert.Contains("public string? RightButtonText", vmSource);
+        Assert.Contains("public partial string? RightButtonText", vmSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -666,7 +892,7 @@ namespace Bindings.Sample
     public partial class CountSingleViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
 
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"")]
         public void Increment() { }
@@ -706,7 +932,7 @@ namespace Bindings.Sample
     }
 
     [Fact]
-    public void MultipleSchemasOnSameFieldGenerateOnePropertyAndAllViewBindings()
+    public void MultipleSchemasOnSamePropertyGenerateOneImplementationAndAllViewBindings()
     {
         const string userCode = @"
 namespace Bindings.Sample
@@ -716,7 +942,7 @@ namespace Bindings.Sample
     {
         [Bindings.Schema(""UnityEngine.GameObject.activeSelf"")]
         [Bindings.Schema(""UnityEngine.Behaviour.enabled"")]
-        private bool _active;
+        public partial bool Active { get; set; }
     }
 }";
 
@@ -725,7 +951,7 @@ namespace Bindings.Sample
         Assert.NotNull(vmSource);
         Assert.NotNull(viewSource);
 
-        const string propertyDeclaration = "public bool Active";
+        const string propertyDeclaration = "public partial bool Active";
         Assert.Contains(propertyDeclaration, vmSource);
         Assert.Equal(
             vmSource.IndexOf(propertyDeclaration, System.StringComparison.Ordinal),
@@ -861,7 +1087,7 @@ namespace Bindings.Sample
                     public void Click() { }
 
                     [Bindings.Schema("UnityEngine.UI.Button.interactable", id: 1, tooltip: "{{fieldTooltip}}")]
-                    private bool _enabled;
+                    public partial bool Enabled { get; set; }
                 }
             }
             """;
@@ -910,7 +1136,7 @@ namespace Bindings.Sample
     public partial class CountSerializableViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -955,7 +1181,7 @@ namespace Bindings.Sample
     public partial class CountModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1071,7 +1297,7 @@ namespace Bindings.Sample
     public partial class CountViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"", id: -2)]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1114,7 +1340,7 @@ namespace Bindings.Sample
     public partial class CountRequireBindViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1140,7 +1366,7 @@ namespace Bindings.Sample
     public partial class CountDefaultBindViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1164,14 +1390,14 @@ namespace Bindings.Sample
     public partial struct CountStructViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
         var (vmSource, _) = RunGenerator(userCode);
 
         Assert.NotNull(vmSource);
-        Assert.Contains("get => _count;", vmSource);
+        Assert.Contains("get => field;", vmSource);
         Assert.Contains("set", vmSource);
         // Generated as struct, not class
         Assert.Contains("public partial struct CountStructViewModel", vmSource);
@@ -1191,7 +1417,7 @@ namespace Bindings.Sample
     public partial class CountDirectViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Image.fillAmount"")]
-        private float _progress;
+        public partial float Progress { get; set; }
     }
 }";
 
@@ -1217,7 +1443,7 @@ namespace Bindings.Sample
     public partial class RectSizeViewModel
     {
         [Bindings.Schema(""UnityEngine.RectTransform.rect.size"")]
-        private UnityEngine.Vector2 _size;
+        public partial UnityEngine.Vector2 Size { get; set; }
     }
 }";
 
@@ -1243,10 +1469,10 @@ namespace Bindings.Sample
     public partial class RectSizeViewModel
     {
         [Bindings.Schema(""UnityEngine.RectTransform.rect.size"", id: 1)]
-        private UnityEngine.Vector2 _size;
+        public partial UnityEngine.Vector2 Size { get; set; }
 
         [Bindings.Schema(""UnityEngine.RectTransform.sizeDelta"", id: 1)]
-        private UnityEngine.Vector2 _sizeDelta;
+        public partial UnityEngine.Vector2 SizeDelta { get; set; }
     }
 }";
 
@@ -1278,7 +1504,7 @@ namespace Bindings.Sample
     public partial class CountFormatViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"", format: ""N0"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1307,7 +1533,7 @@ namespace Bindings.Sample
     public partial class CountTrailingUnderscoreViewModel
     {
         [Bindings.Schema(""Bindings.Sample.Widget_.value"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1457,7 +1683,7 @@ namespace Common
 public partial class GlobalViewModel
 {
     [Bindings.Schema(""TMPro.TMP_Text.text"")]
-    private int _count;
+    public partial int Count { get; set; }
 }";
 
         var (vmSource, viewSource) = RunGenerator(userCode);
@@ -1488,7 +1714,7 @@ namespace Bindings.Sample
         public object Model { get; }
 
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1517,11 +1743,11 @@ namespace Bindings.Sample
         private readonly CounterModel _model;
 
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
 
         partial void OnPostConstruct()
         {
-            _count = _model.Count;
+            Count = _model.Count;
         }
     }
 }";
@@ -1618,7 +1844,7 @@ namespace Bindings.Sample
         [Bindings.Schema(""First.Widget.Value"", tooltip: ""First binding"")]
         [Bindings.Schema(""Second.Widget.Value"", tooltip: ""Second binding"")]
         [Bindings.Schema(""First.Widget.Value"", tooltip: ""Third binding"")]
-        private int _value;
+        public partial int Value { get; set; }
     }
 }";
 
@@ -1651,7 +1877,7 @@ namespace Bindings.Sample
     public partial class CountFieldMethodSharedViewModel
     {
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
-        private bool _interactable;
+        public partial bool Interactable { get; set; }
 
         [Bindings.Schema(""UnityEngine.UI.Button.onClick"", id: 1)]
         public void OnClick() { }
@@ -1683,7 +1909,7 @@ namespace Bindings.Sample
         public partial class Count1ViewModel
         {
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
-            private int _count;
+            public partial int Count { get; set; }
         }
     }
 }";
@@ -1700,7 +1926,7 @@ namespace Bindings.Sample
 
         // ViewModel body uses fixed 4-space indent
         Assert.Contains("    private readonly global::Bindings.IMvvmPublisher _publisher;", vmSource);
-        Assert.Contains("    public int Count", vmSource);
+        Assert.Contains("    public partial int Count", vmSource);
 
         // Fully-qualified name includes the containing type
         Assert.Contains("global::Bindings.Sample.Outer.Count1ViewModel", vmSource);
@@ -1729,7 +1955,7 @@ namespace Bindings.Sample
             public partial class Count1ViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
-                private int _count;
+                public partial int Count { get; set; }
             }
         }
     }
@@ -1768,7 +1994,7 @@ public partial class Outer
     public partial class Count1ViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1803,7 +2029,7 @@ namespace Bindings.Sample
     public partial class CountIndentViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1813,7 +2039,7 @@ namespace Bindings.Sample
 public partial class CountIndentGlobalViewModel
 {
     [Bindings.Schema(""TMPro.TMP_Text.text"")]
-    private int _count;
+    public partial int Count { get; set; }
 }";
 
         var (vmSourceWithNs, _) = RunGenerator(withNs);
@@ -1850,7 +2076,7 @@ namespace Bindings.Sample
         public partial class Count1ViewModel
         {
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
-            private int _count;
+            public partial int Count { get; set; }
         }
     }
 }";
@@ -1871,7 +2097,7 @@ namespace Bindings.Sample
         public partial class CountInStructViewModel
         {
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
-            private int _count;
+            public partial int Count { get; set; }
         }
     }
 }";
@@ -1905,7 +2131,7 @@ namespace Bindings.Sample
             public partial class Count1ViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
-                private int _count;
+                public partial int Count { get; set; }
             }
         }
     }
@@ -1929,7 +2155,7 @@ namespace Bindings.Sample
     internal partial class CountInternalViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -1962,7 +2188,7 @@ namespace Bindings.Sample
             internal partial class CountInternalViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
-                private int _count;
+                public partial int Count { get; set; }
             }
         }
     }
@@ -1975,7 +2201,7 @@ namespace Bindings.Sample
             public partial class CountPublicViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
-                private int _count;
+                public partial int Count { get; set; }
             }
         }
     }
@@ -2035,7 +2261,7 @@ namespace Bindings.Sample
         {accessibility} partial class CountAccessibilityViewModel
         {{
             [Bindings.Schema(""TMPro.TMP_Text.text"")]
-            private int _count;
+            public partial int Count {{ get; set; }}
         }}
     }}
 }}";
@@ -2075,7 +2301,7 @@ namespace Bindings.Sample
             public partial class CountAccessibilityViewModel
             {{
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
-                private int _count;
+                public partial int Count {{ get; set; }}
             }}
         }}
     }}
@@ -2110,7 +2336,7 @@ namespace Bindings.Sample
             partial class CountImplicitPrivateViewModel
             {
                 [Bindings.Schema(""TMPro.TMP_Text.text"")]
-                private int _count;
+                public partial int Count { get; set; }
             }
         }
     }
@@ -2143,7 +2369,7 @@ namespace Bindings.Sample
     public partial class Count1ViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -2173,7 +2399,7 @@ namespace Bindings.Sample
     public partial class CountObjectPath1ViewModel
     {
         [Bindings.Schema(Resolver.TMPro_TMP_Text_text)]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 
@@ -2204,7 +2430,7 @@ namespace Bindings.Sample
     public partial class CountObjectRaw1ViewModel
     {
         [Bindings.Schema(MyPaths.SomeValue)]
-        private int _count;
+        public partial int Count { get; set; }
     }
 }";
 

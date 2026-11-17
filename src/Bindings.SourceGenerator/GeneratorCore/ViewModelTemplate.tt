@@ -18,17 +18,20 @@ namespace <#= Context.Namespace #>
 <#= Context.Accessibility #> partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
     private readonly global::Bindings.IMvvmPublisher _publisher;
-<# foreach (var schemaField in SchemaPropertyFields) {#>
+<# foreach (var property in DistinctSchemaProperties) {#>
 
-    public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
+#if UNITY_EDITOR
+    [field: global::UnityEngine.SerializeField]
+#endif
+    <#= property.Modifiers #> <#= property.PropertyTypeName #> <#= property.PropertyName #>
     {
         [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        get => <#= schemaField.FieldName #>;
-<# if (Context.Type != GenerationContext.ViewModelTypeKind.ReadOnlyStruct) {#>
+        <#= property.Getter #> => field;
+<# if (property.Setter.Length > 0) {#>
         [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        set
+        <#= property.Setter #>
         {
-            <#= schemaField.FieldName #> = value;
+            field = value;
             PublishRebindMessage();
         }
 <# }#>
@@ -37,11 +40,11 @@ namespace <#= Context.Namespace #>
 
     public <#= Context.ClassName #>(<#= ConstructorParamList #>)
     {
+        _publisher = publisher;
 <# for (var i = 0; i < Context.RequiredFields.Count; i++) {
     var field = Context.RequiredFields[i];#>
         <#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
 <# }#>
-        _publisher = publisher;
 <# if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {#>
         OnPostConstruct();
 <# }#>

@@ -10,9 +10,8 @@ namespace Bindings.Sample
         [Required]
         private readonly CountModel _model;
 
-        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text)]
-        private int _count;
+        public partial int Count { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         public void Increment()
@@ -38,12 +37,12 @@ namespace Bindings.Sample
     // {
     //     private readonly IMvvmPublisher _publisher;
     //
-    //     public int Count
+    //     public partial int Count
     //     {
-    //         get => _count;
+    //         get => field;
     //         set
     //         {
-    //             _count = value;
+    //             field = value;
     //             _publisher.PublishRebindMessage<CountViewModel>();
     //         }
     //     }

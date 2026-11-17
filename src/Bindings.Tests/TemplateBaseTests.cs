@@ -44,7 +44,7 @@ public class TemplateBaseTests
             requireBindImplementation: false,
             alreadySerializable: false,
             requiredFields: Array.Empty<(string, string, string)>(),
-            schemaFields: Array.Empty<(string, string, GenerationContext.BindingInfo)>(),
+            schemaProperties: Array.Empty<(string, string, string, string, string, GenerationContext.BindingInfo)>(),
             schemaMethods: schemaMethods ?? Array.Empty<(string, GenerationContext.BindingInfo)>(),
             diagnostics: Array.Empty<Diagnostic>());
 

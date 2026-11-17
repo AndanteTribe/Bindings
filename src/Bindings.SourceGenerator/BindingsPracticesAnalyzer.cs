@@ -169,7 +169,7 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
                 Instance: IInstanceReferenceOperation { ReferenceKind: InstanceReferenceKind.ContainingTypeInstance },
                 Property: { IsStatic: false, IsIndexer: false, DeclaredAccessibility: Accessibility.Public, SetMethod: { DeclaredAccessibility: Accessibility.Public, IsInitOnly: false } } property
             }
-            || !property.IsSchemaProperty(schemaAttribute))
+            || !property.HasAttribute(schemaAttribute))
         {
             return null;
         }

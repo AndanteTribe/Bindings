@@ -13,7 +13,7 @@ public sealed class GenerationContext(
     bool requireBindImplementation,
     bool alreadySerializable,
     IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> requiredFields,
-    IReadOnlyList<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)> schemaFields,
+    IReadOnlyList<(string PropertyName, string PropertyTypeName, string Modifiers, string Getter, string Setter, GenerationContext.BindingInfo Binding)> schemaProperties,
     IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)> schemaMethods,
     IReadOnlyList<Diagnostic> diagnostics,
     bool generateVContainerInjector = false)
@@ -95,10 +95,10 @@ public sealed class GenerationContext(
     public readonly IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> RequiredFields = requiredFields;
 
     /// <summary>
-    /// Attribute arguments for each field annotated with SchemaAttribute, in declaration order.
+    /// Partial property signatures, fully-qualified types, and binding arguments, in declaration order.
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same member.
     /// </summary>
-    public readonly IReadOnlyList<(string FieldName, string FieldTypeName, BindingInfo Binding)> SchemaFields = schemaFields;
+    public readonly IReadOnlyList<(string PropertyName, string PropertyTypeName, string Modifiers, string Getter, string Setter, BindingInfo Binding)> SchemaProperties = schemaProperties;
 
     /// <summary>
     /// Attribute arguments for each method annotated with SchemaAttribute, in declaration order.
@@ -108,7 +108,7 @@ public sealed class GenerationContext(
     public readonly IReadOnlyList<(string MethodName, BindingInfo Binding)> SchemaMethods = schemaMethods;
 
     /// <summary>
-    /// Diagnostics collected during metadata extraction (BND001, BND002, BND004).
+    /// Diagnostics collected during metadata extraction (BND001, BND002, BND004, BND008, BND009).
     /// These are reported in RegisterSourceOutput so they appear in the IDE/build output.
     /// </summary>
     public readonly IReadOnlyList<Diagnostic> Diagnostics = diagnostics;

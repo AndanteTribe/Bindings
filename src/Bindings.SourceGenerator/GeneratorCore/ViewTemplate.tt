@@ -40,7 +40,7 @@ namespace <#= Context.Namespace #>
 
     private void BindAll()
     {
-<#= WriteFieldBindings("        ") #>
+<#= WritePropertyBindings("        ") #>
 <#= WriteMethodBindings("        ") #>
         OnPostBind();
         _viewModel.NotifyCompletedBind();
@@ -70,7 +70,7 @@ namespace <#= Context.Namespace #>
     void global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedMessage(global::Bindings.DebugBindMessage message)
     {
         message.BindTo(this);
-<#= WriteFieldBindings("        ") #>
+<#= WritePropertyBindings("        ") #>
         OnPostBind();
         _viewModel.NotifyCompletedBind();
     }
