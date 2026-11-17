@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Operations;
@@ -16,7 +17,7 @@ namespace Bindings;
 public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(DiagnosticDescriptors.Bndp001, DiagnosticDescriptors.Bndp002, DiagnosticDescriptors.Bndp003, DiagnosticDescriptors.Bndp004);
+        ImmutableArray.Create(DiagnosticDescriptors.Bndp001, DiagnosticDescriptors.Bndp002, DiagnosticDescriptors.Bndp003, DiagnosticDescriptors.Bndp004, DiagnosticDescriptors.Bndp005);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -30,6 +31,35 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
             var viewModelAttribute = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute);
             var publisherInterface = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.PublisherAbstraction);
             var schemaAttribute = compilationContext.Compilation.GetTypeByMetadataName(TypeNames.SchemaAttribute);
+            var uiBehaviour = compilationContext.Compilation.GetTypeByMetadataName("UnityEngine.EventSystems.UIBehaviour");
+
+            compilationContext.RegisterSyntaxNodeAction(syntaxContext =>
+            {
+                if (uiBehaviour == null
+                    || syntaxContext.Node is not ExpressionSyntax expression
+                    || expression.Parent is QualifiedNameSyntax or AliasQualifiedNameSyntax
+                    || (expression.Parent is MemberAccessExpressionSyntax memberAccess
+                        && syntaxContext.SemanticModel.GetSymbolInfo(memberAccess, syntaxContext.CancellationToken).Symbol is ITypeSymbol)
+                    || FindViewModelOwner(syntaxContext.ContainingSymbol, viewModelInterface, viewModelAttribute, viewInterface) is not { } owner)
+                {
+                    return;
+                }
+
+                var type = syntaxContext.SemanticModel.GetTypeInfo(expression, syntaxContext.CancellationToken).Type;
+                // Explicit type arguments are checked by their own syntax callbacks.
+                var uiType = expression is NameSyntax && expression.DescendantNodes().Any(static node => node is TypeArgumentListSyntax)
+                    ? type is INamedTypeSymbol named && named.IsOrInheritsFrom(uiBehaviour) ? named : null
+                    : type.FindReferencedTypeDerivingFrom(uiBehaviour);
+                if (uiType == null)
+                {
+                    return;
+                }
+
+                syntaxContext.ReportDiagnostic(Diagnostic.Create(
+                    DiagnosticDescriptors.Bndp005, expression.GetLocation(), owner.ToDisplayString(), uiType.ToDisplayString()));
+            }, SyntaxKind.IdentifierName, SyntaxKind.GenericName, SyntaxKind.QualifiedName, SyntaxKind.AliasQualifiedName,
+                SyntaxKind.InvocationExpression, SyntaxKind.ImplicitObjectCreationExpression,
+                SyntaxKind.ElementAccessExpression, SyntaxKind.ElementBindingExpression);
 
             compilationContext.RegisterOperationAction(operationContext =>
             {
@@ -110,6 +140,25 @@ public sealed class BindingsPracticesAnalyzer : DiagnosticAnalyzer
                 }
             }, OperationKind.ObjectCreation, OperationKind.TypeParameterObjectCreation);
         });
+    }
+
+    private static INamedTypeSymbol? FindViewModelOwner(
+        ISymbol? symbol, INamedTypeSymbol? viewModelInterface, INamedTypeSymbol? viewModelAttribute, INamedTypeSymbol? viewInterface)
+    {
+        for (var type = symbol as INamedTypeSymbol ?? symbol?.ContainingType; type != null; type = type.ContainingType)
+        {
+            if (type.HasAttribute(viewModelAttribute) || type.IsOrImplementsInterface(viewModelInterface))
+            {
+                return type;
+            }
+
+            if (type.IsOrImplementsInterface(viewInterface))
+            {
+                return null;
+            }
+        }
+
+        return null;
     }
 
     private static bool IsSchemaAssignmentWrapper(

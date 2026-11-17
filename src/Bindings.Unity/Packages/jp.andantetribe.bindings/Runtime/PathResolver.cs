@@ -2,12 +2,11 @@
 #pragma warning disable IDE1006
 
 using System.Diagnostics.CodeAnalysis;
+using G_TMPro = global::TMPro;
+using G_UnityEngine = UnityEngine;
 
 namespace Bindings
 {
-    using G_UnityEngine = global::UnityEngine;
-    using G_TMPro = global::TMPro;
-
     /// <summary>
     /// Provides refactoring-safe Unity component member paths for <see cref="SchemaAttribute"/>.
     /// </summary>
@@ -225,8 +224,12 @@ namespace Bindings
                 public static class Button
                 {
                     public const string onClick = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Button) + "." + nameof(G_UnityEngine.UI.Button.onClick);
+                    public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                    public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                    public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                    public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -282,15 +285,15 @@ namespace Bindings
                 public static class Dropdown
                 {
                     public const string alphaFadeSpeed = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.alphaFadeSpeed);
-                    public const string captionImage = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.captionImage);
-                    public const string captionText = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.captionText);
-                    public const string itemImage = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.itemImage);
-                    public const string itemText = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.itemText);
                     public const string onValueChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.onValueChanged);
-                    public const string template = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.template);
+                    public const string options = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.options);
                     public const string value = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Dropdown) + "." + nameof(G_UnityEngine.UI.Dropdown.value);
+                    public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                    public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                    public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                    public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -459,7 +462,6 @@ namespace Bindings
                     public const string onSubmit = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onSubmit);
                     public const string onValidateInput = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onValidateInput);
                     public const string onValueChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.onValueChanged);
-                    public const string placeholder = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.placeholder);
                     public const string readOnly = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.readOnly);
                     public const string selectionAnchorPosition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.selectionAnchorPosition);
                     public const string selectionColor = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.selectionColor);
@@ -467,9 +469,12 @@ namespace Bindings
                     public const string shouldActivateOnSelect = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.shouldActivateOnSelect);
                     public const string shouldHideMobileInput = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.shouldHideMobileInput);
                     public const string text = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.text);
-                    public const string textComponent = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.InputField) + "." + nameof(G_UnityEngine.UI.InputField.textComponent);
+                    public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                    public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                    public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                    public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -651,12 +656,10 @@ namespace Bindings
             {
                 public static class ScrollRect
                 {
-                    public const string content = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.content);
                     public const string decelerationRate = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.decelerationRate);
                     public const string elasticity = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.elasticity);
                     public const string horizontal = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.horizontal);
                     public const string horizontalNormalizedPosition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.horizontalNormalizedPosition);
-                    public const string horizontalScrollbar = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.horizontalScrollbar);
                     public const string horizontalScrollbarSpacing = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.horizontalScrollbarSpacing);
                     public const string horizontalScrollbarVisibility = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.horizontalScrollbarVisibility);
                     public const string inertia = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.inertia);
@@ -667,10 +670,8 @@ namespace Bindings
                     public const string velocity = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.velocity);
                     public const string vertical = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.vertical);
                     public const string verticalNormalizedPosition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.verticalNormalizedPosition);
-                    public const string verticalScrollbar = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.verticalScrollbar);
                     public const string verticalScrollbarSpacing = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.verticalScrollbarSpacing);
                     public const string verticalScrollbarVisibility = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.verticalScrollbarVisibility);
-                    public const string viewport = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.ScrollRect) + "." + nameof(G_UnityEngine.UI.ScrollRect.viewport);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -686,13 +687,16 @@ namespace Bindings
                 public static class Scrollbar
                 {
                     public const string direction = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Scrollbar) + "." + nameof(G_UnityEngine.UI.Scrollbar.direction);
-                    public const string handleRect = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Scrollbar) + "." + nameof(G_UnityEngine.UI.Scrollbar.handleRect);
                     public const string numberOfSteps = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Scrollbar) + "." + nameof(G_UnityEngine.UI.Scrollbar.numberOfSteps);
                     public const string onValueChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Scrollbar) + "." + nameof(G_UnityEngine.UI.Scrollbar.onValueChanged);
                     public const string size = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Scrollbar) + "." + nameof(G_UnityEngine.UI.Scrollbar.size);
                     public const string value = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Scrollbar) + "." + nameof(G_UnityEngine.UI.Scrollbar.value);
+                    public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                    public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                    public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                    public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -707,8 +711,12 @@ namespace Bindings
             {
                 public static class Selectable
                 {
+                    public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                    public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                    public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                    public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -741,16 +749,18 @@ namespace Bindings
                 public static class Slider
                 {
                     public const string direction = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.direction);
-                    public const string fillRect = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.fillRect);
-                    public const string handleRect = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.handleRect);
                     public const string maxValue = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.maxValue);
                     public const string minValue = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.minValue);
                     public const string normalizedValue = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.normalizedValue);
                     public const string onValueChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.onValueChanged);
                     public const string value = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.value);
                     public const string wholeNumbers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Slider) + "." + nameof(G_UnityEngine.UI.Slider.wholeNumbers);
+                    public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                    public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                    public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                    public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -799,10 +809,15 @@ namespace Bindings
             {
                 public static class Toggle
                 {
-                    public const string group = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Toggle) + "." + nameof(G_UnityEngine.UI.Toggle.group);
                     public const string isOn = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Toggle) + "." + nameof(G_UnityEngine.UI.Toggle.isOn);
+                    public const string onValueChanged = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Toggle) + "." + nameof(G_UnityEngine.UI.Toggle.onValueChanged);
+                    public const string toggleTransition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Toggle) + "." + nameof(G_UnityEngine.UI.Toggle.toggleTransition);
+                    public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                     public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                     public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                    public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                    public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                    public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                     public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                     public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                     public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -871,17 +886,15 @@ namespace Bindings
             {
                 public const string MultiSelect = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.MultiSelect);
                 public const string alphaFadeSpeed = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.alphaFadeSpeed);
-                public const string captionImage = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.captionImage);
-                public const string captionText = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.captionText);
-                public const string itemImage = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.itemImage);
-                public const string itemText = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.itemText);
                 public const string onValueChanged = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.onValueChanged);
                 public const string options = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.options);
-                public const string placeholder = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.placeholder);
-                public const string template = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.template);
                 public const string value = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Dropdown) + "." + nameof(G_TMPro.TMP_Dropdown.value);
+                public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                 public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                 public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                 public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                 public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                 public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -905,6 +918,7 @@ namespace Bindings
                 public const string fontAsset = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.fontAsset);
                 public const string inputType = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.inputType);
                 public const string inputValidator = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.inputValidator);
+                public const string isAlert = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.isAlert);
                 public const string isRichTextEditingAllowed = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.isRichTextEditingAllowed);
                 public const string keepTextSelectionVisible = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.keepTextSelectionVisible);
                 public const string keyboardType = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.keyboardType);
@@ -920,7 +934,6 @@ namespace Bindings
                 public const string onTouchScreenKeyboardStatusChanged = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.onTouchScreenKeyboardStatusChanged);
                 public const string onValidateInput = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.onValidateInput);
                 public const string onValueChanged = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.onValueChanged);
-                public const string placeholder = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.placeholder);
                 public const string pointSize = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.pointSize);
                 public const string readOnly = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.readOnly);
                 public const string resetOnDeActivation = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.resetOnDeActivation);
@@ -937,11 +950,12 @@ namespace Bindings
                 public const string shouldHideSoftKeyboard = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.shouldHideSoftKeyboard);
                 public const string stringPosition = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.stringPosition);
                 public const string text = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.text);
-                public const string textComponent = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.textComponent);
-                public const string textViewport = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.textViewport);
-                public const string verticalScrollbar = nameof(TMPro) + "." + nameof(G_TMPro.TMP_InputField) + "." + nameof(G_TMPro.TMP_InputField.verticalScrollbar);
+                public const string animationTriggers = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.animationTriggers);
                 public const string colors = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.colors);
                 public const string interactable = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.interactable);
+                public const string navigation = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.navigation);
+                public const string spriteState = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.spriteState);
+                public const string transition = nameof(UnityEngine) + "." + nameof(G_UnityEngine.UI) + "." + nameof(G_UnityEngine.UI.Selectable) + "." + nameof(G_UnityEngine.UI.Selectable.transition);
                 public const string enabled = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Behaviour) + "." + nameof(G_UnityEngine.Behaviour.enabled);
                 public const string tag = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Component) + "." + nameof(G_UnityEngine.Component.tag);
                 public const string hideFlags = nameof(UnityEngine) + "." + nameof(G_UnityEngine.Object) + "." + nameof(G_UnityEngine.Object.hideFlags);
@@ -993,10 +1007,8 @@ namespace Bindings
                 public const string isVolumetricText = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.isVolumetricText);
                 public const string lineSpacing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.lineSpacing);
                 public const string lineSpacingAdjustment = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.lineSpacingAdjustment);
-                public const string linkedTextComponent = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.linkedTextComponent);
                 public const string mappingUvLineOffset = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.mappingUvLineOffset);
                 public const string margin = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.margin);
-                public const string maxHeight = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxHeight);
                 public const string maxVisibleCharacters = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxVisibleCharacters);
                 public const string maxVisibleLines = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxVisibleLines);
                 public const string maxVisibleWords = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxVisibleWords);
@@ -1081,10 +1093,8 @@ namespace Bindings
                 public const string isVolumetricText = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.isVolumetricText);
                 public const string lineSpacing = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.lineSpacing);
                 public const string lineSpacingAdjustment = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.lineSpacingAdjustment);
-                public const string linkedTextComponent = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.linkedTextComponent);
                 public const string mappingUvLineOffset = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.mappingUvLineOffset);
                 public const string margin = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.margin);
-                public const string maxHeight = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxHeight);
                 public const string maxVisibleCharacters = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxVisibleCharacters);
                 public const string maxVisibleLines = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxVisibleLines);
                 public const string maxVisibleWords = nameof(TMPro) + "." + nameof(G_TMPro.TMP_Text) + "." + nameof(G_TMPro.TMP_Text.maxVisibleWords);

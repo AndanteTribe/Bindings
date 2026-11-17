@@ -208,4 +208,16 @@ internal static class DiagnosticDescriptors
             isEnabledByDefault: true,
             helpLinkUri: Documentation.BaseUrl + "BNDP004.md",
             customTags: [PracticesCategory]);
+    /// <summary>
+    /// BNDP005: keeps UIBehaviour dependencies out of ViewModels.
+    /// </summary>
+    public static readonly DiagnosticDescriptor Bndp005 = new(
+            id: "BNDP005",
+            title: new LocalizableResourceString("Bndp005Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+            messageFormat: new LocalizableResourceString("Bndp005Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+            category: PracticesCategory,
+            defaultSeverity: DiagnosticSeverity.Error,
+            isEnabledByDefault: true,
+            helpLinkUri: Documentation.BaseUrl + "BNDP005.md",
+            customTags: [PracticesCategory]);
 }

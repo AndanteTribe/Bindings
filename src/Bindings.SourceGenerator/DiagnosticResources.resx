@@ -74,4 +74,10 @@
     <data name="Bndp004Message" xml:space="preserve">
         <value>Method '{0}' only assigns its parameters directly to publicly writable Schema properties. Assign the properties directly instead.</value>
     </data>
+    <data name="Bndp005Title" xml:space="preserve">
+        <value>ViewModels must not use UI components</value>
+    </data>
+    <data name="Bndp005Message" xml:space="preserve">
+        <value>ViewModel '{0}' directly uses UI component type '{1}'. Keep UI component access in the View.</value>
+    </data>
 </root>

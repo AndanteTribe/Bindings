@@ -76,6 +76,55 @@ internal static class SymbolExtensions
         return false;
     }
 
+    public static bool IsOrInheritsFrom(this INamedTypeSymbol type, INamedTypeSymbol? baseType) =>
+        baseType != null && (SymbolEqualityComparer.Default.Equals(type, baseType) || type.InheritsFrom(baseType));
+
+    /// <summary>
+    /// Finds the specified base type or a derived type in a type reference,
+    /// including array elements, generic arguments, and type-parameter constraints.
+    /// </summary>
+    public static INamedTypeSymbol? FindReferencedTypeDerivingFrom(this ITypeSymbol? type, INamedTypeSymbol baseType) =>
+        FindReferencedTypeDerivingFrom(type, baseType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default));
+
+    private static INamedTypeSymbol? FindReferencedTypeDerivingFrom(ITypeSymbol? type, INamedTypeSymbol baseType, ISet<ITypeSymbol> visited)
+    {
+        if (type == null || type.TypeKind == TypeKind.Error || !visited.Add(type))
+        {
+            return null;
+        }
+
+        switch (type)
+        {
+            case IArrayTypeSymbol array:
+                return FindReferencedTypeDerivingFrom(array.ElementType, baseType, visited);
+            case ITypeParameterSymbol parameter:
+                foreach (var constraint in parameter.ConstraintTypes)
+                {
+                    if (FindReferencedTypeDerivingFrom(constraint, baseType, visited) is { } match)
+                    {
+                        return match;
+                    }
+                }
+                break;
+            case INamedTypeSymbol named when named.IsOrInheritsFrom(baseType):
+                return named;
+            case INamedTypeSymbol named:
+                for (var current = named; current != null; current = current.ContainingType)
+                {
+                    foreach (var argument in current.TypeArguments)
+                    {
+                        if (FindReferencedTypeDerivingFrom(argument, baseType, visited) is { } match)
+                        {
+                            return match;
+                        }
+                    }
+                }
+                break;
+        }
+
+        return null;
+    }
+
     /// <summary>
     /// Checks whether a type is the specified interface itself or implements it.
     /// </summary>
@@ -105,7 +154,7 @@ internal static class SymbolExtensions
             HasInterfaceConstraint(parameter, interfaceType, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default));
     }
 
-    private static bool HasInterfaceConstraint(ITypeParameterSymbol parameter, INamedTypeSymbol interfaceType, HashSet<ITypeSymbol> visited)
+    private static bool HasInterfaceConstraint(ITypeParameterSymbol parameter, INamedTypeSymbol interfaceType, ISet<ITypeSymbol> visited)
     {
         if (!visited.Add(parameter))
         {
