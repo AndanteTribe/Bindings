@@ -389,6 +389,7 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 | [`BNDP002`](docs/diagnostics/BNDP002.ja.md) | エラー | View 内で ViewModel を直接生成せず、View の外で生成して受け渡す。 |
 | [`BNDP003`](docs/diagnostics/BNDP003.ja.md) | エラー | 子 ViewModel を保持・公開するだけで自身の処理に使わない場合、その所有を親 ViewModel の外へ移す。 |
 | [`BNDP004`](docs/diagnostics/BNDP004.ja.md) | エラー | 引数を自分自身の公開 Schema プロパティへそのまま代入するだけのメソッドを作らず、プロパティへ直接代入する。 |
+| [`BNDP005`](docs/diagnostics/BNDP005.ja.md) | エラー | ViewModel が `UIBehaviour` またはその派生コンポーネント型を直接参照している。コンポーネントへのアクセスは View に配置する。 |
 
 ### 重大度の設定
 

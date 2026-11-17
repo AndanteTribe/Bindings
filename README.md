@@ -389,6 +389,7 @@ Each ID links to its detailed cause, examples, exceptions, Code Fix availability
 | [`BNDP002`](docs/diagnostics/BNDP002.md) | Error | Construct ViewModels outside the View and pass them in, rather than constructing them inside the View. |
 | [`BNDP003`](docs/diagnostics/BNDP003.md) | Error | If a child ViewModel is only stored or exposed without being used in the parent's logic, move ownership outside the parent. |
 | [`BNDP004`](docs/diagnostics/BNDP004.md) | Error | Assign public Schema properties directly instead of writing methods that only copy arguments unchanged to those properties on the current instance. |
+| [`BNDP005`](docs/diagnostics/BNDP005.md) | Error | A ViewModel directly references `UIBehaviour` or a derived component type. Keep component access in the View. |
 
 ### Configuring Severity
 
