@@ -33,7 +33,7 @@ jobs:
           git config user.email "github-actions@github.com"
 
           git fetch origin
-          git checkout -b "$BRANCH" origin/main
+          git checkout -b "$BRANCH" "origin/${GITHUB_REF_NAME}"
       - name: update version (unity package.json)
         run: |
           VERSION="${{ github.event.inputs.version }}"
@@ -81,7 +81,7 @@ jobs:
           BRANCH="feature/v$VERSION"
 
           gh pr create \
-            --base main \
+            --base "${GITHUB_REF_NAME}" \
             --head "$BRANCH" \
             --title "chore: bump version to $VERSION" \
             --fill \
