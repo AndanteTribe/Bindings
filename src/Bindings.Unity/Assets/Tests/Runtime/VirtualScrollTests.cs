@@ -115,8 +115,11 @@ namespace Bindings.Tests
             await ((IView)_view).BindAsync(cancellationToken);
             Assert.That(old._publishers.Span[0].Binder, Is.Null);
             Assert.That(_scroll.content.childCount, Is.EqualTo(6));
+            ScrollTo(1);
+            old = _model;
             SetModel(2);
             await ((IView)_view).BindAsync(cancellationToken);
+            Assert.That(old._publishers.ToArray().All(p => p.Binder is null), Is.True);
             await Awaitable.NextFrameAsync(cancellationToken);
             Assert.That(_scroll.content.childCount, Is.EqualTo(2));
             old = _model;
