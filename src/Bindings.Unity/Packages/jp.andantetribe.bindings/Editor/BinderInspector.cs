@@ -46,7 +46,7 @@ namespace Bindings.Editor
                 var last = _viewsProperty.arraySize;
                 _viewsProperty.InsertArrayElementAtIndex(_viewsProperty.arraySize);
                 var property = _viewsProperty.GetArrayElementAtIndex(last);
-                property.managedReferenceValue = Activator.CreateInstance(type);
+                property.managedReferenceValue = Activator.CreateInstance(type, nonPublic: true);
                 _ = serializedObject.ApplyModifiedProperties();
             }
         }

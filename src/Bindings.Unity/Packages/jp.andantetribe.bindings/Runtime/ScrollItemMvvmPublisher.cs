@@ -54,23 +54,11 @@ namespace Bindings
 
         /// <inheritdoc />
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void IMvvmPublisher.PublishRebindMessage<T>()
-        {
-            if (Binder != null)
-            {
-                ((IMvvmPublisher)Binder).PublishRebindMessage<T>();
-            }
-        }
+        void IMvvmPublisher.PublishRebindMessage<T>() => ((IMvvmPublisher?)Binder)?.PublishRebindMessage<T>();
 
         /// <inheritdoc />
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void IMvvmPublisher.Publish<T>(T message)
-        {
-            if (Binder != null)
-            {
-                ((IMvvmPublisher)Binder).Publish(message);
-            }
-        }
+        void IMvvmPublisher.Publish<T>(T message) => ((IMvvmPublisher?)Binder)?.Publish(message);
 
         /// <summary>
         /// Registers the ViewModels assigned to a virtual scroll item's Binder when the item becomes visible.

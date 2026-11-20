@@ -139,8 +139,9 @@ namespace Bindings.Tests
             Assert.That(_view.Message, Is.EqualTo(9));
             publisher.Binder = _binder;
             Object.DestroyImmediate(_binder.gameObject);
+            ((IMvvmPublisher)publisher).Publish(11);
+            Assert.That(_view.Message, Is.EqualTo(9));
             Assert.That(publisher.Binder, Is.Null);
-            Assert.DoesNotThrow(() => ((IMvvmPublisher)publisher).Publish(11));
         });
 
         private static ScrollItemMvvmPublisher CreateItemPublisher(TestViewModel model)
