@@ -182,6 +182,21 @@ namespace UnityEngine.Events
         return (vmSource, viewSource);
     }
 
+    [Fact]
+    public void GeneratedViewCannotBeConstructedByCaller()
+    {
+        const string code = """
+            [Bindings.ViewModel] public partial class CounterViewModel { }
+            public class Caller { public CounterView Create() => new CounterView(); }
+            """;
+        _ = RunGenerator(code, out _, out var compilation);
+        var constructor = Assert.Single(compilation.GetTypeByMetadataName("CounterView")!.InstanceConstructors);
+        Assert.Empty(constructor.Parameters);
+        Assert.Equal(Accessibility.Private, constructor.DeclaredAccessibility);
+        var error = Assert.Single(compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.Equal("CS0122", error.Id);
+    }
+
     private static bool IsGeneratedViewModelSource(SyntaxTree tree) =>
         tree.GetText().ToString().Contains(": global::Bindings.IViewModel");
 
