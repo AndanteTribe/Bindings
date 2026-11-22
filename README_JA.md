@@ -45,13 +45,13 @@ namespace MyApp
         private int _count;
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Increment()
+        private void Increment()
         {
             Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Decrement()
+        private void Decrement()
         {
             Count -= 1;
         }
@@ -80,6 +80,8 @@ namespace MyApp
     public partial class CounterViewModel : global::Bindings.IViewModel
     {
         private readonly global::Bindings.IMvvmPublisher _publisher;
+        internal readonly global::UnityEngine.Events.UnityAction _incrementAction;
+        internal readonly global::UnityEngine.Events.UnityAction _decrementAction;
 
         public int Count
         {
@@ -95,6 +97,8 @@ namespace MyApp
         {
             _model = model;
             _publisher = publisher;
+            this._incrementAction = this.@Increment;
+            this._decrementAction = this.@Decrement;
             OnPostConstruct();
         }
 
@@ -153,9 +157,9 @@ namespace MyApp
         {
             global::Bindings.TextMeshProExtensions.SetValue(_countText, _viewModel.Count);
             _incrementButton.onClick.RemoveAllListeners();
-            _incrementButton.onClick.AddListener(_viewModel.Increment);
+            _incrementButton.onClick.AddListener(_viewModel._incrementAction);
             _decrementButton.onClick.RemoveAllListeners();
-            _decrementButton.onClick.AddListener(_viewModel.Decrement);
+            _decrementButton.onClick.AddListener(_viewModel._decrementAction);
             OnPostBind();
             _viewModel.NotifyCompletedBind();
         }
@@ -342,7 +346,7 @@ public readonly struct ShowDialogMessage
 public partial class MyViewModel
 {
     [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-    public void OnConfirm()
+    private void OnConfirm()
     {
         _publisher.Publish(new ShowDialogMessage("よろしいですか？"));
     }

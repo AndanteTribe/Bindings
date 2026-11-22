@@ -13,7 +13,8 @@ public sealed class GenerationContext(
     bool requireBindImplementation,
     IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> requiredFields,
     IReadOnlyList<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)> schemaFields,
-    IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)> schemaMethods,
+    IReadOnlyList<(string MethodName, string ActionField, GenerationContext.BindingInfo Binding)> schemaMethods,
+    IReadOnlyList<(string MemberName, string ActionType, string MethodName, bool IsStatic)> schemaActions,
     IReadOnlyList<Diagnostic> diagnostics,
     bool generateVContainerInjector = false)
 {
@@ -99,7 +100,9 @@ public sealed class GenerationContext(
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same method.
     /// Binding.Format is empty because it is not needed for methods.
     /// </summary>
-    public readonly IReadOnlyList<(string MethodName, BindingInfo Binding)> SchemaMethods = schemaMethods;
+    public readonly IReadOnlyList<(string MethodName, string ActionField, BindingInfo Binding)> SchemaMethods = schemaMethods;
+
+    public readonly IReadOnlyList<(string MemberName, string ActionType, string MethodName, bool IsStatic)> SchemaActions = schemaActions;
 
     /// <summary>
     /// Diagnostics collected during metadata extraction (BND001, BND002, BND004).

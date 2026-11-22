@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using Bindings.GeneratorCore;
@@ -113,7 +114,9 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         // [Schema] is only valid on fields and methods; properties are excluded.
         var requiredFields = new List<(string TypeFullName, string FieldName, string TypeOfName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)>();
-        var schemaMethods = new List<(string MethodName, GenerationContext.BindingInfo Binding)>();
+        var schemaMethods = new List<(string MethodName, string ActionField, GenerationContext.BindingInfo Binding)>();
+        var schemaActions = new List<(string MemberName, string ActionType, string MethodName, bool IsStatic)>();
+        HashSet<string>? reservedNames = null;
 
         foreach (var member in typeSymbol.GetMembers())
         {
@@ -171,6 +174,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 }
                 case IMethodSymbol { MethodKind: MethodKind.Ordinary, IsImplicitlyDeclared: false } method:
                 {
+                    string? actionField = null;
                     foreach (var attr in method.GetAttributes())
                     {
                         if (attr.IsAttribute(schemaAttribute))
@@ -183,8 +187,24 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd002, attrLoc, id.ToString()));
                                 id = -1; // treat as unset to avoid further errors
                             }
+                            if (actionField == null)
+                            {
+                                reservedNames ??= [.. typeSymbol.MemberNames];
+                                actionField = "_" + TemplateHelpers.ToParamName(method.Name) + "Action";
+                                while (!reservedNames.Add(actionField))
+                                {
+                                    actionField += "_";
+                                }
+                                var actionType = "global::UnityEngine.Events.UnityAction";
+                                if (method.Parameters.Length > 0)
+                                {
+                                    actionType += "<" + string.Join(", ", method.Parameters.Select(p => p.Type.ToDisplayString(s_fullyQualifiedNullableFormat))) + ">";
+                                }
+                                schemaActions.Add((actionField, actionType, method.Name, method.IsStatic));
+                            }
                             schemaMethods.Add((
                                 MethodName: method.Name,
+                                ActionField: actionField,
                                 Binding: new GenerationContext.BindingInfo(
                                     bindingPath: GetBindingPath(attr),
                                     id: id,
@@ -208,6 +228,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             requiredFields: requiredFields,
             schemaFields: schemaFields,
             schemaMethods: schemaMethods,
+            schemaActions: schemaActions,
             diagnostics: diagnostics,
             generateVContainerInjector: CanGenerateVContainerInjector(compilation, typeSymbol));
     }
@@ -470,7 +491,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
 
         for (var i = 0; i < methodCount; i++)
         {
-            var (methodName, binding) = data.SchemaMethods[i];
+            var (methodName, _, binding) = data.SchemaMethods[i];
             AddEntry(binding, true, i, methodName);
         }
 

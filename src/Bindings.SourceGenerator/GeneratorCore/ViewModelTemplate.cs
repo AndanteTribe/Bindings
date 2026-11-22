@@ -38,6 +38,23 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write(" : global::Bindings.IViewModel\n{\n    private readonly global::Bindings.IMvvmPubli" +
                     "sher _publisher;\n");
+ foreach (var action in Context.SchemaActions) {
+    if (!ShouldCacheAction(action.IsStatic)) {
+            this.Write("    internal ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.ActionType ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MemberName ));
+            this.Write(" => this.@");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MethodName ));
+            this.Write(";\n");
+ } else {
+            this.Write("    internal readonly ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.ActionType ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MemberName ));
+            this.Write(";\n");
+ }
+ }
  foreach (var schemaField in SchemaPropertyFields) {
             this.Write("\n    public ");
             this.Write(this.ToStringHelper.ToStringWithCulture( schemaField.FieldTypeName ));
@@ -61,7 +78,9 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write("(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ConstructorParamList ));
-            this.Write(")\n    {\n");
+            this.Write(")");
+            this.Write(this.ToStringHelper.ToStringWithCulture( Context.SchemaActions.Count > 0 && Context.Type != GenerationContext.ViewModelTypeKind.Class ? " : this()" : "" ));
+            this.Write("\n    {\n");
  for (var i = 0; i < Context.RequiredFields.Count; i++) {
     var field = Context.RequiredFields[i];
             this.Write("        ");
@@ -71,6 +90,16 @@ namespace Bindings.GeneratorCore {
             this.Write(";\n");
  }
             this.Write("        _publisher = publisher;\n");
+ foreach (var action in Context.SchemaActions) {
+    if (!ShouldCacheAction(action.IsStatic)) { continue; }
+            this.Write("        this.");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MemberName ));
+            this.Write(" = ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.IsStatic ? ViewModelFullName : "this" ));
+            this.Write(".@");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MethodName ));
+            this.Write(";\n");
+ }
  if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {
             this.Write("        OnPostConstruct();\n");
  }
