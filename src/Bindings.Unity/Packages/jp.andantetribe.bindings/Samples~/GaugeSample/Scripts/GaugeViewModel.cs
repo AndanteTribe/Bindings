@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using Bindings;
-using UnityEngine;
 
 namespace Bindings.Sample
 {

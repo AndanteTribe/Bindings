@@ -1,15 +1,14 @@
 #nullable enable
 
-using Bindings.Editor.Internal;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
-namespace Bindings.Editor
+namespace Bindings.Editor.Internal
 {
-    [CustomPropertyDrawer(typeof(IViewModel), true)]
-    public class ViewModelDrawer : PropertyDrawer
+    [CustomPropertyDrawer(typeof(TempViewModel))]
+    internal class TempViewModelDrawer : PropertyDrawer
     {
         /// <inheritdoc />
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
@@ -25,7 +24,8 @@ namespace Bindings.Editor
                 image = IconConst.ScriptIcon,
                 style = { width = 18f, height = 18f }
             });
-            foldoutCheck.parent.Add(new Label(property.managedReferenceValue.GetType().FullName)
+            var preview = (TempViewModel)property.managedReferenceValue;
+            foldoutCheck.parent.Add(new Label(preview.ViewModelType.FullName)
             {
                 style = { marginLeft = 5f, unityFontStyleAndWeight = FontStyle.Bold, fontSize = 13 }
             });
@@ -39,23 +39,15 @@ namespace Bindings.Editor
                 }
             });
 
-            var iterator = property.Copy();
-            var endProperty = iterator.GetEndProperty();
-
-            if (iterator.NextVisible(true))
+            var slots = property.FindPropertyRelative(nameof(TempViewModel._slots));
+            for (var i = 0; i < slots.arraySize; i++)
             {
-                do
-                {
-                    if (SerializedProperty.EqualContents(iterator, endProperty))
-                    {
-                        break;
-                    }
-
-                    var field = new PropertyField(iterator.Copy());
-                    field.Bind(property.serializedObject);
-                    root.Add(field);
-                }
-                while (iterator.NextVisible(false));
+                var slot = slots.GetArrayElementAtIndex(i);
+                var value = slot.FindPropertyRelative(nameof(Slot<int>.Value));
+                var label = ObjectNames.NicifyVariableName(((ISlot)slot.managedReferenceValue).MemberName);
+                var field = new PropertyField(value, label);
+                field.Bind(property.serializedObject);
+                root.Add(field);
             }
 
             return root;

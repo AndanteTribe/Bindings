@@ -1,2 +1,2 @@
-Bindings: BND001-BND009
+Bindings: BND001-BND008
 Bindings.Practices: BNDP001-BNDP005

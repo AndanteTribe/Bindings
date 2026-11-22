@@ -46,7 +46,7 @@ namespace Bindings.Editor
                 var last = _viewsProperty.arraySize;
                 _viewsProperty.InsertArrayElementAtIndex(_viewsProperty.arraySize);
                 var property = _viewsProperty.GetArrayElementAtIndex(last);
-                property.managedReferenceValue = Activator.CreateInstance(type);
+                property.managedReferenceValue = Activator.CreateInstance(type, nonPublic: true);
                 _ = serializedObject.ApplyModifiedProperties();
             }
         }
@@ -104,11 +104,10 @@ namespace Bindings.Editor
                     return;
                 }
 
-                var button = (Button)evt.target;
+                var button = (Button)evt.currentTarget;
                 var root = button.parent;
-                root.Remove(button);
-
                 self._viewModelContainer ??= TempViewModelContainer.Create();
+                var previewDirtyCount = EditorUtility.GetDirtyCount(self.target);
 
                 var viewModels = new ListView
                 {
@@ -122,7 +121,7 @@ namespace Bindings.Editor
                     selectionType = SelectionType.None,
                     showAlternatingRowBackgrounds = AlternatingRowBackground.ContentOnly,
                 };
-                viewModels.Bind(self._viewModelContainer.Build(self._viewsProperty, self.target));
+                viewModels.Bind(self._viewModelContainer.Build(self._viewsProperty, (Binder)self.target));
 
                 var invokeButton = new Button()
                 {
@@ -133,18 +132,45 @@ namespace Bindings.Editor
                         alignSelf = Align.Center,
                     }
                 };
-                invokeButton.RegisterCallback<ClickEvent, BinderInspector>(static (_, self) =>
+                invokeButton.RegisterCallback<ClickEvent, (BinderInspector, int)>(static (evt, args) =>
                 {
-                    self._viewModelContainer?.BindTo(self.target);
-                    SceneView.RepaintAll();
-                }, self);
+                    var (self, dirtyCount) = args;
+                    // The Binder can change before the Inspector's tracking callback runs.
+                    if (EditorUtility.GetDirtyCount(self.target) != dirtyCount)
+                    {
+                        ClosePreview(((Button)evt.currentTarget).parent);
+                        return;
+                    }
+                    try
+                    {
+                        self.serializedObject.Update();
+                        self._viewModelContainer!.BindTo(self._viewsProperty!, (Binder)self.target);
+                        SceneView.RepaintAll();
+                    }
+                    catch
+                    {
+                        ClosePreview(((Button)evt.currentTarget).parent);
+                        throw;
+                    }
+                }, (self, previewDirtyCount));
 
                 var box = CreateBox("Preview");
+                box.userData = button;
                 box.Add(viewModels);
                 box.Add(invokeButton);
+                root.Remove(button);
                 root.Add(box);
+                box.TrackSerializedObjectValue(self.serializedObject, _ => ClosePreview(box));
             }, this);
             return previewButton;
+        }
+
+        private static void ClosePreview(VisualElement box)
+        {
+            var parent = box.parent;
+            box.Unbind();
+            box.RemoveFromHierarchy();
+            parent.Add((Button)box.userData);
         }
 
         protected static VisualElement CreateBox(string label)

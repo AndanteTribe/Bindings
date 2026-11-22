@@ -10,19 +10,18 @@ namespace <#= Context.Namespace #>
 <#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
 <# }#>
-<# if (!Context.AlreadySerializable) {#>
-#if UNITY_EDITOR
-[global::System.Serializable]
-#endif
-<# }#>
 <#= Context.Accessibility #> partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
     private readonly global::Bindings.IMvvmPublisher _publisher;
+<# foreach (var action in Context.SchemaActions) {
+    if (!ShouldCacheAction(action.IsStatic)) {#>
+    internal <#= action.ActionType #> <#= action.MemberName #> => this.@<#= action.MethodName #>;
+<# } else {#>
+    internal readonly <#= action.ActionType #> <#= action.MemberName #>;
+<# }#>
+<# }#>
 <# foreach (var property in DistinctSchemaProperties) {#>
 
-#if UNITY_EDITOR
-    [field: global::UnityEngine.SerializeField]
-#endif
     <#= property.Modifiers #> <#= property.PropertyTypeName #> <#= property.PropertyName #>
     {
         [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
@@ -38,12 +37,16 @@ namespace <#= Context.Namespace #>
     }
 <# }#>
 
-    public <#= Context.ClassName #>(<#= ConstructorParamList #>)
+    public <#= Context.ClassName #>(<#= ConstructorParamList #>)<#= Context.SchemaActions.Count > 0 && Context.Type != GenerationContext.ViewModelTypeKind.Class ? " : this()" : "" #>
     {
         _publisher = publisher;
 <# for (var i = 0; i < Context.RequiredFields.Count; i++) {
     var field = Context.RequiredFields[i];#>
         <#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
+<# }#>
+<# foreach (var action in Context.SchemaActions) {
+    if (!ShouldCacheAction(action.IsStatic)) { continue; }#>
+        this.<#= action.MemberName #> = <#= action.IsStatic ? ViewModelFullName : "this" #>.@<#= action.MethodName #>;
 <# }#>
 <# if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {#>
         OnPostConstruct();

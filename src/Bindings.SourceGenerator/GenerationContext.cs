@@ -11,10 +11,10 @@ public sealed class GenerationContext(
     IReadOnlyList<(string Accessibility, string TypeKeyword, string TypeName)> containingTypes,
     GenerationContext.ViewModelTypeKind type,
     bool requireBindImplementation,
-    bool alreadySerializable,
     IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> requiredFields,
     IReadOnlyList<(string PropertyName, string PropertyTypeName, string Modifiers, string Getter, string Setter, GenerationContext.BindingInfo Binding)> schemaProperties,
-    IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)> schemaMethods,
+    IReadOnlyList<(string MethodName, string ActionField, GenerationContext.BindingInfo Binding)> schemaMethods,
+    IReadOnlyList<(string MemberName, string ActionType, string MethodName, bool IsStatic)> schemaActions,
     IReadOnlyList<Diagnostic> diagnostics,
     bool generateVContainerInjector = false)
 {
@@ -79,11 +79,6 @@ public sealed class GenerationContext(
     /// </summary>
     public readonly bool RequireBindImplementation = requireBindImplementation;
 
-    /// <summary>
-    /// Whether <see cref="System.SerializableAttribute"/> is already applied to the type.
-    /// </summary>
-    public readonly bool AlreadySerializable = alreadySerializable;
-
     /// <summary>Whether a constructor-only VContainer injector can be generated safely.</summary>
     public readonly bool GenerateVContainerInjector = generateVContainerInjector;
 
@@ -105,10 +100,12 @@ public sealed class GenerationContext(
     /// Multiple entries are created when multiple [Schema] attributes are applied to the same method.
     /// Binding.Format is empty because it is not needed for methods.
     /// </summary>
-    public readonly IReadOnlyList<(string MethodName, BindingInfo Binding)> SchemaMethods = schemaMethods;
+    public readonly IReadOnlyList<(string MethodName, string ActionField, BindingInfo Binding)> SchemaMethods = schemaMethods;
+
+    public readonly IReadOnlyList<(string MemberName, string ActionType, string MethodName, bool IsStatic)> SchemaActions = schemaActions;
 
     /// <summary>
-    /// Diagnostics collected during metadata extraction (BND001, BND002, BND004, BND008, BND009).
+    /// Diagnostics collected during metadata extraction (BND001, BND002, BND004, BND008).
     /// These are reported in RegisterSourceOutput so they appear in the IDE/build output.
     /// </summary>
     public readonly IReadOnlyList<Diagnostic> Diagnostics = diagnostics;

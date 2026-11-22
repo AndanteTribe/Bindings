@@ -13,7 +13,7 @@ public class BindingsUsageAnalyzerTests
     private const string MonoBehaviourStub = "namespace UnityEngine { public class MonoBehaviour : Behaviour { } }";
 
     internal static Task<ImmutableArray<Diagnostic>> AnalyzeAsync(Compilation compilation) =>
-        compilation.WithAnalyzers(ImmutableArray.Create<DiagnosticAnalyzer>(new BindingsUsageAnalyzer()))
+        compilation.WithAnalyzers([new BindingsUsageAnalyzer()])
             .GetAnalyzerDiagnosticsAsync();
 
     internal static CSharpCompilation CreateCompilation(string source, string? stubs = null, string path = "User.cs") =>
@@ -29,68 +29,20 @@ public class BindingsUsageAnalyzerTests
     [Fact]
     public void SupportedDiagnosticsAreUsageRulesOnly()
     {
-        Assert.Equal(new[] { "BND005", "BND006" }, new BindingsUsageAnalyzer().SupportedDiagnostics.Select(static descriptor => descriptor.Id));
+        Assert.Equal(new[] { "BND006" }, new BindingsUsageAnalyzer().SupportedDiagnostics.Select(static descriptor => descriptor.Id));
     }
 
     [Theory]
     [InlineData("UnityEngine.SerializeField")]
     [InlineData("UnityEngine.SerializeReference")]
-    public async Task BND005ReportsWithoutRunningGenerator(string attribute)
+    public async Task SerializedViewModelFieldsDoNotReportUsageDiagnostics(string attribute)
     {
         var compilation = CreateCompilation($$"""
             [Bindings.ViewModel] public class SampleViewModel { }
             public class Host { [{{attribute}}] private SampleViewModel _viewModel; }
             """);
 
-        var diagnostic = Assert.Single(await AnalyzeAsync(compilation));
-        Assert.Equal("BND005", diagnostic.Id);
-        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
-        Assert.Contains("_viewModel", diagnostic.GetMessage());
-        Assert.Contains("SampleViewModel", diagnostic.GetMessage());
-        Assert.Equal(attribute, diagnostic.Location.SourceTree!.GetText().ToString(diagnostic.Location.SourceSpan));
-    }
-
-    [Fact]
-    public async Task BND005ReportsEachAttributeAndField()
-    {
-        var diagnostics = await AnalyzeAsync(CreateCompilation("""
-            [Bindings.ViewModel] public struct SampleViewModel { }
-            public class Host
-            {
-                [UnityEngine.SerializeField, UnityEngine.SerializeReference]
-                private SampleViewModel _first, _second;
-            }
-            """));
-
-        Assert.Equal(4, diagnostics.Length);
-        Assert.All(diagnostics, static diagnostic => Assert.Equal("BND005", diagnostic.Id));
-    }
-
-    [Fact]
-    public async Task BND005RecognizesAliasesAndConstructedGenericTypes()
-    {
-        var diagnostics = await AnalyzeAsync(CreateCompilation("""
-            using Serialized = UnityEngine.SerializeField;
-            [Bindings.ViewModel] public class GenericViewModel<T> { }
-            public class Host { [Serialized] private GenericViewModel<int> _value; }
-            """));
-
-        var diagnostic = Assert.Single(diagnostics);
-        Assert.Equal("BND005", diagnostic.Id);
-        Assert.Contains("GenericViewModel<int>", diagnostic.GetMessage());
-    }
-
-    [Theory]
-    [InlineData("[System.Serializable, Bindings.ViewModel] public class SampleViewModel { } public class Host { private SampleViewModel _value; }")]
-    [InlineData("[Bindings.ViewModel] public class SampleViewModel { } public class Host { [UnityEngine.SerializeField] private SampleViewModel[] _value; }")]
-    [InlineData("public class Host<T> { [UnityEngine.SerializeReference] private T _value; }")]
-    [InlineData("public class Host { [UnityEngine.SerializeField] private Missing _value; }")]
-    [InlineData("namespace Other { public class ViewModelAttribute : System.Attribute { } } [Other.ViewModel] public class Sample { } public class Host { [UnityEngine.SerializeField] private Sample _value; }")]
-    [InlineData("namespace Other { public class SerializeField : System.Attribute { } } [Bindings.ViewModel] public class SampleViewModel { } public class Host { [Other.SerializeField] private SampleViewModel _value; }")]
-    [InlineData("[Bindings.ViewModel] public class SampleViewModel { } public class Host { [UnityEngine.SerializeField] public SampleViewModel Value { get; set; } }")]
-    public async Task BND005IgnoresUnrelatedOrUnsupportedTargets(string source)
-    {
-        Assert.Empty(await AnalyzeAsync(CreateCompilation(source)));
+        Assert.Empty(await AnalyzeAsync(compilation));
     }
 
     [Theory]

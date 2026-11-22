@@ -175,7 +175,7 @@ public class ViewModelGeneratorTests
     [InlineData(true, "get; private set;")]
     [InlineData(true, "get; init;")]
     [InlineData(true, "get;")]
-    public void SchemaBackingFieldSerializationIsEditorOnly(bool editor, string accessors)
+    public void SchemaBackingFieldSerializationIsNotGenerated(bool editor, string accessors)
     {
         var (source, _) = RunGenerator($$"""
             [Bindings.ViewModel] public partial class TestViewModel
@@ -186,14 +186,14 @@ public class ViewModelGeneratorTests
             }
             """, out var result, out var output);
         Assert.Empty(result.Diagnostics);
-        Assert.Equal(1, source!.Split("[field: global::UnityEngine.SerializeField]").Length - 1);
-        var options = CSharpParseOptions.Default.WithPreprocessorSymbols(editor ? new[] { "UNITY_EDITOR" } : System.Array.Empty<string>());
+        Assert.DoesNotContain("[field: global::UnityEngine.SerializeField]", source);
+        var options = CSharpParseOptions.Default.WithPreprocessorSymbols(editor ? ["UNITY_EDITOR"] : System.Array.Empty<string>());
         output = output.RemoveAllSyntaxTrees().AddSyntaxTrees(output.SyntaxTrees.Select(tree =>
             CSharpSyntaxTree.ParseText(tree.GetText(), options, tree.FilePath)));
         Assert.DoesNotContain(output.GetDiagnostics(), static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error);
         var field = Assert.Single(output.GetTypeByMetadataName("TestViewModel")!.GetMembers().OfType<IFieldSymbol>(),
             static field => field.AssociatedSymbol is IPropertySymbol);
-        Assert.Equal(editor ? 1 : 0, field.GetAttributes().Count(static attribute =>
+        Assert.Equal(0, field.GetAttributes().Count(static attribute =>
             attribute.AttributeClass?.ToDisplayString() == "UnityEngine.SerializeField"));
     }
 
@@ -202,7 +202,7 @@ public class ViewModelGeneratorTests
     [InlineData("[UnityEngine.SerializeField]")]
     [InlineData("[property: UnityEngine.SerializeField]")]
     [InlineData("[field: Serialized]")]
-    public void UserSchemaSerializationStopsOnlyItsViewModel(string attribute)
+    public void UserSchemaSerializationDoesNotSuppressGeneration(string attribute)
     {
         var compilation = BindingsUsageAnalyzerTests.CreateCompilation("")
             .AddSyntaxTrees(
@@ -218,13 +218,8 @@ public class ViewModelGeneratorTests
                     [Bindings.ViewModel] public partial class GoodViewModel { }
                     """));
         var result = CSharpGeneratorDriver.Create(new ViewModelGenerator()).RunGenerators(compilation).GetRunResult();
-        var diagnostic = Assert.Single(result.Diagnostics);
-        Assert.Equal("BND009", diagnostic.Id);
-        Assert.Equal(DiagnosticSeverity.Error, diagnostic.Severity);
-        Assert.Contains("Remove SerializeField", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Contains("No source will be generated", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Equal(2, result.GeneratedTrees.Length);
-        Assert.All(result.GeneratedTrees, static tree => Assert.Contains("GoodView", tree.FilePath));
+        Assert.Empty(result.Diagnostics);
+        Assert.Equal(4, result.GeneratedTrees.Length);
     }
 
     [Fact]
@@ -354,9 +349,14 @@ namespace UnityEngine.UI
     public class ButtonClickedEvent
     {
         public void RemoveAllListeners() { }
-        public void AddListener(System.Action call) { }
+        public void AddListener(UnityEngine.Events.UnityAction call) { }
     }
     public class Image { public float fillAmount { get; set; } }
+}
+namespace UnityEngine.Events
+{
+    public delegate void UnityAction();
+    public delegate void UnityAction<T>(T value);
 }
 ";
 
@@ -644,113 +644,44 @@ namespace VContainer
         Assert.Contains("MissingViewModel", diagnostic.GetMessage());
     }
 
-    [Fact]
-    public async Task BND005SerializeFieldOnViewModelTypeReportsWarningAndContinuesGeneration()
-    {
-        const string userCode = @"
-namespace Bindings.Sample
-{
-    [Bindings.ViewModel]
-    public partial class CountSerializedViewModel
-    {
-        [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        public partial int Count { get; set; }
-    }
-
-    public sealed class ViewModelHost
-    {
-        [UnityEngine.SerializeField]
-        private CountSerializedViewModel _viewModel;
-    }
-}";
-
-        _ = RunGenerator(userCode, out var runResult, out var compilation);
-        var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
-
-        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
-        var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
-        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
-        Assert.Contains("_viewModel", diagnostic.GetMessage());
-        Assert.Contains("Bindings.Sample.CountSerializedViewModel", diagnostic.GetMessage());
-        Assert.Contains("[SerializeField]", diagnostic.GetMessage());
-        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
-            .GetText()
-            .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountSerializedViewModel.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountSerializedView.g.cs"));
-    }
-
-    [Fact]
-    public async Task BND005DoesNotReportForNonViewModelSerializeField()
-    {
-        const string userCode = @"
-public sealed class PrimitiveHost
-{
-    [UnityEngine.SerializeField]
-    private int _count;
-}";
-
-        _ = RunGenerator(userCode, out _, out var compilation);
-
-        Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
-    }
-
-    [Fact]
-    public async Task BND005SerializeReferenceOnSerializableViewModelTypeReportsWarningAndContinuesGeneration()
-    {
-        const string userCode = @"
-[System.Serializable]
-[Bindings.ViewModel]
-public partial class CountReferenceViewModel
-{
-    [Bindings.Schema(""TMPro.TMP_Text.text"")]
-    public partial int Count { get; set; }
-}
-
-public sealed class ViewModelHost
-{
-    [UnityEngine.SerializeReference]
-    private CountReferenceViewModel _viewModel;
-}";
-
-        _ = RunGenerator(userCode, out var runResult, out var compilation);
-        var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
-
-        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
-        var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
-        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
-        Assert.Contains("_viewModel", diagnostic.GetMessage());
-        Assert.Contains("CountReferenceViewModel", diagnostic.GetMessage());
-        Assert.Contains("[SerializeReference]", diagnostic.GetMessage());
-        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Equal("UnityEngine.SerializeReference", diagnostic.Location.SourceTree!
-            .GetText()
-            .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountReferenceViewModel.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountReferenceView.g.cs"));
-    }
-
-    [Fact]
-    public async Task BND005DoesNotReportForNonViewModelSerializeReference()
-    {
-        const string userCode = @"
-public sealed class PrimitiveHost
-{
-    [UnityEngine.SerializeReference]
-    private object _value;
-}";
-
-        _ = RunGenerator(userCode, out _, out var compilation);
-
-        Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
-    }
-
     // -------------------------------------------------------------------------
     // Multiple same-type methods use their ViewModel member names
     // -------------------------------------------------------------------------
+
+    [Theory]
+    [InlineData("partial class")]
+    [InlineData("partial struct")]
+    [InlineData("readonly partial struct")]
+    public void PrivateOverloadsExposeOneTypedActionPerMethod(string kind)
+    {
+        var (model, view) = RunGenerator($$"""
+            public class Control
+            {
+                public Event changed = new();
+                public class Event
+                {
+                    public void RemoveAllListeners() { }
+                    public void AddListener(UnityEngine.Events.UnityAction<float> listener) { }
+                }
+            }
+            [Bindings.ViewModel]
+            public {{kind}} InputViewModel
+            {
+                [Bindings.Schema("UnityEngine.UI.Button.onClick")]
+                private void Handle() { }
+                [Bindings.Schema("Control.changed", id: 1)]
+                [Bindings.Schema("Control.changed", id: 2)]
+                private static void Handle(float value) { }
+            }
+            """, out _, out var compilation);
+        Assert.Empty(compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.Contains(kind == "partial class"
+            ? "internal readonly global::UnityEngine.Events.UnityAction _handleAction;"
+            : "internal global::UnityEngine.Events.UnityAction _handleAction => this.@Handle;", model);
+        Assert.Contains("internal readonly global::UnityEngine.Events.UnityAction<float> _handleAction_;", model);
+        Assert.Contains("this._handleAction_ = global::InputViewModel.@Handle;", model);
+        Assert.Equal(2, view!.Split("AddListener(_viewModel._handleAction_);").Length - 1);
+    }
 
     [Fact]
     public void Count1ViewModelMultipleDefaultIdMethodsProduceSeparateFields()
@@ -783,9 +714,9 @@ namespace Bindings.Sample
         Assert.Contains("_countText ", viewSource);
         // Increment / Decrement each AddListener on their respective button
         Assert.Contains("_incrementButton.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Increment)", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel._incrementAction)", viewSource);
         Assert.Contains("_decrementButton.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_decrementButton.onClick.AddListener(_viewModel.Decrement)", viewSource);
+        Assert.Contains("_decrementButton.onClick.AddListener(_viewModel._decrementAction)", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -823,8 +754,8 @@ namespace Bindings.Sample
         Assert.DoesNotContain("_decrementButton", viewSource);
         // Both methods AddListener on the same field
         Assert.Contains("_incrementButton.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Increment)", viewSource);
-        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Decrement)", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel._incrementAction)", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel._decrementAction)", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -1109,7 +1040,7 @@ namespace Bindings.Sample
         }
 
         Assert.Equal(1, viewSource.Split("private global::UnityEngine.UI.Button ").Length - 1);
-        Assert.Contains("_enabledButton.onClick.AddListener(_viewModel.Click);", viewSource);
+        Assert.Contains("_enabledButton.onClick.AddListener(_viewModel._clickAction);", viewSource);
         if (expectedTooltip.Length == 0)
         {
             Assert.DoesNotContain("[global::UnityEngine.Tooltip(", viewSource);
@@ -1122,17 +1053,19 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // [System.Serializable] already applied: do not add it again
+    // Only the generated View requires [System.Serializable].
     // -------------------------------------------------------------------------
 
-    [Fact]
-    public void AlreadySerializableDoesNotAddSerializableAgain()
+    [Theory]
+    [InlineData("")]
+    [InlineData("[System.Serializable]")]
+    public void SerializableIsOnlyEmittedOnTheView(string attribute)
     {
-        const string userCode = @"
+        var userCode = @"
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    [System.Serializable]
+    " + attribute + @"
     public partial class CountSerializableViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
@@ -1140,13 +1073,12 @@ namespace Bindings.Sample
     }
 }";
 
-        var (vmSource, _) = RunGenerator(userCode, out var runResult);
+        var (vmSource, viewSource) = RunGenerator(userCode, out var runResult);
 
         Assert.NotNull(vmSource);
-        // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
-        // [Serializable] alone can be used by custom serializers and must not report BND005.
-        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
+        Assert.Contains("[global::System.Serializable]", viewSource);
+        Assert.Empty(runResult.Diagnostics);
     }
 
     // -------------------------------------------------------------------------
@@ -1595,8 +1527,8 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        Assert.Contains("_submitButton.onClick.AddListener(_viewModel.Submit)", viewSource);
-        Assert.Contains("_cancelButton.onClick.AddListener(_viewModel.Cancel)", viewSource);
+        Assert.Contains("_submitButton.onClick.AddListener(_viewModel._submitAction)", viewSource);
+        Assert.Contains("_cancelButton.onClick.AddListener(_viewModel._cancelAction)", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -1890,7 +1822,7 @@ namespace Bindings.Sample
         // The field is encountered first and names the shared component.
         Assert.Contains("_interactableButton", viewSource);
         Assert.DoesNotContain("_onClickButton", viewSource);
-        Assert.Contains("_interactableButton.onClick.AddListener(_viewModel.OnClick)", viewSource);
+        Assert.Contains("_interactableButton.onClick.AddListener(_viewModel._onClickAction)", viewSource);
     }
 
     // -------------------------------------------------------------------------

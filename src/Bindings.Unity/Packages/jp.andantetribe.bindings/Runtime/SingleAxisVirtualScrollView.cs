@@ -4,6 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 namespace Bindings
@@ -18,6 +19,9 @@ namespace Bindings
     /// </remarks>
     [Serializable]
     public sealed class SingleAxisVirtualScrollView : IView<SingleAxisVirtualScrollViewModel>, IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>
+#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
+        , IMvvmSubscriber<DebugBindMessage>
+#endif
     {
         [SerializeField]
         private Binder _itemPrefab = null!;
@@ -30,6 +34,7 @@ namespace Bindings
         [SerializeField]
         private ScrollRect _scrollRect = null!;
 
+        private readonly UnityAction<Vector2> _onScrollValueChanged;
         private SingleAxisVirtualScrollViewModel _viewModel = null!;
         private ReadOnlyMemory<Binder> _items = ReadOnlyMemory<Binder>.Empty;
         private ReadOnlyMemory<ScrollItemMvvmPublisher> _boundPublishers = ReadOnlyMemory<ScrollItemMvvmPublisher>.Empty;
@@ -38,6 +43,8 @@ namespace Bindings
         private int _visibleStart;
         private int _visibleCount;
         private int _firstIndex = -1;
+
+        internal SingleAxisVirtualScrollView() => _onScrollValueChanged = OnScrollValueChanged;
 
         void IView<SingleAxisVirtualScrollViewModel>.Initialize(SingleAxisVirtualScrollViewModel viewModel) => _viewModel = viewModel;
 
@@ -51,12 +58,13 @@ namespace Bindings
                 throw new InvalidOperationException("Enable exactly one ScrollRect direction: Vertical or Horizontal.");
             }
             _axis = _scrollRect.vertical ? RectTransform.Axis.Vertical : RectTransform.Axis.Horizontal;
-            _itemSize = ((RectTransform)_itemPrefab.transform).rect.size[(int)_axis];
+            var prefabSize = ((RectTransform)_itemPrefab.transform).rect.size;
+            _itemSize = prefabSize[(int)_axis];
             if (_itemSize <= 0)
             {
                 throw new InvalidOperationException("The scroll item prefab must have a positive size along the scroll axis.");
             }
-            if (_laneCount > 1 && ((RectTransform)_itemPrefab.transform).rect.size[1 - (int)_axis] <= 0)
+            if (_laneCount > 1 && prefabSize[1 - (int)_axis] <= 0)
             {
                 throw new InvalidOperationException("The grid item prefab must have a positive size perpendicular to the scroll axis.");
             }
@@ -79,8 +87,9 @@ namespace Bindings
                 await AddItemsAsync(count, cancellationToken);
             }
             _boundPublishers = publishers;
-            _scrollRect.onValueChanged.AddListener(OnScrollValueChanged);
-            ScrollTo(viewModel.ScrollRatio);
+            _scrollRect.onValueChanged.AddListener(_onScrollValueChanged);
+            SetScrollPosition(viewModel.ScrollRatio);
+            OnScrollValueChanged(_scrollRect.normalizedPosition);
         }
 
         void IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>.OnReceivedMessage(
@@ -88,14 +97,24 @@ namespace Bindings
         {
             if (!_boundPublishers.IsEmpty)
             {
-                ScrollTo(message.Ratio);
+                SetScrollPosition(message.Ratio);
+                OnScrollValueChanged(_scrollRect.normalizedPosition);
             }
         }
 
-        private void ScrollTo(float ratio)
+#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
+        void IMvvmSubscriber<DebugBindMessage>.OnReceivedMessage(DebugBindMessage message)
+        {
+            // Do not call OnScrollValueChanged.
+            message.BindTo(this);
+            SetScrollPosition(_viewModel.ScrollRatio);
+        }
+#endif
+
+        private void SetScrollPosition(float ratio)
         {
             _scrollRect.StopMovement();
-            if (_axis == RectTransform.Axis.Vertical)
+            if (_scrollRect.vertical)
             {
                 _scrollRect.verticalNormalizedPosition = 1 - ratio;
             }
@@ -103,7 +122,6 @@ namespace Bindings
             {
                 _scrollRect.horizontalNormalizedPosition = ratio;
             }
-            OnScrollValueChanged(_scrollRect.normalizedPosition);
         }
 
         private void TrimItems(int count)
@@ -150,11 +168,13 @@ namespace Bindings
             }
 
             var viewport = _scrollRect.viewport;
-            var contentRect = _scrollRect.content.rect;
-            var viewportStart = _scrollRect.content.InverseTransformPoint(
-                viewport.TransformPoint(new Vector3(viewport.rect.xMin, viewport.rect.yMax)));
+            var viewportRect = viewport.rect;
+            var content = _scrollRect.content;
+            var contentRect = content.rect;
+            var viewportStart = content.InverseTransformPoint(
+                viewport.TransformPoint(new Vector3(viewportRect.xMin, viewportRect.yMax)));
             var offset = _axis == RectTransform.Axis.Vertical ? contentRect.yMax - viewportStart.y : viewportStart.x - contentRect.xMin;
-            var length = viewport.rect.size[(int)_axis];
+            var length = viewportRect.size[(int)_axis];
             var pitch = _itemSize + _spacing;
             var stepCount = _boundPublishers.IsEmpty ? 0 : (_boundPublishers.Length - 1) / _laneCount + 1;
             var firstStep = Mathf.Clamp(Mathf.FloorToInt((offset - _itemSize) / pitch) + 1, 0, stepCount);
@@ -200,14 +220,15 @@ namespace Bindings
                 var step = index / _laneCount;
                 var lane = index % _laneCount;
                 var laneSize = rect.rect.size[1 - (int)_axis];
+                var pivot = rect.pivot;
                 var laneOffset = (lane - (_laneCount - 1) * 0.5f) * (laneSize + _laneSpacing);
                 rect.localPosition = _axis == RectTransform.Axis.Vertical
                     ? new Vector3(
-                        contentRect.center.x + laneOffset + (rect.pivot.x - 0.5f) * rect.rect.width,
-                        contentRect.yMax - step * pitch - (1 - rect.pivot.y) * _itemSize, 0)
+                        contentRect.center.x + laneOffset + (pivot.x - 0.5f) * laneSize,
+                        contentRect.yMax - step * pitch - (1 - pivot.y) * _itemSize, 0)
                     : new Vector3(
-                        contentRect.xMin + step * pitch + rect.pivot.x * _itemSize,
-                        contentRect.center.y - laneOffset + (rect.pivot.y - 0.5f) * rect.rect.height, 0);
+                        contentRect.xMin + step * pitch + pivot.x * _itemSize,
+                        contentRect.center.y - laneOffset + (pivot.y - 0.5f) * laneSize, 0);
                 _boundPublishers.Span[index].Binder = item;
                 item.gameObject.SetActive(true);
             }
@@ -215,10 +236,13 @@ namespace Bindings
 
         private void ResetBindings()
         {
-            _scrollRect.onValueChanged.RemoveListener(OnScrollValueChanged);
-            foreach (var publisher in _boundPublishers.Span)
+            _scrollRect.onValueChanged.RemoveListener(_onScrollValueChanged);
+            if (_visibleCount > 0)
             {
-                publisher.Binder = null;
+                foreach (var publisher in _boundPublishers.Span.Slice(_firstIndex, _visibleCount))
+                {
+                    publisher.Binder = null;
+                }
             }
             foreach (var item in _items.Span)
             {

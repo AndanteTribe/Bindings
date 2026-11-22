@@ -33,7 +33,6 @@ https://github.com/AndanteTribe/Bindings.git?path=src/Bindings.Unity/Packages/jp
 
 ```csharp
 using Bindings;
-using UnityEngine;
 
 namespace MyApp
 {
@@ -47,13 +46,13 @@ namespace MyApp
         public partial int Count { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Increment()
+        private void Increment()
         {
             Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Decrement()
+        private void Decrement()
         {
             Count -= 1;
         }
@@ -79,16 +78,12 @@ namespace MyApp
 
 namespace MyApp
 {
-#if UNITY_EDITOR
-    [global::System.Serializable]
-#endif
     public partial class CounterViewModel : global::Bindings.IViewModel
     {
         private readonly global::Bindings.IMvvmPublisher _publisher;
+        internal readonly global::UnityEngine.Events.UnityAction _incrementAction;
+        internal readonly global::UnityEngine.Events.UnityAction _decrementAction;
 
-        #if UNITY_EDITOR
-        [field: global::UnityEngine.SerializeField]
-        #endif
         public partial int Count
         {
             get => field;
@@ -103,6 +98,8 @@ namespace MyApp
         {
             _publisher = publisher;
             _model = model;
+            this._incrementAction = this.@Increment;
+            this._decrementAction = this.@Decrement;
             OnPostConstruct();
         }
 
@@ -161,9 +158,9 @@ namespace MyApp
         {
             global::Bindings.TextMeshProExtensions.SetValue(_countText, _viewModel.Count);
             _incrementButton.onClick.RemoveAllListeners();
-            _incrementButton.onClick.AddListener(_viewModel.Increment);
+            _incrementButton.onClick.AddListener(_viewModel._incrementAction);
             _decrementButton.onClick.RemoveAllListeners();
-            _decrementButton.onClick.AddListener(_viewModel.Decrement);
+            _decrementButton.onClick.AddListener(_viewModel._decrementAction);
             OnPostBind();
             _viewModel.NotifyCompletedBind();
         }
@@ -232,7 +229,9 @@ public class GameEntry : MonoBehaviour
 
 **手順 4 — Preview**
 
-**Add View** ボタンの下にある **Preview** ボタンをクリックすると、登録されている各 View に紐づく ViewModel オブジェクトが表示されます。Inspector から直接値を入力し、**Invoke** ボタンを押すとバインドが適用されるので、UI が想定通りに更新されるか検証できます。
+**Add View** ボタンの下にある **Preview** ボタンをクリックすると、登録されている各 View に紐づく ViewModel の編集可能な値が表示されます。Inspector から直接値を入力し、**Invoke** ボタンを押すとバインドが適用されるので、UI が想定通りに更新されるか検証できます。
+
+表示対象は、Unity が描画できる型の public フィールド、public setter を持つプロパティ、または `[Required]` 付きのフィールド・プロパティです。**Invoke** を押すたびに View ごとに ViewModel を生成し、`[Required]` の値はコンストラクタに渡します。Binder を編集するとプレビューは閉じ、入力値は破棄されます。
 
 ![Preview と Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
 
@@ -304,7 +303,7 @@ public partial Vector2 Size { get; set; }
 
 Schema 属性を複数付けても、プロパティごとに生成する partial 実装は1つです。`private set`・`init`・getter のみの定義を含め、アクセサーの宣言を維持します。getter は C# 14 の `field` でコンパイラー生成の backing field を読み、`set` / `init` は代入して再バインドを要求します。同じ値でも通知します。readonly struct では getter のみの定義を使用できます。
 
-移行時は `[Schema] private int _count;` を `[Schema] public partial int Count { get; set; }` に変更し、ユーザーコードからも `Count` を使います。ユーザー側の `SerializeField` は削除してください。Bindings がデバッグ表示用として、生成実装に `#if UNITY_EDITOR` 限定で `[field: UnityEngine.SerializeField]` を付与します。Schema プロパティへの `SerializeField` 指定は `field:` 指定も含めて [BND009](docs/diagnostics/BND009.ja.md) の対象です。実行時の永続化を目的としたものではなく、readonly な backing field などには Unity 標準のシリアライズ制約が適用されます。初期値は partial 定義側に記述できます。旧フィールドへの直接アクセス診断 BND007 は削除しました。
+移行時は `[Schema] private int _count;` を `[Schema] public partial int Count { get; set; }` に変更し、ユーザーコードからも `Count` を使います。Bindings は ViewModel や backing field にシリアライズ属性を生成せず、Inspector のプレビューには独立したスロットを使用します。初期値は partial 定義側に記述できます。旧診断 BND007 と BND009 は削除しました。
 
 ### コンポーネントフィールドと共有
 
@@ -325,7 +324,7 @@ Schema 属性を複数付けても、プロパティごとに生成する partia
 
 デバッグ用サブスクライバーは `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT` の条件でコンパイルします。プロパティのバインドだけを適用して同じ完了フックを呼び、イベントリスナーの再登録は行いません。
 
-Viewには、Binderの `[SerializeReference]` による保持のため、常に `[Serializable]` を付与します。ViewModelへの参照はシリアライズしません。ViewModelには `UNITY_EDITOR` の場合だけ `[Serializable]` を付与し、ユーザーが明示済みの場合は重複させません。これはInspector表示を支援するもので、生成された実行時状態のUnityによる永続化を保証しません。[BND005](docs/diagnostics/BND005.ja.md)に従い、ViewModelは実行時に構築してください。
+Viewには、Binderの `[SerializeReference]` による保持のため、常に `[Serializable]` を付与します。ViewModelへの参照はシリアライズしません。
 
 ## `IMvvmSubscriber<T>` によるメッセージング
 
@@ -350,7 +349,7 @@ public readonly struct ShowDialogMessage
 public partial class MyViewModel
 {
     [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-    public void OnConfirm()
+    private void OnConfirm()
     {
         _publisher.Publish(new ShowDialogMessage("よろしいですか？"));
     }
@@ -380,10 +379,8 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 | [`BND002`](docs/diagnostics/BND002.ja.md) | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
 | [`BND003`](docs/diagnostics/BND003.ja.md) | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
 | [`BND004`](docs/diagnostics/BND004.ja.md) | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
-| [`BND005`](docs/diagnostics/BND005.ja.md) | 警告 | `[ViewModel]` 型のフィールドに `[SerializeField]` または `[SerializeReference]` が付与されている。ViewModel は Unity のデシリアライズに任せず、実行時に生成・代入する。 |
 | [`BND006`](docs/diagnostics/BND006.ja.md) | エラー | `IView` を実装するクラスが `MonoBehaviour` を継承している。View は通常の C# クラスとして実装する。 |
 | [`BND008`](docs/diagnostics/BND008.ja.md) | エラー | Schema プロパティが public な getter を持つ対応可能な public インスタンス partial 定義ではない。 |
-| [`BND009`](docs/diagnostics/BND009.ja.md) | エラー | Editor 限定のシリアライズ属性を Bindings が生成する Schema プロパティに、ユーザーが SerializeField を指定している。 |
 
 ### ベストプラクティス診断
 
@@ -408,7 +405,7 @@ dotnet_diagnostic.BNDP001.severity = suggestion
 
 無効にする場合は `none` を指定します。ベストプラクティス診断をまとめて無効にするには、`dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none` を指定してください。
 
-診断メッセージはUIカルチャーが `ja` / `ja-JP` の場合に日本語、それ以外は英語になります。生成時のBND001・BND004・BND008・BND009は該当ViewModelの生成だけを中止し、Usage診断・ベストプラクティス診断はソース生成を抑止しません。個別の動作は各診断ページを参照してください。
+診断メッセージはUIカルチャーが `ja` / `ja-JP` の場合に日本語、それ以外は英語になります。生成時のBND001・BND004・BND008は該当ViewModelの生成だけを中止し、Usage診断・ベストプラクティス診断はソース生成を抑止しません。個別の動作は各診断ページを参照してください。
 
 ## 単軸仮想スクロール
 

@@ -106,20 +106,6 @@ internal static class DiagnosticDescriptors
             customTags: [Category]);
 
     /// <summary>
-    /// BND005: emitted when a field whose type is annotated with [ViewModel] is marked with
-    /// Unity's [SerializeField] or [SerializeReference].
-    /// </summary>
-    public static readonly DiagnosticDescriptor Bnd005 = new(
-            id: "BND005",
-            title: new LocalizableResourceString("Bnd005Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            messageFormat: new LocalizableResourceString("Bnd005Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            category: Category,
-            defaultSeverity: DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            helpLinkUri: Documentation.BaseUrl + "BND005.md",
-            customTags: [Category]);
-
-    /// <summary>
     /// BND006: emitted when an IView implementation derives from MonoBehaviour.
     /// </summary>
     public static readonly DiagnosticDescriptor Bnd006 = new(
@@ -143,19 +129,6 @@ internal static class DiagnosticDescriptors
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             helpLinkUri: Documentation.BaseUrl + "BND008.md",
-            customTags: [Category]);
-
-    /// <summary>
-    /// BND009: Schema property serialization is owned by the generator.
-    /// </summary>
-    public static readonly DiagnosticDescriptor Bnd009 = new(
-            id: "BND009",
-            title: new LocalizableResourceString("Bnd009Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            messageFormat: new LocalizableResourceString("Bnd009Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            category: Category,
-            defaultSeverity: DiagnosticSeverity.Error,
-            isEnabledByDefault: true,
-            helpLinkUri: Documentation.BaseUrl + "BND009.md",
             customTags: [Category]);
 
     /// <summary>

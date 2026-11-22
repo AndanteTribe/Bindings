@@ -33,7 +33,6 @@ Annotate a `partial` class with `[ViewModel]`. Use `[Required]` to declare const
 
 ```csharp
 using Bindings;
-using UnityEngine;
 
 namespace MyApp
 {
@@ -47,13 +46,13 @@ namespace MyApp
         public partial int Count { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Increment()
+        private void Increment()
         {
             Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Decrement()
+        private void Decrement()
         {
             Count -= 1;
         }
@@ -79,16 +78,12 @@ The source generator automatically produces:
 
 namespace MyApp
 {
-#if UNITY_EDITOR
-    [global::System.Serializable]
-#endif
     public partial class CounterViewModel : global::Bindings.IViewModel
     {
         private readonly global::Bindings.IMvvmPublisher _publisher;
+        internal readonly global::UnityEngine.Events.UnityAction _incrementAction;
+        internal readonly global::UnityEngine.Events.UnityAction _decrementAction;
 
-        #if UNITY_EDITOR
-        [field: global::UnityEngine.SerializeField]
-        #endif
         public partial int Count
         {
             get => field;
@@ -103,6 +98,8 @@ namespace MyApp
         {
             _publisher = publisher;
             _model = model;
+            this._incrementAction = this.@Increment;
+            this._decrementAction = this.@Decrement;
             OnPostConstruct();
         }
 
@@ -161,9 +158,9 @@ namespace MyApp
         {
             global::Bindings.TextMeshProExtensions.SetValue(_countText, _viewModel.Count);
             _incrementButton.onClick.RemoveAllListeners();
-            _incrementButton.onClick.AddListener(_viewModel.Increment);
+            _incrementButton.onClick.AddListener(_viewModel._incrementAction);
             _decrementButton.onClick.RemoveAllListeners();
-            _decrementButton.onClick.AddListener(_viewModel.Decrement);
+            _decrementButton.onClick.AddListener(_viewModel._decrementAction);
             OnPostBind();
             _viewModel.NotifyCompletedBind();
         }
@@ -232,7 +229,9 @@ The selected View is now registered in the **Views** list. Each `[SerializeField
 
 **Step 4 — Preview**
 
-Click the **Preview** button below **Add View** to reveal the ViewModel associated with each registered View. Fill in values directly in the Inspector and click **Invoke** to apply the bindings and verify that the UI updates as expected.
+Click the **Preview** button below **Add View** to reveal the editable values of the ViewModel associated with each registered View. Fill in values directly in the Inspector and click **Invoke** to apply the bindings and verify that the UI updates as expected.
+
+The Inspector shows public fields, properties with a public setter, and `[Required]` fields or properties if Unity can draw their type. Each **Invoke** constructs a fresh ViewModel for each View, passing `[Required]` values to the constructor. Editing the Binder closes the preview and discards its inputs.
 
 ![Preview and Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
 
@@ -304,7 +303,7 @@ The generated View calls `RectTransform.SetSizeWithCurrentAnchors` once for the 
 
 Each Schema property produces one partial implementation, even with multiple Schema attributes. Accessor signatures are preserved, including `private set`, `init`, and getter-only definitions. The getter reads the compiler-generated backing field through C# 14's `field`; `set` and `init` assign it and request a rebind, even when the value is unchanged. Readonly structs can use getter-only definitions.
 
-To migrate, replace `[Schema] private int _count;` with `[Schema] public partial int Count { get; set; }` and use `Count` in user code. Remove user-written `SerializeField`: Bindings adds `[field: UnityEngine.SerializeField]` to the generated implementation only under `#if UNITY_EDITOR` for debug inspection. Applying `SerializeField` to a Schema property, including with `field:`, produces [BND009](docs/diagnostics/BND009.md). This is not runtime persistence; Unity's normal field serialization limitations still apply, including readonly backing fields. Initializers belong on the partial definition. The former direct-field-access diagnostic BND007 has been removed.
+To migrate, replace `[Schema] private int _count;` with `[Schema] public partial int Count { get; set; }` and use `Count` in user code. Bindings does not generate serialization attributes on ViewModels or their backing fields; Inspector previews use separate slots. Initializers belong on the partial definition. The former diagnostics BND007 and BND009 have been removed.
 
 ### Component Fields and Sharing
 
@@ -325,7 +324,7 @@ With `requireBindImplementation: true`, implement `IView.BindAsync` on the parti
 
 The debug subscriber is compiled under `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT`. It applies only property bindings, followed by the same completion hooks; it does not re-register event listeners.
 
-Views always receive `[Serializable]` for the Binder's `[SerializeReference]` storage; their ViewModel reference is non-serialized. ViewModels receive `[Serializable]` only under `UNITY_EDITOR`, unless the user already supplied it. This supports inspection, not Unity persistence of generated runtime state; construct ViewModels at runtime as explained in [BND005](docs/diagnostics/BND005.md).
+Views always receive `[Serializable]` for the Binder's `[SerializeReference]` storage; their ViewModel reference is non-serialized.
 
 ## Messaging with `IMvvmSubscriber<T>`
 
@@ -350,7 +349,7 @@ public readonly struct ShowDialogMessage
 public partial class MyViewModel
 {
     [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-    public void OnConfirm()
+    private void OnConfirm()
     {
         _publisher.Publish(new ShowDialogMessage("Are you sure?"));
     }
@@ -380,10 +379,8 @@ Each ID links to its detailed cause, examples, exceptions, Code Fix availability
 | [`BND002`](docs/diagnostics/BND002.md) | Error | `[Schema]` `id` is less than `-1`. |
 | [`BND003`](docs/diagnostics/BND003.md) | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
 | [`BND004`](docs/diagnostics/BND004.md) | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
-| [`BND005`](docs/diagnostics/BND005.md) | Warning | A field of a `[ViewModel]` type is marked with `[SerializeField]` or `[SerializeReference]`. Construct or assign ViewModels at runtime instead of relying on Unity deserialization. |
 | [`BND006`](docs/diagnostics/BND006.md) | Error | A class implementing `IView` derives from `MonoBehaviour`. Implement Views as plain C# classes instead. |
 | [`BND008`](docs/diagnostics/BND008.md) | Error | A Schema property is not a supported public instance partial definition with a public getter. |
-| [`BND009`](docs/diagnostics/BND009.md) | Error | A user-defined Schema property has SerializeField; Bindings owns its Editor-only serialization attribute. |
 
 ### Best-practice diagnostics
 
@@ -408,7 +405,7 @@ dotnet_diagnostic.BNDP001.severity = suggestion
 
 Use `none` to disable a diagnostic. To disable all best-practice diagnostics, set `dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none`.
 
-Diagnostic messages use Japanese for the `ja` / `ja-JP` UI cultures and fall back to English for other cultures. Source-generation errors BND001, BND004, BND008, and BND009 stop only the affected ViewModel's generation; usage and best-practice diagnostics do not suppress source generation. Detailed behavior is documented on each rule's page.
+Diagnostic messages use Japanese for the `ja` / `ja-JP` UI cultures and fall back to English for other cultures. Source-generation errors BND001, BND004, and BND008 stop only the affected ViewModel's generation; usage and best-practice diagnostics do not suppress source generation. Detailed behavior is documented on each rule's page.
 
 ## Single-Axis Virtual Scrolling
 

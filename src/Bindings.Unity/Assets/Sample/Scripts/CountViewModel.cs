@@ -1,7 +1,5 @@
 #nullable enable
 
-using UnityEngine;
-
 namespace Bindings.Sample
 {
     [ViewModel]
@@ -14,13 +12,13 @@ namespace Bindings.Sample
         public partial int Count { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Increment()
+        private void Increment()
         {
             Count += 1;
         }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Decrement()
+        private void Decrement()
         {
             Count -= 1;
         }
@@ -32,10 +30,11 @@ namespace Bindings.Sample
     }
 
     // Planned to be generated auto.
-    // [System.Serializable]
     // public sealed partial class CountViewModel : IViewModel
     // {
     //     private readonly IMvvmPublisher _publisher;
+    //     internal readonly global::UnityEngine.Events.UnityAction _incrementAction;
+    //     internal readonly global::UnityEngine.Events.UnityAction _decrementAction;
     //
     //     public partial int Count
     //     {
@@ -49,8 +48,10 @@ namespace Bindings.Sample
     //
     //     public CountViewModel(CountModel model, IMvvmPublisher publisher)
     //     {
-    //         _model = model;
     //         _publisher = publisher;
+    //         _model = model;
+    //         this._incrementAction = this.@Increment;
+    //         this._decrementAction = this.@Decrement;
     //     }
     //
     //     public void NotifyCompletedBind() => OnPostBind();
@@ -89,9 +90,9 @@ namespace Bindings.Sample
     //     {
     //         _text.SetValue(_viewModel.Count);
     //         _incrementButton.onClick.RemoveAllListeners();
-    //         _incrementButton.onClick.AddListener(_viewModel.Increment);
+    //         _incrementButton.onClick.AddListener(_viewModel._incrementAction);
     //         _decrementButton.onClick.RemoveAllListeners();
-    //         _decrementButton.onClick.AddListener(_viewModel.Decrement);
+    //         _decrementButton.onClick.AddListener(_viewModel._decrementAction);
     //         OnPostBind();
     //         _viewModel.NotifyCompletedBind();
     //     }

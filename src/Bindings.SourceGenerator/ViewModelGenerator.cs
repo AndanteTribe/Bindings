@@ -85,17 +85,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var viewModelAttr = ctx.Attributes[0];
         var requireBind = viewModelAttr.ConstructorArguments.Length > 0 && viewModelAttr.ConstructorArguments[0].Value is true;
 
-        // 2. Check whether [System.Serializable] is already applied to the type
-        var alreadySerializable = typeSymbol.HasAttribute(compilation.GetTypeByMetadataName(TypeNames.SerializableAttribute));
-
-        // 3. Namespace (empty string when the type is in the global namespace)
+        // 2. Namespace (empty string when the type is in the global namespace)
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace ? "" : typeSymbol.ContainingNamespace.ToDisplayString();
 
-        // 4. Validate accessibility
+        // 3. Validate accessibility
         var diagnostics = new List<Diagnostic>();
         var (accessibility, canGenerate) = GetAccessibilityKeyword(typeSymbol, typeLocation, typeSymbol.Name, diagnostics);
 
-        // 5. Collect containing types (outermost first)
+        // 4. Collect containing types (outermost first)
         var containingTypes = new List<(string Accessibility, string TypeKeyword, string TypeName)>();
         var enclosing = typeSymbol.ContainingType;
         while (enclosing != null)
@@ -107,18 +104,20 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             enclosing = enclosing.ContainingType;
         }
 
-        // 6. Validate the ViewModel class name
+        // 5. Validate the ViewModel class name
         if (TemplateHelpers.GetViewName(typeSymbol.Name) == null)
         {
             diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd001, typeLocation, typeSymbol.Name));
             canGenerate = false;
         }
 
-        // 7. Walk members to collect [Required] / [Schema] information
+        // 6. Walk members to collect [Required] / [Schema] information
         // Schema bindings belong to partial property definitions and methods.
         var requiredFields = new List<(string TypeFullName, string FieldName, string TypeOfName)>();
         var schemaProperties = new List<(string PropertyName, string PropertyTypeName, string Modifiers, string Getter, string Setter, GenerationContext.BindingInfo Binding)>();
-        var schemaMethods = new List<(string MethodName, GenerationContext.BindingInfo Binding)>();
+        var schemaMethods = new List<(string MethodName, string ActionField, GenerationContext.BindingInfo Binding)>();
+        var schemaActions = new List<(string MemberName, string ActionType, string MethodName, bool IsStatic)>();
+        HashSet<string>? reservedNames = null;
 
         foreach (var member in typeSymbol.GetMembers())
         {
@@ -148,22 +147,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                         diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd008, prop.Locations.FirstOrDefault() ?? typeLocation, prop.Name));
                         canGenerate = false;
                         break;
-                    }
-
-                    if (prop.HasAttribute(schemaAttribute))
-                    {
-                        var serializeField = compilation.GetTypeByMetadataName(TypeNames.SerializeField);
-                        var semanticModel = compilation.GetSemanticModel(declaration!.SyntaxTree);
-                        foreach (var attribute in declaration.AttributeLists.SelectMany(static list => list.Attributes))
-                        {
-                            if (serializeField != null
-                                && semanticModel.GetSymbolInfo(attribute, ct).Symbol is IMethodSymbol constructor
-                                && SymbolEqualityComparer.Default.Equals(constructor.ContainingType, serializeField))
-                            {
-                                diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd009, attribute.GetLocation(), prop.Name));
-                                canGenerate = false;
-                            }
-                        }
                     }
 
                     foreach (var attr in prop.GetAttributes())
@@ -204,6 +187,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                 }
                 case IMethodSymbol { MethodKind: MethodKind.Ordinary, IsImplicitlyDeclared: false } method:
                 {
+                    string? actionField = null;
                     foreach (var attr in method.GetAttributes())
                     {
                         if (attr.IsAttribute(schemaAttribute))
@@ -216,8 +200,24 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd002, attrLoc, id.ToString()));
                                 id = -1; // treat as unset to avoid further errors
                             }
+                            if (actionField == null)
+                            {
+                                reservedNames ??= [.. typeSymbol.MemberNames];
+                                actionField = "_" + TemplateHelpers.ToParamName(method.Name) + "Action";
+                                while (!reservedNames.Add(actionField))
+                                {
+                                    actionField += "_";
+                                }
+                                var actionType = "global::UnityEngine.Events.UnityAction";
+                                if (method.Parameters.Length > 0)
+                                {
+                                    actionType += "<" + string.Join(", ", method.Parameters.Select(p => p.Type.ToDisplayString(s_fullyQualifiedNullableFormat))) + ">";
+                                }
+                                schemaActions.Add((actionField, actionType, method.Name, method.IsStatic));
+                            }
                             schemaMethods.Add((
                                 MethodName: method.Name,
+                                ActionField: actionField,
                                 Binding: new GenerationContext.BindingInfo(
                                     bindingPath: GetBindingPath(attr),
                                     id: id,
@@ -238,10 +238,10 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             containingTypes: containingTypes,
             type: viewModelType,
             requireBindImplementation: requireBind,
-            alreadySerializable: alreadySerializable,
             requiredFields: requiredFields,
             schemaProperties: schemaProperties,
             schemaMethods: schemaMethods,
+            schemaActions: schemaActions,
             diagnostics: diagnostics,
             generateVContainerInjector: CanGenerateVContainerInjector(compilation, typeSymbol));
     }
@@ -509,13 +509,13 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var orderedTypeGroups = new List<(string, List<(bool, int, int, string, string)>)>();
         for (var i = 0; i < fieldCount; i++)
         {
-            var property = data.SchemaProperties[i];
-            AddEntry(property.Binding, false, i, property.PropertyName.TrimStart('@'));
+            var (PropertyName, PropertyTypeName, Modifiers, Getter, Setter, Binding) = data.SchemaProperties[i];
+            AddEntry(Binding, false, i, PropertyName.TrimStart('@'));
         }
 
         for (var i = 0; i < methodCount; i++)
         {
-            var (methodName, binding) = data.SchemaMethods[i];
+            var (methodName, _, binding) = data.SchemaMethods[i];
             AddEntry(binding, true, i, methodName);
         }
 
@@ -673,7 +673,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// Generates the partial class or struct for the ViewModel using the <see cref="ViewModelTemplate"/>.
     ///
     /// Generated contents:
-    ///   - [global::System.Serializable] in UNITY_EDITOR (only when not already applied by the user)
     ///   - IViewModel implementation
     ///   - _publisher field
     ///   - One public property per [Schema] field (in declaration order)

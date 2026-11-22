@@ -31,9 +31,6 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
             this.Write("\n{\n");
  }
- if (!Context.AlreadySerializable) {
-            this.Write("#if UNITY_EDITOR\n[global::System.Serializable]\n#endif\n");
- }
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
             this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( TypeKeyword ));
@@ -41,8 +38,25 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write(" : global::Bindings.IViewModel\n{\n    private readonly global::Bindings.IMvvmPubli" +
                     "sher _publisher;\n");
+ foreach (var action in Context.SchemaActions) {
+    if (!ShouldCacheAction(action.IsStatic)) {
+            this.Write("    internal ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.ActionType ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MemberName ));
+            this.Write(" => this.@");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MethodName ));
+            this.Write(";\n");
+ } else {
+            this.Write("    internal readonly ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.ActionType ));
+            this.Write(" ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MemberName ));
+            this.Write(";\n");
+ }
+ }
  foreach (var property in DistinctSchemaProperties) {
-            this.Write("\n#if UNITY_EDITOR\n    [field: global::UnityEngine.SerializeField]\n#endif\n    ");
+            this.Write("\n    ");
             this.Write(this.ToStringHelper.ToStringWithCulture( property.Modifiers ));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture( property.PropertyTypeName ));
@@ -65,13 +79,25 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.ClassName ));
             this.Write("(");
             this.Write(this.ToStringHelper.ToStringWithCulture( ConstructorParamList ));
-            this.Write(")\n    {\n        _publisher = publisher;\n");
+            this.Write(")");
+            this.Write(this.ToStringHelper.ToStringWithCulture( Context.SchemaActions.Count > 0 && Context.Type != GenerationContext.ViewModelTypeKind.Class ? " : this()" : "" ));
+            this.Write("\n    {\n        _publisher = publisher;\n");
  for (var i = 0; i < Context.RequiredFields.Count; i++) {
     var field = Context.RequiredFields[i];
             this.Write("        ");
             this.Write(this.ToStringHelper.ToStringWithCulture( field.FieldName ));
             this.Write(" = ");
             this.Write(this.ToStringHelper.ToStringWithCulture( ToParamName(field.FieldName) ));
+            this.Write(";\n");
+ }
+ foreach (var action in Context.SchemaActions) {
+    if (!ShouldCacheAction(action.IsStatic)) { continue; }
+            this.Write("        this.");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MemberName ));
+            this.Write(" = ");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.IsStatic ? ViewModelFullName : "this" ));
+            this.Write(".@");
+            this.Write(this.ToStringHelper.ToStringWithCulture( action.MethodName ));
             this.Write(";\n");
  }
  if (Context.Type == GenerationContext.ViewModelTypeKind.Class) {
