@@ -30,6 +30,7 @@ namespace Bindings.Editor.Internal
             foreach (var property in type.GetProperties(InstanceMembers).AsSpan())
             {
                 if ((property.SetMethod?.IsPublic == true || property.IsDefined(typeof(RequiredAttribute)))
+                    && property.GetIndexParameters().Length == 0
                     && Slot.Create(property.Name, property.PropertyType) is { } slot)
                 {
                     _slots.Add(slot);

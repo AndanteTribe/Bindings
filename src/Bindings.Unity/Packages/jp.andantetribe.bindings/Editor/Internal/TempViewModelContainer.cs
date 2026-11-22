@@ -46,8 +46,10 @@ namespace Bindings.Editor.Internal
             for (var i = 0; i < viewModels.Length; i++)
             {
                 var view = viewsProperty.GetArrayElementAtIndex(i);
-                var subscriber = (IMvvmSubscriber<DebugBindMessage>)view.managedReferenceValue;
-                subscriber.OnReceivedMessage(new DebugBindMessage(viewModels[i].CreateViewModel(publisher)));
+                if (view.managedReferenceValue is IMvvmSubscriber<DebugBindMessage> subscriber)
+                {
+                    subscriber.OnReceivedMessage(new DebugBindMessage(viewModels[i].CreateViewModel(publisher)));
+                }
             }
         }
     }
