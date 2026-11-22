@@ -13,7 +13,7 @@ namespace Bindings;
 public sealed class BindingsUsageAnalyzer : DiagnosticAnalyzer
 {
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
-        ImmutableArray.Create(DiagnosticDescriptors.Bnd005, DiagnosticDescriptors.Bnd006, DiagnosticDescriptors.Bnd007);
+        ImmutableArray.Create(DiagnosticDescriptors.Bnd006, DiagnosticDescriptors.Bnd007);
 
     public override void Initialize(AnalysisContext context)
     {
@@ -23,33 +23,8 @@ public sealed class BindingsUsageAnalyzer : DiagnosticAnalyzer
         {
             var viewModelAttribute = context.Compilation.GetTypeByMetadataName(TypeNames.ViewModelAttribute);
             var schemaAttribute = context.Compilation.GetTypeByMetadataName(TypeNames.SchemaAttribute);
-            var serializeField = context.Compilation.GetTypeByMetadataName(TypeNames.SerializeField);
-            var serializeReference = context.Compilation.GetTypeByMetadataName(TypeNames.SerializeReference);
             var view = context.Compilation.GetTypeByMetadataName(TypeNames.ViewAbstraction);
             var monoBehaviour = context.Compilation.GetTypeByMetadataName(TypeNames.MonoBehaviour);
-
-            context.RegisterSymbolAction(context =>
-            {
-                var field = (IFieldSymbol)context.Symbol;
-                if (field.Type is not INamedTypeSymbol fieldType || !fieldType.HasAttribute(viewModelAttribute))
-                {
-                    return;
-                }
-
-                foreach (var attribute in field.GetAttributes())
-                {
-                    var attributeType = attribute.AttributeClass;
-                    if (attributeType == null
-                        || (!attribute.IsAttribute(serializeField) && !attribute.IsAttribute(serializeReference)))
-                    {
-                        continue;
-                    }
-
-                    var location = attribute.ApplicationSyntaxReference?.GetSyntax(context.CancellationToken).GetLocation() ?? field.Locations[0];
-                    context.ReportDiagnostic(Diagnostic.Create(
-                        DiagnosticDescriptors.Bnd005, location, field.Name, fieldType.ToDisplayString(), attributeType.Name));
-                }
-            }, SymbolKind.Field);
 
             context.RegisterSymbolAction(context =>
             {

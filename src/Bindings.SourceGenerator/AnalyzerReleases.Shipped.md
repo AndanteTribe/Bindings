@@ -11,7 +11,6 @@ BND001  | Bindings | Error    | ViewModelTypeNameMustEndWithViewModelOrNumberedV
 BND002  | Bindings | Error    | InvalidSchemaIdValue. [Documentation](../../docs/diagnostics/BND002.md)
 BND003  | Bindings | Error    | ConflictingTooltipValues. [Documentation](../../docs/diagnostics/BND003.md)
 BND004  | Bindings | Error    | UnsupportedTypeAccessibility. [Documentation](../../docs/diagnostics/BND004.md)
-BND005  | Bindings | Warning  | ViewModelSerializedByUnity. [Documentation](../../docs/diagnostics/BND005.md)
 BND006  | Bindings | Error    | ViewMustNotDeriveFromMonoBehaviour. [Documentation](../../docs/diagnostics/BND006.md)
 BND007  | Bindings | Error    | SchemaFieldMustBeAccessedThroughProperty. [Documentation](../../docs/diagnostics/BND007.md)
 BNDP001 | Bindings.Practices | Error | UseGeneratedSelfRebindHelper. [Documentation](../../docs/diagnostics/BNDP001.md)

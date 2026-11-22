@@ -418,110 +418,6 @@ namespace VContainer
         Assert.Contains("MissingViewModel", diagnostic.GetMessage());
     }
 
-    [Fact]
-    public async Task BND005SerializeFieldOnViewModelTypeReportsWarningAndContinuesGeneration()
-    {
-        const string userCode = @"
-namespace Bindings.Sample
-{
-    [Bindings.ViewModel]
-    public partial class CountSerializedViewModel
-    {
-        [Bindings.Schema(""TMPro.TMP_Text.text"")]
-        private int _count;
-    }
-
-    public sealed class ViewModelHost
-    {
-        [UnityEngine.SerializeField]
-        private CountSerializedViewModel _viewModel;
-    }
-}";
-
-        _ = RunGenerator(userCode, out var runResult, out var compilation);
-        var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
-
-        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
-        var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
-        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
-        Assert.Contains("_viewModel", diagnostic.GetMessage());
-        Assert.Contains("Bindings.Sample.CountSerializedViewModel", diagnostic.GetMessage());
-        Assert.Contains("[SerializeField]", diagnostic.GetMessage());
-        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Equal("UnityEngine.SerializeField", diagnostic.Location.SourceTree!
-            .GetText()
-            .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountSerializedViewModel.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("Bindings.Sample.CountSerializedView.g.cs"));
-    }
-
-    [Fact]
-    public async Task BND005DoesNotReportForNonViewModelSerializeField()
-    {
-        const string userCode = @"
-public sealed class PrimitiveHost
-{
-    [UnityEngine.SerializeField]
-    private int _count;
-}";
-
-        _ = RunGenerator(userCode, out _, out var compilation);
-
-        Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
-    }
-
-    [Fact]
-    public async Task BND005SerializeReferenceOnSerializableViewModelTypeReportsWarningAndContinuesGeneration()
-    {
-        const string userCode = @"
-[System.Serializable]
-[Bindings.ViewModel]
-public partial class CountReferenceViewModel
-{
-    [Bindings.Schema(""TMPro.TMP_Text.text"")]
-    private int _count;
-}
-
-public sealed class ViewModelHost
-{
-    [UnityEngine.SerializeReference]
-    private CountReferenceViewModel _viewModel;
-}";
-
-        _ = RunGenerator(userCode, out var runResult, out var compilation);
-        var diagnostics = await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation);
-
-        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
-        var diagnostic = Assert.Single(diagnostics, static candidate => candidate.Id == "BND005");
-        Assert.Equal(DiagnosticSeverity.Warning, diagnostic.Severity);
-        Assert.Contains("_viewModel", diagnostic.GetMessage());
-        Assert.Contains("CountReferenceViewModel", diagnostic.GetMessage());
-        Assert.Contains("[SerializeReference]", diagnostic.GetMessage());
-        Assert.Contains("may leave generated runtime state uninitialized", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Contains("even when the type is marked [Serializable]", diagnostic.GetMessage(CultureInfo.InvariantCulture));
-        Assert.Equal("UnityEngine.SerializeReference", diagnostic.Location.SourceTree!
-            .GetText()
-            .ToString(diagnostic.Location.SourceSpan));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountReferenceViewModel.g.cs"));
-        Assert.Contains(runResult.GeneratedTrees, static tree => tree.FilePath.EndsWith("CountReferenceView.g.cs"));
-    }
-
-    [Fact]
-    public async Task BND005DoesNotReportForNonViewModelSerializeReference()
-    {
-        const string userCode = @"
-public sealed class PrimitiveHost
-{
-    [UnityEngine.SerializeReference]
-    private object _value;
-}";
-
-        _ = RunGenerator(userCode, out _, out var compilation);
-
-        Assert.Empty(await BindingsUsageAnalyzerTests.AnalyzeAsync(compilation));
-    }
-
     // -------------------------------------------------------------------------
     // Multiple same-type methods use their ViewModel member names
     // -------------------------------------------------------------------------
@@ -896,17 +792,19 @@ namespace Bindings.Sample
     }
 
     // -------------------------------------------------------------------------
-    // [System.Serializable] already applied: do not add it again
+    // Only the generated View requires [System.Serializable].
     // -------------------------------------------------------------------------
 
-    [Fact]
-    public void AlreadySerializableDoesNotAddSerializableAgain()
+    [Theory]
+    [InlineData("")]
+    [InlineData("[System.Serializable]")]
+    public void SerializableIsOnlyEmittedOnTheView(string attribute)
     {
-        const string userCode = @"
+        var userCode = @"
 namespace Bindings.Sample
 {
     [Bindings.ViewModel]
-    [System.Serializable]
+    " + attribute + @"
     public partial class CountSerializableViewModel
     {
         [Bindings.Schema(""TMPro.TMP_Text.text"")]
@@ -914,13 +812,12 @@ namespace Bindings.Sample
     }
 }";
 
-        var (vmSource, _) = RunGenerator(userCode, out var runResult);
+        var (vmSource, viewSource) = RunGenerator(userCode, out var runResult);
 
         Assert.NotNull(vmSource);
-        // [Serializable] is already applied so the generator must not add it again
         Assert.DoesNotContain("[global::System.Serializable]", vmSource);
-        // [Serializable] alone can be used by custom serializers and must not report BND005.
-        Assert.DoesNotContain(runResult.Diagnostics, static candidate => candidate.Id == "BND005");
+        Assert.Contains("[global::System.Serializable]", viewSource);
+        Assert.Empty(runResult.Diagnostics);
     }
 
     // -------------------------------------------------------------------------

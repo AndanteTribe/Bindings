@@ -31,9 +31,6 @@ namespace Bindings.GeneratorCore {
             this.Write(this.ToStringHelper.ToStringWithCulture( typeName ));
             this.Write("\n{\n");
  }
- if (!Context.AlreadySerializable) {
-            this.Write("#if UNITY_EDITOR\n[global::System.Serializable]\n#endif\n");
- }
             this.Write(this.ToStringHelper.ToStringWithCulture( Context.Accessibility ));
             this.Write(" partial ");
             this.Write(this.ToStringHelper.ToStringWithCulture( TypeKeyword ));
