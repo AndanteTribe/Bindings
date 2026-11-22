@@ -26,12 +26,6 @@
     <data name="Bnd004Message" xml:space="preserve">
         <value>型 '{0}' のアクセシビリティ '{1}' はサポートされていません。ViewModel '{2}' のソースは生成されません。</value>
     </data>
-    <data name="Bnd005Title" xml:space="preserve">
-        <value>Unity のデシリアライズ後に ViewModel の状態が未初期化になる可能性があります</value>
-    </data>
-    <data name="Bnd005Message" xml:space="preserve">
-        <value>フィールド '{0}' は ViewModel 型 '{1}' に [{2}] を使用しています。型に [Serializable] が付与されていても、Unity のデシリアライズ後に生成されたランタイム状態が未初期化になる可能性があります。ViewModel は実行時に構築または代入してください。</value>
-    </data>
     <data name="Bnd006Title" xml:space="preserve">
         <value>View の実装は MonoBehaviour を継承できません</value>
     </data>

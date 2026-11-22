@@ -32,7 +32,6 @@ https://github.com/AndanteTribe/Bindings.git?path=src/Bindings.Unity/Packages/jp
 
 ```csharp
 using Bindings;
-using UnityEngine;
 
 namespace MyApp
 {
@@ -42,7 +41,6 @@ namespace MyApp
         [Required]
         private readonly CounterModel _model;
 
-        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text)]
         private int _count;
 
@@ -79,9 +77,6 @@ namespace MyApp
 
 namespace MyApp
 {
-#if UNITY_EDITOR
-    [global::System.Serializable]
-#endif
     public partial class CounterViewModel : global::Bindings.IViewModel
     {
         private readonly global::Bindings.IMvvmPublisher _publisher;
@@ -229,7 +224,9 @@ public class GameEntry : MonoBehaviour
 
 **手順 4 — Preview**
 
-**Add View** ボタンの下にある **Preview** ボタンをクリックすると、登録されている各 View に紐づく ViewModel オブジェクトが表示されます。Inspector から直接値を入力し、**Invoke** ボタンを押すとバインドが適用されるので、UI が想定通りに更新されるか検証できます。
+**Add View** ボタンの下にある **Preview** ボタンをクリックすると、登録されている各 View に紐づく ViewModel の編集可能な値が表示されます。Inspector から直接値を入力し、**Invoke** ボタンを押すとバインドが適用されるので、UI が想定通りに更新されるか検証できます。
+
+表示対象は、Unity が描画できる型の public フィールド、public setter を持つプロパティ、または `[Required]` 付きのフィールド・プロパティです。**Invoke** を押すたびに View ごとに ViewModel を生成し、`[Required]` の値はコンストラクタに渡します。Binder を編集するとプレビューは閉じ、入力値は破棄されます。
 
 ![Preview と Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
 
@@ -320,7 +317,7 @@ Schema属性を複数付けても、フィールドごとに生成する公開�
 
 デバッグ用サブスクライバーは `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT` の条件でコンパイルします。フィールドのバインドだけを適用して同じ完了フックを呼び、イベントリスナーの再登録は行いません。
 
-Viewには、Binderの `[SerializeReference]` による保持のため、常に `[Serializable]` を付与します。ViewModelへの参照はシリアライズしません。ViewModelには `UNITY_EDITOR` の場合だけ `[Serializable]` を付与し、ユーザーが明示済みの場合は重複させません。これはInspector表示を支援するもので、生成された実行時状態のUnityによる永続化を保証しません。[BND005](docs/diagnostics/BND005.ja.md)に従い、ViewModelは実行時に構築してください。
+Viewには、Binderの `[SerializeReference]` による保持のため、常に `[Serializable]` を付与します。ViewModelへの参照はシリアライズしません。
 
 ## `IMvvmSubscriber<T>` によるメッセージング
 
@@ -375,7 +372,6 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 | [`BND002`](docs/diagnostics/BND002.ja.md) | エラー | `[Schema]` の `id` に `-1` 未満の値が指定された。 |
 | [`BND003`](docs/diagnostics/BND003.ja.md) | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
 | [`BND004`](docs/diagnostics/BND004.ja.md) | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
-| [`BND005`](docs/diagnostics/BND005.ja.md) | 警告 | `[ViewModel]` 型のフィールドに `[SerializeField]` または `[SerializeReference]` が付与されている。ViewModel は Unity のデシリアライズに任せず、実行時に生成・代入する。 |
 | [`BND006`](docs/diagnostics/BND006.ja.md) | エラー | `IView` を実装するクラスが `MonoBehaviour` を継承している。View は通常の C# クラスとして実装する。 |
 | [`BND007`](docs/diagnostics/BND007.ja.md) | エラー | `[ViewModel]` 型の `[Schema]` フィールドを直接読み書きしている。生成されるプロパティを使用する。 |
 

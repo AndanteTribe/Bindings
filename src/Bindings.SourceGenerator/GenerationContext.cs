@@ -11,7 +11,6 @@ public sealed class GenerationContext(
     IReadOnlyList<(string Accessibility, string TypeKeyword, string TypeName)> containingTypes,
     GenerationContext.ViewModelTypeKind type,
     bool requireBindImplementation,
-    bool alreadySerializable,
     IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> requiredFields,
     IReadOnlyList<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)> schemaFields,
     IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)> schemaMethods,
@@ -78,11 +77,6 @@ public sealed class GenerationContext(
     /// Argument of ViewModelAttribute (requireBindImplementation).
     /// </summary>
     public readonly bool RequireBindImplementation = requireBindImplementation;
-
-    /// <summary>
-    /// Whether <see cref="System.SerializableAttribute"/> is already applied to the type.
-    /// </summary>
-    public readonly bool AlreadySerializable = alreadySerializable;
 
     /// <summary>Whether a constructor-only VContainer injector can be generated safely.</summary>
     public readonly bool GenerateVContainerInjector = generateVContainerInjector;

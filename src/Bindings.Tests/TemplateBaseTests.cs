@@ -42,7 +42,6 @@ public class TemplateBaseTests
             containingTypes: Array.Empty<(string, string, string)>(),
             type: type,
             requireBindImplementation: false,
-            alreadySerializable: false,
             requiredFields: Array.Empty<(string, string, string)>(),
             schemaFields: Array.Empty<(string, string, GenerationContext.BindingInfo)>(),
             schemaMethods: schemaMethods ?? Array.Empty<(string, GenerationContext.BindingInfo)>(),

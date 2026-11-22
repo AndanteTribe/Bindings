@@ -10,11 +10,6 @@ namespace <#= Context.Namespace #>
 <#= accessibility #> partial <#= typeKeyword #> <#= typeName #>
 {
 <# }#>
-<# if (!Context.AlreadySerializable) {#>
-#if UNITY_EDITOR
-[global::System.Serializable]
-#endif
-<# }#>
 <#= Context.Accessibility #> partial <#= TypeKeyword #> <#= Context.ClassName #> : global::Bindings.IViewModel
 {
     private readonly global::Bindings.IMvvmPublisher _publisher;

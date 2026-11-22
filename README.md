@@ -32,7 +32,6 @@ Annotate a `partial` class with `[ViewModel]`. Use `[Required]` to declare const
 
 ```csharp
 using Bindings;
-using UnityEngine;
 
 namespace MyApp
 {
@@ -42,7 +41,6 @@ namespace MyApp
         [Required]
         private readonly CounterModel _model;
 
-        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text)]
         private int _count;
 
@@ -79,9 +77,6 @@ The source generator automatically produces:
 
 namespace MyApp
 {
-#if UNITY_EDITOR
-    [global::System.Serializable]
-#endif
     public partial class CounterViewModel : global::Bindings.IViewModel
     {
         private readonly global::Bindings.IMvvmPublisher _publisher;
@@ -229,7 +224,9 @@ The selected View is now registered in the **Views** list. Each `[SerializeField
 
 **Step 4 — Preview**
 
-Click the **Preview** button below **Add View** to reveal the ViewModel associated with each registered View. Fill in values directly in the Inspector and click **Invoke** to apply the bindings and verify that the UI updates as expected.
+Click the **Preview** button below **Add View** to reveal the editable values of the ViewModel associated with each registered View. Fill in values directly in the Inspector and click **Invoke** to apply the bindings and verify that the UI updates as expected.
+
+The Inspector shows public fields, properties with a public setter, and `[Required]` fields or properties if Unity can draw their type. Each **Invoke** constructs a fresh ViewModel for each View, passing `[Required]` values to the constructor. Editing the Binder closes the preview and discards its inputs.
 
 ![Preview and Invoke](https://github.com/user-attachments/assets/2d34fa59-19ec-4e8b-8c82-10608e63b287)
 
@@ -320,7 +317,7 @@ With `requireBindImplementation: true`, implement `IView.BindAsync` on the parti
 
 The debug subscriber is compiled under `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT`. It applies only field bindings, followed by the same completion hooks; it does not re-register event listeners.
 
-Views always receive `[Serializable]` for the Binder's `[SerializeReference]` storage; their ViewModel reference is non-serialized. ViewModels receive `[Serializable]` only under `UNITY_EDITOR`, unless the user already supplied it. This supports inspection, not Unity persistence of generated runtime state; construct ViewModels at runtime as explained in [BND005](docs/diagnostics/BND005.md).
+Views always receive `[Serializable]` for the Binder's `[SerializeReference]` storage; their ViewModel reference is non-serialized.
 
 ## Messaging with `IMvvmSubscriber<T>`
 
@@ -375,7 +372,6 @@ Each ID links to its detailed cause, examples, exceptions, Code Fix availability
 | [`BND002`](docs/diagnostics/BND002.md) | Error | `[Schema]` `id` is less than `-1`. |
 | [`BND003`](docs/diagnostics/BND003.md) | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
 | [`BND004`](docs/diagnostics/BND004.md) | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
-| [`BND005`](docs/diagnostics/BND005.md) | Warning | A field of a `[ViewModel]` type is marked with `[SerializeField]` or `[SerializeReference]`. Construct or assign ViewModels at runtime instead of relying on Unity deserialization. |
 | [`BND006`](docs/diagnostics/BND006.md) | Error | A class implementing `IView` derives from `MonoBehaviour`. Implement Views as plain C# classes instead. |
 | [`BND007`](docs/diagnostics/BND007.md) | Error | Code directly reads or writes a `[Schema]` field in a `[ViewModel]` type. Use its generated property instead. |
 

@@ -83,17 +83,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var viewModelAttr = ctx.Attributes[0];
         var requireBind = viewModelAttr.ConstructorArguments.Length > 0 && viewModelAttr.ConstructorArguments[0].Value is true;
 
-        // 2. Check whether [System.Serializable] is already applied to the type
-        var alreadySerializable = typeSymbol.HasAttribute(compilation.GetTypeByMetadataName(TypeNames.SerializableAttribute));
-
-        // 3. Namespace (empty string when the type is in the global namespace)
+        // 2. Namespace (empty string when the type is in the global namespace)
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace ? string.Empty : typeSymbol.ContainingNamespace.ToDisplayString();
 
-        // 4. Validate accessibility
+        // 3. Validate accessibility
         var diagnostics = new List<Diagnostic>();
         var (accessibility, canGenerate) = GetAccessibilityKeyword(typeSymbol, typeLocation, typeSymbol.Name, diagnostics);
 
-        // 5. Collect containing types (outermost first)
+        // 4. Collect containing types (outermost first)
         var containingTypes = new List<(string Accessibility, string TypeKeyword, string TypeName)>();
         var enclosing = typeSymbol.ContainingType;
         while (enclosing != null)
@@ -105,14 +102,14 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             enclosing = enclosing.ContainingType;
         }
 
-        // 6. Validate the ViewModel class name
+        // 5. Validate the ViewModel class name
         if (TemplateHelpers.GetViewName(typeSymbol.Name) == null)
         {
             diagnostics.Add(Diagnostic.Create(DiagnosticDescriptors.Bnd001, typeLocation, typeSymbol.Name));
             canGenerate = false;
         }
 
-        // 7. Walk members to collect [Required] / [Schema] information
+        // 6. Walk members to collect [Required] / [Schema] information
         // [Schema] is only valid on fields and methods; properties are excluded.
         var requiredFields = new List<(string TypeFullName, string FieldName, string TypeOfName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)>();
@@ -208,7 +205,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             containingTypes: containingTypes,
             type: viewModelType,
             requireBindImplementation: requireBind,
-            alreadySerializable: alreadySerializable,
             requiredFields: requiredFields,
             schemaFields: schemaFields,
             schemaMethods: schemaMethods,
@@ -632,7 +628,6 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
     /// Generates the partial class or struct for the ViewModel using the <see cref="ViewModelTemplate"/>.
     ///
     /// Generated contents:
-    ///   - [global::System.Serializable] in UNITY_EDITOR (only when not already applied by the user)
     ///   - IViewModel implementation
     ///   - _publisher field
     ///   - One public property per [Schema] field (in declaration order)

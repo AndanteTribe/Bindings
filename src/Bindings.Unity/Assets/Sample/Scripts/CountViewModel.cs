@@ -1,7 +1,5 @@
 #nullable enable
 
-using UnityEngine;
-
 namespace Bindings.Sample
 {
     [ViewModel]
@@ -10,7 +8,6 @@ namespace Bindings.Sample
         [Required]
         private readonly CountModel _model;
 
-        [SerializeField]
         [Schema(PathResolver.TMPro.TMP_Text.text)]
         private int _count;
 
@@ -33,7 +30,6 @@ namespace Bindings.Sample
     }
 
     // Planned to be generated auto.
-    // [System.Serializable]
     // public sealed partial class CountViewModel : IViewModel
     // {
     //     private readonly IMvvmPublisher _publisher;

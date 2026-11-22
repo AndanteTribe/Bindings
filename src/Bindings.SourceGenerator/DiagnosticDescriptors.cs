@@ -36,7 +36,7 @@ internal static class DiagnosticDescriptors
 
             for (var i = separator + 1; i < informationalVersion.Length; i++)
             {
-                if (informationalVersion[i] is not (>= '0' and <= '9' or >= 'a' and <= 'f' or >= 'A' and <= 'F'))
+                if (informationalVersion[i] is not ((>= '0' and <= '9') or (>= 'a' and <= 'f') or (>= 'A' and <= 'F')))
                 {
                     return;
                 }
@@ -103,20 +103,6 @@ internal static class DiagnosticDescriptors
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             helpLinkUri: Documentation.BaseUrl + "BND004.md",
-            customTags: [Category]);
-
-    /// <summary>
-    /// BND005: emitted when a field whose type is annotated with [ViewModel] is marked with
-    /// Unity's [SerializeField] or [SerializeReference].
-    /// </summary>
-    public static readonly DiagnosticDescriptor Bnd005 = new(
-            id: "BND005",
-            title: new LocalizableResourceString("Bnd005Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            messageFormat: new LocalizableResourceString("Bnd005Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            category: Category,
-            defaultSeverity: DiagnosticSeverity.Warning,
-            isEnabledByDefault: true,
-            helpLinkUri: Documentation.BaseUrl + "BND005.md",
             customTags: [Category]);
 
     /// <summary>

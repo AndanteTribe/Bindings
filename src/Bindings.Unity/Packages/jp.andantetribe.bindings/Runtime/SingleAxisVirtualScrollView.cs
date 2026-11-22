@@ -19,6 +19,9 @@ namespace Bindings
     /// </remarks>
     [Serializable]
     public sealed class SingleAxisVirtualScrollView : IView<SingleAxisVirtualScrollViewModel>, IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>
+#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
+        , IMvvmSubscriber<DebugBindMessage>
+#endif
     {
         [SerializeField]
         private Binder _itemPrefab = null!;
@@ -85,7 +88,8 @@ namespace Bindings
             }
             _boundPublishers = publishers;
             _scrollRect.onValueChanged.AddListener(_onScrollValueChanged);
-            ScrollTo(viewModel.ScrollRatio);
+            SetScrollPosition(viewModel.ScrollRatio);
+            OnScrollValueChanged(_scrollRect.normalizedPosition);
         }
 
         void IMvvmSubscriber<SingleAxisVirtualScrollViewModel.ScrollToRatioMessage>.OnReceivedMessage(
@@ -93,14 +97,24 @@ namespace Bindings
         {
             if (!_boundPublishers.IsEmpty)
             {
-                ScrollTo(message.Ratio);
+                SetScrollPosition(message.Ratio);
+                OnScrollValueChanged(_scrollRect.normalizedPosition);
             }
         }
 
-        private void ScrollTo(float ratio)
+#if UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT
+        void IMvvmSubscriber<DebugBindMessage>.OnReceivedMessage(DebugBindMessage message)
+        {
+            // Do not call OnScrollValueChanged.
+            message.BindTo(this);
+            SetScrollPosition(_viewModel.ScrollRatio);
+        }
+#endif
+
+        private void SetScrollPosition(float ratio)
         {
             _scrollRect.StopMovement();
-            if (_axis == RectTransform.Axis.Vertical)
+            if (_scrollRect.vertical)
             {
                 _scrollRect.verticalNormalizedPosition = 1 - ratio;
             }
@@ -108,7 +122,6 @@ namespace Bindings
             {
                 _scrollRect.horizontalNormalizedPosition = ratio;
             }
-            OnScrollValueChanged(_scrollRect.normalizedPosition);
         }
 
         private void TrimItems(int count)

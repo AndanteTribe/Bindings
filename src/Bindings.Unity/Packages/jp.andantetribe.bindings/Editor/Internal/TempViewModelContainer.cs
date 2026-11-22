@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,55 +10,47 @@ namespace Bindings.Editor.Internal
     internal class TempViewModelContainer : ScriptableObject
     {
         [SerializeReference]
-        private IViewModel[] _viewModels = Array.Empty<IViewModel>();
+        private TempViewModel[] _viewModels = Array.Empty<TempViewModel>();
 
         private static readonly Dictionary<Type, Type> s_genericViewsTypes = TypeUtils.GetAllGenericViewTypes();
 
         public static TempViewModelContainer Create() => CreateInstance<TempViewModelContainer>();
 
-        public SerializedObject Build(SerializedProperty viewsProperty, object binder)
+        public SerializedObject Build(SerializedProperty viewsProperty, IMvvmPublisher publisher)
         {
-            var size = viewsProperty.arraySize;
-            if (_viewModels.Length != size)
-            {
-                _viewModels = new IViewModel[size];
-            }
+            _viewModels = new TempViewModel[viewsProperty.arraySize];
             var viewModels = _viewModels.AsSpan();
             for (var i = 0; i < viewModels.Length; i++)
             {
-                var view = viewsProperty.GetArrayElementAtIndex(i).managedReferenceValue;
-                if (view?.GetType() is not { } viewType || !s_genericViewsTypes.TryGetValue(viewType, out var type))
+                var view = viewsProperty.GetArrayElementAtIndex(i);
+                viewModels[i] = new TempViewModel(s_genericViewsTypes[view.managedReferenceValue.GetType()]);
+            }
+            var serialized = new SerializedObject(this);
+            var models = serialized.FindProperty(nameof(_viewModels));
+            for (var i = 0; i < viewModels.Length; i++)
+            {
+                var slots = models.GetArrayElementAtIndex(i).FindPropertyRelative(nameof(TempViewModel._slots));
+                viewModels[i].LoadDefaults(slots, publisher);
+            }
+            serialized.Update();
+            return serialized;
+        }
+
+        public void BindTo(SerializedProperty viewsProperty, IMvvmPublisher publisher)
+        {
+            var viewModels = _viewModels.AsSpan();
+            if (viewsProperty.arraySize != viewModels.Length)
+            {
+                throw new InvalidOperationException("The Views list changed. Reopen the preview.");
+            }
+            for (var i = 0; i < viewModels.Length; i++)
+            {
+                var view = viewsProperty.GetArrayElementAtIndex(i);
+                if (view.managedReferenceValue is IMvvmSubscriber<DebugBindMessage> subscriber)
                 {
-                    continue;
+                    subscriber.OnReceivedMessage(new DebugBindMessage(viewModels[i].CreateViewModel(publisher)));
                 }
-                viewModels[i] = (IViewModel)Activator.CreateInstance(type, GetConstructorArguments(type, binder));
             }
-            return new SerializedObject(this);
-        }
-
-        public void BindTo(object binder)
-        {
-            var publisher = (IMvvmPublisher)binder;
-            foreach (var viewModel in _viewModels.AsSpan())
-            {
-                publisher.Publish(new DebugBindMessage(viewModel));
-            }
-        }
-
-        private static object[] GetConstructorArguments(Type type, object binder)
-        {
-            var parameters = type.GetConstructors().Single().GetParameters();
-            var arguments = new object[parameters.Length];
-            for (var i = 0; i < parameters.Length - 1; i++)
-            {
-#if NET8_0_OR_GREATER
-                arguments[i] = System.Runtime.CompilerServices.RuntimeHelpers.GetUninitializedObject(parameters[i].ParameterType);
-#else
-                arguments[i] = System.Runtime.Serialization.FormatterServices.GetUninitializedObject(parameters[i].ParameterType);
-#endif
-            }
-            arguments[^1] = binder;
-            return arguments;
         }
     }
 }
