@@ -14,7 +14,7 @@ public sealed class GenerationContext(
     IReadOnlyList<(string TypeFullName, string FieldName, string TypeOfName)> requiredFields,
     IReadOnlyList<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)> schemaFields,
     IReadOnlyList<(string MethodName, string ActionField, GenerationContext.BindingInfo Binding)> schemaMethods,
-    IReadOnlyList<(string FieldName, string ActionType, string Target)> cachedActions,
+    IReadOnlyList<(string MemberName, string ActionType, string MethodName, bool IsStatic)> schemaActions,
     IReadOnlyList<Diagnostic> diagnostics,
     bool generateVContainerInjector = false)
 {
@@ -102,7 +102,7 @@ public sealed class GenerationContext(
     /// </summary>
     public readonly IReadOnlyList<(string MethodName, string ActionField, BindingInfo Binding)> SchemaMethods = schemaMethods;
 
-    public readonly IReadOnlyList<(string FieldName, string ActionType, string Target)> CachedActions = cachedActions;
+    public readonly IReadOnlyList<(string MemberName, string ActionType, string MethodName, bool IsStatic)> SchemaActions = schemaActions;
 
     /// <summary>
     /// Diagnostics collected during metadata extraction (BND001, BND002, BND004).

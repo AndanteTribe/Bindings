@@ -431,7 +431,7 @@ namespace VContainer
     [InlineData("partial class")]
     [InlineData("partial struct")]
     [InlineData("readonly partial struct")]
-    public void PrivateOverloadsCacheOneTypedActionPerMethod(string kind)
+    public void PrivateOverloadsExposeOneTypedActionPerMethod(string kind)
     {
         var (model, view) = RunGenerator($$"""
             public class Control
@@ -454,8 +454,11 @@ namespace VContainer
             }
             """, out _, out var compilation);
         Assert.Empty(compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error));
-        Assert.Contains("internal readonly global::UnityEngine.Events.UnityAction _handleAction;", model);
+        Assert.Contains(kind == "partial class"
+            ? "internal readonly global::UnityEngine.Events.UnityAction _handleAction;"
+            : "internal global::UnityEngine.Events.UnityAction _handleAction => this.@Handle;", model);
         Assert.Contains("internal readonly global::UnityEngine.Events.UnityAction<float> _handleAction_;", model);
+        Assert.Contains("this._handleAction_ = global::InputViewModel.@Handle;", model);
         Assert.Equal(2, view!.Split("AddListener(_viewModel._handleAction_);").Length - 1);
     }
 

@@ -16,6 +16,8 @@ public partial class ViewModelTemplate(GenerationContext context)
     public bool HasNamespace => !string.IsNullOrEmpty(Context.Namespace);
     public string TypeKeyword => Context.Type == GenerationContext.ViewModelTypeKind.Class ? "class" : "struct";
 
+    private bool ShouldCacheAction(bool isStatic) => isStatic || Context.Type == GenerationContext.ViewModelTypeKind.Class;
+
     /// <summary>
     /// The fully-qualified type name of the ViewModel with the global:: prefix,
     /// including any containing type names for nested types.

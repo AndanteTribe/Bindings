@@ -115,7 +115,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
         var requiredFields = new List<(string TypeFullName, string FieldName, string TypeOfName)>();
         var schemaFields = new List<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)>();
         var schemaMethods = new List<(string MethodName, string ActionField, GenerationContext.BindingInfo Binding)>();
-        var cachedActions = new List<(string FieldName, string ActionType, string Target)>();
+        var schemaActions = new List<(string MemberName, string ActionType, string MethodName, bool IsStatic)>();
         HashSet<string>? reservedNames = null;
 
         foreach (var member in typeSymbol.GetMembers())
@@ -200,8 +200,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
                                 {
                                     actionType += "<" + string.Join(", ", method.Parameters.Select(p => p.Type.ToDisplayString(s_fullyQualifiedNullableFormat))) + ">";
                                 }
-                                var receiver = method.IsStatic ? typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat) : "this";
-                                cachedActions.Add((actionField, actionType, receiver + ".@" + method.Name));
+                                schemaActions.Add((actionField, actionType, method.Name, method.IsStatic));
                             }
                             schemaMethods.Add((
                                 MethodName: method.Name,
@@ -229,7 +228,7 @@ public sealed class ViewModelGenerator : IIncrementalGenerator
             requiredFields: requiredFields,
             schemaFields: schemaFields,
             schemaMethods: schemaMethods,
-            cachedActions: cachedActions,
+            schemaActions: schemaActions,
             diagnostics: diagnostics,
             generateVContainerInjector: CanGenerateVContainerInjector(compilation, typeSymbol));
     }

@@ -13,6 +13,37 @@ namespace Bindings.Tests
 {
     public sealed class GeneratedBindingTests
     {
+        [Test]
+        public void StructListenerReadsValueSuppliedToView()
+        {
+            var view = new StructEventView();
+            var binder = TestObjects.CreateBinder(view);
+            var ui = new GameObject("UI", typeof(RectTransform), typeof(CanvasRenderer));
+            try
+            {
+                var image = ui.AddComponent<Image>();
+                var button = ui.AddComponent<Button>();
+                var fields = typeof(StructEventView).GetFields(BindingFlags.Instance | BindingFlags.NonPublic);
+                fields.Single(f => f.FieldType == typeof(Image)).SetValue(view, image);
+                fields.Single(f => f.FieldType == typeof(Button)).SetValue(view, button);
+                float observed = -1;
+                var model = new StructEventViewModel(value => observed = value, binder)
+                {
+                    Amount = 0.75f
+                };
+                binder.Initialize(model);
+                binder.Run();
+                button.onClick.Invoke();
+                Assert.That(image.fillAmount, Is.EqualTo(0.75f));
+                Assert.That(observed, Is.EqualTo(image.fillAmount));
+            }
+            finally
+            {
+                Object.DestroyImmediate(binder.gameObject);
+                Object.DestroyImmediate(ui);
+            }
+        }
+
         [UnityTest]
         public IEnumerator GeneratedViewConnectsRealUnityComponentsAndEvents() => new ToCoroutineEnumerator(async cancellationToken =>
         {
@@ -45,6 +76,19 @@ namespace Bindings.Tests
                 Object.DestroyImmediate(ui);
             }
         });
+    }
+
+    [ViewModel]
+    internal partial struct StructEventViewModel
+    {
+        [Required]
+        private readonly System.Action<float> _observe;
+
+        [Schema(PathResolver.UnityEngine.UI.Image.fillAmount)]
+        private float _amount;
+
+        [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
+        private void Click() => _observe(Amount);
     }
 
     [ViewModel]

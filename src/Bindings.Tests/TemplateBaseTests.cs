@@ -45,7 +45,7 @@ public class TemplateBaseTests
             requiredFields: Array.Empty<(string, string, string)>(),
             schemaFields: Array.Empty<(string, string, GenerationContext.BindingInfo)>(),
             schemaMethods: schemaMethods ?? [],
-            cachedActions: [],
+            schemaActions: [],
             diagnostics: Array.Empty<Diagnostic>());
 
     private static ViewTemplate MinimalViewTemplate() => new(MinimalContext(), [], [], []);
