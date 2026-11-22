@@ -56,6 +56,6 @@ namespace Bindings.Tests
         public int Clicks { get; private set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
-        public void Click() => Clicks++;
+        private void Click() => Clicks++;
     }
 }

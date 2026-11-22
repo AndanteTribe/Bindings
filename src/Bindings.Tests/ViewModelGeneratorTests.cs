@@ -128,9 +128,14 @@ namespace UnityEngine.UI
     public class ButtonClickedEvent
     {
         public void RemoveAllListeners() { }
-        public void AddListener(System.Action call) { }
+        public void AddListener(UnityEngine.Events.UnityAction call) { }
     }
     public class Image { public float fillAmount { get; set; } }
+}
+namespace UnityEngine.Events
+{
+    public delegate void UnityAction();
+    public delegate void UnityAction<T>(T value);
 }
 ";
 
@@ -422,6 +427,38 @@ namespace VContainer
     // Multiple same-type methods use their ViewModel member names
     // -------------------------------------------------------------------------
 
+    [Theory]
+    [InlineData("partial class")]
+    [InlineData("partial struct")]
+    [InlineData("readonly partial struct")]
+    public void PrivateOverloadsCacheOneTypedActionPerMethod(string kind)
+    {
+        var (model, view) = RunGenerator($$"""
+            public class Control
+            {
+                public Event changed = new();
+                public class Event
+                {
+                    public void RemoveAllListeners() { }
+                    public void AddListener(UnityEngine.Events.UnityAction<float> listener) { }
+                }
+            }
+            [Bindings.ViewModel]
+            public {{kind}} InputViewModel
+            {
+                [Bindings.Schema("UnityEngine.UI.Button.onClick")]
+                private void Handle() { }
+                [Bindings.Schema("Control.changed", id: 1)]
+                [Bindings.Schema("Control.changed", id: 2)]
+                private static void Handle(float value) { }
+            }
+            """, out _, out var compilation);
+        Assert.Empty(compilation.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error));
+        Assert.Contains("internal readonly global::UnityEngine.Events.UnityAction _handleAction;", model);
+        Assert.Contains("internal readonly global::UnityEngine.Events.UnityAction<float> _handleAction_;", model);
+        Assert.Equal(2, view!.Split("AddListener(_viewModel._handleAction_);").Length - 1);
+    }
+
     [Fact]
     public void Count1ViewModelMultipleDefaultIdMethodsProduceSeparateFields()
     {
@@ -453,9 +490,9 @@ namespace Bindings.Sample
         Assert.Contains("_countText ", viewSource);
         // Increment / Decrement each AddListener on their respective button
         Assert.Contains("_incrementButton.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Increment)", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel._incrementAction)", viewSource);
         Assert.Contains("_decrementButton.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_decrementButton.onClick.AddListener(_viewModel.Decrement)", viewSource);
+        Assert.Contains("_decrementButton.onClick.AddListener(_viewModel._decrementAction)", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -493,8 +530,8 @@ namespace Bindings.Sample
         Assert.DoesNotContain("_decrementButton", viewSource);
         // Both methods AddListener on the same field
         Assert.Contains("_incrementButton.onClick.RemoveAllListeners", viewSource);
-        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Increment)", viewSource);
-        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel.Decrement)", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel._incrementAction)", viewSource);
+        Assert.Contains("_incrementButton.onClick.AddListener(_viewModel._decrementAction)", viewSource);
     }
 
     // -------------------------------------------------------------------------
@@ -779,7 +816,7 @@ namespace Bindings.Sample
         }
 
         Assert.Equal(1, viewSource.Split("private global::UnityEngine.UI.Button ").Length - 1);
-        Assert.Contains("_enabledButton.onClick.AddListener(_viewModel.Click);", viewSource);
+        Assert.Contains("_enabledButton.onClick.AddListener(_viewModel._clickAction);", viewSource);
         if (expectedTooltip.Length == 0)
         {
             Assert.DoesNotContain("[global::UnityEngine.Tooltip(", viewSource);
@@ -1266,8 +1303,8 @@ namespace Bindings.Sample
         var (_, viewSource) = RunGenerator(userCode);
 
         Assert.NotNull(viewSource);
-        Assert.Contains("_submitButton.onClick.AddListener(_viewModel.Submit)", viewSource);
-        Assert.Contains("_cancelButton.onClick.AddListener(_viewModel.Cancel)", viewSource);
+        Assert.Contains("_submitButton.onClick.AddListener(_viewModel._submitAction)", viewSource);
+        Assert.Contains("_cancelButton.onClick.AddListener(_viewModel._cancelAction)", viewSource);
 
         var errors = RunGeneratorAndCompile(userCode);
         Assert.Empty(errors);
@@ -1561,7 +1598,7 @@ namespace Bindings.Sample
         // The field is encountered first and names the shared component.
         Assert.Contains("_interactableButton", viewSource);
         Assert.DoesNotContain("_onClickButton", viewSource);
-        Assert.Contains("_interactableButton.onClick.AddListener(_viewModel.OnClick)", viewSource);
+        Assert.Contains("_interactableButton.onClick.AddListener(_viewModel._onClickAction)", viewSource);
     }
 
     // -------------------------------------------------------------------------

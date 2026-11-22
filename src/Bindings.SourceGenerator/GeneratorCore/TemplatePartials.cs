@@ -246,7 +246,7 @@ public partial class ViewTemplate(
 
         for (var i = 0; i < Context.SchemaMethods.Count; i++)
         {
-            var (methodName, binding) = Context.SchemaMethods[i];
+            var (_, actionField, binding) = Context.SchemaMethods[i];
             var viewField = MethodAssignments[i];
             var (_, memberName) = SplitBindingPath(binding.BindingPath);
             var key = (viewField, memberName);
@@ -257,7 +257,7 @@ public partial class ViewTemplate(
                 groups.Add(key, methods);
                 orderedGroups.Add((viewField, memberName, methods));
             }
-            methods.Add(methodName);
+            methods.Add(actionField);
         }
 
         var sb = new StringBuilder();

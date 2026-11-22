@@ -33,7 +33,7 @@ public class TemplateBaseTests
         string className = "Count1ViewModel",
         string ns = "Test.Space",
         GenerationContext.ViewModelTypeKind type = GenerationContext.ViewModelTypeKind.Class,
-        IReadOnlyList<(string MethodName, GenerationContext.BindingInfo Binding)>? schemaMethods = null) =>
+        IReadOnlyList<(string MethodName, string ActionField, GenerationContext.BindingInfo Binding)>? schemaMethods = null) =>
         new(
             className: className,
             @namespace: ns,
@@ -44,7 +44,8 @@ public class TemplateBaseTests
             requireBindImplementation: false,
             requiredFields: Array.Empty<(string, string, string)>(),
             schemaFields: Array.Empty<(string, string, GenerationContext.BindingInfo)>(),
-            schemaMethods: schemaMethods ?? Array.Empty<(string, GenerationContext.BindingInfo)>(),
+            schemaMethods: schemaMethods ?? [],
+            cachedActions: [],
             diagnostics: Array.Empty<Diagnostic>());
 
     private static ViewTemplate MinimalViewTemplate() => new(MinimalContext(), [], [], []);
@@ -55,10 +56,10 @@ public class TemplateBaseTests
         var template = new ViewTemplate(
             MinimalContext(schemaMethods:
             [
-                ("First", new("Example.Control.onClick", 0, "", "")),
-                ("Second", new("Example.Control.onSubmit", 0, "", "")),
-                ("Third", new("Example.Control.onClick", 0, "", "")),
-                ("Fourth", new("Example.Control.onClick", 1, "", "")),
+                ("First", "_firstAction", new("Example.Control.onClick", 0, "", "")),
+                ("Second", "_secondAction", new("Example.Control.onSubmit", 0, "", "")),
+                ("Third", "_thirdAction", new("Example.Control.onClick", 0, "", "")),
+                ("Fourth", "_fourthAction", new("Example.Control.onClick", 1, "", "")),
             ]),
             [],
             ["_control", "_control", "_control", "_other"],
@@ -66,12 +67,12 @@ public class TemplateBaseTests
 
         var expected = string.Join(Environment.NewLine,
             "    _control.onClick.RemoveAllListeners();",
-            "    _control.onClick.AddListener(_viewModel.First);",
-            "    _control.onClick.AddListener(_viewModel.Third);",
+            "    _control.onClick.AddListener(_viewModel._firstAction);",
+            "    _control.onClick.AddListener(_viewModel._thirdAction);",
             "    _control.onSubmit.RemoveAllListeners();",
-            "    _control.onSubmit.AddListener(_viewModel.Second);",
+            "    _control.onSubmit.AddListener(_viewModel._secondAction);",
             "    _other.onClick.RemoveAllListeners();",
-            "    _other.onClick.AddListener(_viewModel.Fourth);");
+            "    _other.onClick.AddListener(_viewModel._fourthAction);");
 
         // The writer removes the final LF but retains CR on Windows.
         Assert.Equal((expected + Environment.NewLine).TrimEnd('\n'), template.WriteMethodBindings("    "));
