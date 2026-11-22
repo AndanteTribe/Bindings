@@ -40,6 +40,7 @@ jobs:
       - uses: AndanteTribe/Actions/actions/unity-test-runner@main # zizmor: ignore[unpinned-uses] repository-local action reference is intentionally tracked on @main
         id: tests
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
