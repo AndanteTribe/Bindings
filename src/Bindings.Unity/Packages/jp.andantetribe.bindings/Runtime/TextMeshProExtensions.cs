@@ -1,9 +1,9 @@
 #nullable enable
 
 using System;
-using System.Buffers;
 using System.Runtime.CompilerServices;
 using TMPro;
+using Unity.Collections;
 
 namespace Bindings
 {
@@ -289,23 +289,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -317,23 +309,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -345,23 +329,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -373,23 +349,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -401,23 +369,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -429,23 +389,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -457,23 +409,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -485,23 +429,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -513,23 +449,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -541,23 +469,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -569,23 +489,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -597,23 +509,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -625,23 +529,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -653,23 +549,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
 
@@ -681,23 +569,15 @@ namespace Bindings
                 text.SetText(buffer[..written]);
                 return;
             }
-            var size = StackBufferSize * 2;
-            var array = ArrayPool<char>.Shared.Rent(size);
-            try
+            for (var size = StackBufferSize * 2; ; size = checked(size * 2))
             {
-                int charsWritten;
-                while (!value.TryFormat(array, out charsWritten, format))
+                using var native = new NativeArray<char>(size, Allocator.Temp, NativeArrayOptions.UninitializedMemory);
+                var span = native.AsSpan();
+                if (value.TryFormat(span, out written, format))
                 {
-                    var toReturn = array;
-                    size = array.Length * 2;
-                    array = ArrayPool<char>.Shared.Rent(size);
-                    ArrayPool<char>.Shared.Return(toReturn);
+                    text.SetText(span[..written]);
+                    return;
                 }
-                text.SetCharArray(array, 0, charsWritten);
-            }
-            finally
-            {
-                ArrayPool<char>.Shared.Return(array);
             }
         }
     }
