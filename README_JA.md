@@ -141,6 +141,10 @@ namespace MyApp
         [global::UnityEngine.SerializeField]
         private global::UnityEngine.UI.Button _decrementButton = null!;
 
+        private CounterView()
+        {
+        }
+
         void global::Bindings.IView<global::MyApp.CounterViewModel>.Initialize(
             global::MyApp.CounterViewModel viewModel)
         {

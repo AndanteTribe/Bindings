@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -16,7 +17,7 @@ namespace Bindings.Tests
         [Test]
         public void StructListenerReadsValueSuppliedToView()
         {
-            var view = new StructEventView();
+            var view = (StructEventView)Activator.CreateInstance(typeof(StructEventView), nonPublic: true);
             var binder = TestObjects.CreateBinder(view);
             var ui = new GameObject("UI", typeof(RectTransform), typeof(CanvasRenderer));
             try
@@ -47,7 +48,7 @@ namespace Bindings.Tests
         [UnityTest]
         public IEnumerator GeneratedViewConnectsRealUnityComponentsAndEvents() => new ToCoroutineEnumerator(async cancellationToken =>
         {
-            var view = new IntegrationView();
+            var view = (IntegrationView)Activator.CreateInstance(typeof(IntegrationView), nonPublic: true);
             var binder = TestObjects.CreateBinder(view);
             var ui = new GameObject("UI", typeof(RectTransform), typeof(CanvasRenderer));
             try
@@ -82,7 +83,7 @@ namespace Bindings.Tests
     internal partial struct StructEventViewModel
     {
         [Required]
-        private readonly System.Action<float> _observe;
+        private readonly Action<float> _observe;
 
         [Schema(PathResolver.UnityEngine.UI.Image.fillAmount)]
         public partial float Amount { get; set; }

@@ -13,6 +13,10 @@ namespace Bindings.Editor.Internal
         /// <inheritdoc />
         public override VisualElement CreatePropertyGUI(SerializedProperty property)
         {
+            if (property.managedReferenceValue is not TempViewModel preview)
+            {
+                return new VisualElement { style = { display = DisplayStyle.None } };
+            }
             var root = new Foldout
             {
                 focusable = true,
@@ -24,7 +28,6 @@ namespace Bindings.Editor.Internal
                 image = IconConst.ScriptIcon,
                 style = { width = 18f, height = 18f }
             });
-            var preview = (TempViewModel)property.managedReferenceValue;
             foldoutCheck.parent.Add(new Label(preview.ViewModelType.FullName)
             {
                 style = { marginLeft = 5f, unityFontStyleAndWeight = FontStyle.Bold, fontSize = 13 }

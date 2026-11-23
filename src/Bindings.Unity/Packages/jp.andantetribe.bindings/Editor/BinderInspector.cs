@@ -107,6 +107,7 @@ namespace Bindings.Editor
                 var button = (Button)evt.currentTarget;
                 var root = button.parent;
                 self._viewModelContainer ??= TempViewModelContainer.Create();
+                self.serializedObject.Update();
                 var previewDirtyCount = EditorUtility.GetDirtyCount(self.target);
 
                 var viewModels = new ListView
