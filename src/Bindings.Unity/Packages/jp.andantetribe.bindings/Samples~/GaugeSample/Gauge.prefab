@@ -272,7 +272,7 @@ MonoBehaviour:
     version: 2
     RefIds:
     - rid: 4980252382293917933
-      type: {class: GaugeView, ns: Bindings.Sample, asm: Assembly-CSharp}
+      type: {class: GaugeView, ns: Bindings.Sample, asm: Bindings.Samples.Gauge}
       data:
         _gaugeRoot: {fileID: 5426587759238972050}
         _fillTransform: {fileID: 8780518985152761455}
