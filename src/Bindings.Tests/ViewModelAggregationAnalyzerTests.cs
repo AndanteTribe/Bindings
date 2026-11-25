@@ -111,7 +111,7 @@ public class ViewModelAggregationAnalyzerTests
     [Fact]
     public async Task GeneratedSchemaPropertyIsTrackedAsAlias()
     {
-        Assert.Empty(await Analyze("[Bindings.Schema(\"ChildComponent.Value\")] private Child _child; public void Update() => Child.Update();", generate: true));
+        Assert.Empty(await Analyze("[Bindings.Schema(\"ChildComponent.Value\")] public partial Child Child { get; set; } public void Update() => Child.Update();", generate: true));
     }
 
     [Theory]

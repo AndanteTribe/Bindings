@@ -20,17 +20,17 @@ namespace <#= Context.Namespace #>
     internal readonly <#= action.ActionType #> <#= action.MemberName #>;
 <# }#>
 <# }#>
-<# foreach (var schemaField in SchemaPropertyFields) {#>
+<# foreach (var property in DistinctSchemaProperties) {#>
 
-    public <#= schemaField.FieldTypeName #> <#= ToPropertyName(schemaField.FieldName) #>
+    <#= property.Modifiers #> <#= property.PropertyTypeName #> <#= property.PropertyName #>
     {
         [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        get => <#= schemaField.FieldName #>;
-<# if (Context.Type != GenerationContext.ViewModelTypeKind.ReadOnlyStruct) {#>
+        <#= property.Getter #> => field;
+<# if (property.Setter.Length > 0) {#>
         [global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
-        set
+        <#= property.Setter #>
         {
-            <#= schemaField.FieldName #> = value;
+            field = value;
             PublishRebindMessage();
         }
 <# }#>
@@ -39,11 +39,11 @@ namespace <#= Context.Namespace #>
 
     public <#= Context.ClassName #>(<#= ConstructorParamList #>)<#= Context.SchemaActions.Count > 0 && Context.Type != GenerationContext.ViewModelTypeKind.Class ? " : this()" : "" #>
     {
+        _publisher = publisher;
 <# for (var i = 0; i < Context.RequiredFields.Count; i++) {
     var field = Context.RequiredFields[i];#>
         <#= field.FieldName #> = <#= ToParamName(field.FieldName) #>;
 <# }#>
-        _publisher = publisher;
 <# foreach (var action in Context.SchemaActions) {
     if (!ShouldCacheAction(action.IsStatic)) { continue; }#>
         this.<#= action.MemberName #> = <#= action.IsStatic ? ViewModelFullName : "this" #>.@<#= action.MethodName #>;

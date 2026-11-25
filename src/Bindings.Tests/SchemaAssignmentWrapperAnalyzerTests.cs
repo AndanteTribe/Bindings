@@ -13,10 +13,8 @@ public class SchemaAssignmentWrapperAnalyzerTests
 {
     private const string Header = """
         public partial class TestViewModel : Bindings.IViewModel {
-            [Bindings.Schema("Text.text")] private int _count;
-            [Bindings.Schema("Text.text")] private string _name;
-            public int Count { get; set; }
-            public string Name { get; set; }
+            [Bindings.Schema("Text.text")] public int Count { get; set; }
+            [Bindings.Schema("Text.text")] public string Name { get; set; }
         """;
 
     private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source, bool allowCompilerErrors = false)
@@ -76,7 +74,7 @@ public class SchemaAssignmentWrapperAnalyzerTests
     [InlineData("public void Set(int count) { System.Action copy = () => Count = count; copy(); }")]
     [InlineData("public TestViewModel(int count) { Count = count; }")]
     [InlineData("public void Set(int count) => Other = count; public int Other { get; set; }")]
-    [InlineData("public void Set(int count) => _count = count;")]
+    [InlineData("private int _other; public void Set(int count) => _other = count;")]
     [InlineData("[Bindings.Schema(\"Slider.onValueChanged\")] public void Set(int count) => Count = count;")]
     public async Task ExcludesProcessingAndNonWrapperMethods(string member)
     {
@@ -107,8 +105,7 @@ public class SchemaAssignmentWrapperAnalyzerTests
     public async Task ExcludesRepeatedArgumentsAcrossDifferentProperties()
     {
         Assert.Empty(await AnalyzeAsync(Header + """
-            [Bindings.Schema("Text.text")] private int _second;
-            public int Second { get; set; }
+            [Bindings.Schema("Text.text")] public int Second { get; set; }
             public void Set(int first, int second) { Count = first; Second = first; }
             }
             """));
@@ -211,7 +208,7 @@ public class SchemaAssignmentWrapperAnalyzerTests
     {
         var compilation = BindingsUsageAnalyzerTests.CreateCompilation("""
             [Bindings.ViewModel] public partial class SampleViewModel {
-                [Bindings.Schema("TMPro.TMP_Text.text")] private int _count;
+                [Bindings.Schema("TMPro.TMP_Text.text")] public partial int Count { get; set; }
                 public void Set(int count) => Count = count;
             }
             """);

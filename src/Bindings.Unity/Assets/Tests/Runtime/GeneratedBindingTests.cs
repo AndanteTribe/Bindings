@@ -86,7 +86,7 @@ namespace Bindings.Tests
         private readonly Action<float> _observe;
 
         [Schema(PathResolver.UnityEngine.UI.Image.fillAmount)]
-        private float _amount;
+        public partial float Amount { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         private void Click() => _observe(Amount);
@@ -96,7 +96,7 @@ namespace Bindings.Tests
     internal partial class IntegrationViewModel
     {
         [Schema(PathResolver.UnityEngine.UI.Image.fillAmount)]
-        private float _amount;
+        public partial float Amount { get; set; }
 
         public int Clicks { get; private set; }
 

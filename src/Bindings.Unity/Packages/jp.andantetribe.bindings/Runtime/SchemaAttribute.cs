@@ -6,14 +6,14 @@ using System.Runtime.CompilerServices;
 namespace Bindings
 {
     /// <summary>
-    /// Supplies binding metadata for a ViewModel field or method to the Bindings source generator.
+    /// Supplies binding metadata for a ViewModel partial property or method to the Bindings source generator.
     /// </summary>
     /// <remarks>
-    /// For a field, the generator creates a ViewModel property and updates the selected Unity component member when
+    /// For a partial property, the generator implements its accessors and updates the selected Unity component member when
     /// the view binds. For a method, the generator registers the method as a listener on the selected Unity event.
     /// Apply this attribute more than once to declare multiple bindings for the same ViewModel member.
     /// </remarks>
-    [AttributeUsage(AttributeTargets.Field | AttributeTargets.Method, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Property | AttributeTargets.Method, AllowMultiple = true)]
     public sealed class SchemaAttribute : Attribute
     {
         /// <summary>
@@ -30,7 +30,7 @@ namespace Bindings
         public readonly int Id;
 
         /// <summary>
-        /// Gets the format string used for <c>TMPro.TMP_Text.text</c> field bindings.
+        /// Gets the format string used for <c>TMPro.TMP_Text.text</c> property bindings.
         /// </summary>
         /// <remarks>The generator ignores this value for other binding paths and for method bindings.</remarks>
         public readonly string Format;
@@ -49,7 +49,7 @@ namespace Bindings
         /// <param name="id">
         /// A non-negative identifier for sharing a generated component field, or <c>-1</c> for automatic assignment.
         /// </param>
-        /// <param name="format">The format string for a <c>TMPro.TMP_Text.text</c> field binding.</param>
+        /// <param name="format">The format string for a <c>TMPro.TMP_Text.text</c> property binding.</param>
         /// <param name="tooltip">The Unity Inspector tooltip for the generated component field.</param>
         public SchemaAttribute(string bindingPath, int id = -1, string format = "", string tooltip = "")
         {
@@ -66,7 +66,7 @@ namespace Bindings
         /// <param name="id">
         /// A non-negative identifier for sharing a generated component field, or <c>-1</c> for automatic assignment.
         /// </param>
-        /// <param name="format">The format string for a <c>TMPro.TMP_Text.text</c> field binding.</param>
+        /// <param name="format">The format string for a <c>TMPro.TMP_Text.text</c> property binding.</param>
         /// <param name="tooltip">The Unity Inspector tooltip for the generated component field.</param>
         /// <param name="path">
         /// The compiler-captured expression for <paramref name="bindingPath"/>. Callers should not pass this argument.

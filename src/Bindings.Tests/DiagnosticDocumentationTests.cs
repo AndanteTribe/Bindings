@@ -227,10 +227,10 @@ public class DiagnosticDocumentationTests
     public void JapaneseDiagnosticFormatsArguments(string cultureName)
     {
         var descriptor = (DiagnosticDescriptor)typeof(ViewModelGenerator).Assembly.GetType("Bindings.DiagnosticDescriptors")!
-            .GetField("Bnd007", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
-        var diagnostic = Diagnostic.Create(descriptor, Location.None, "_count", "Count");
+            .GetField("Bnd008", BindingFlags.Public | BindingFlags.Static)!.GetValue(null)!;
+        var diagnostic = Diagnostic.Create(descriptor, Location.None, "Count");
         Assert.Equal(
-            "フィールド '_count' には [Schema] が付与されています。フィールドではなく、生成されたプロパティ 'Count' にアクセスしてください。",
+            "プロパティ 'Count' は public な getter を持ち、アクセサー本体を持たない public インスタンス partial プロパティ定義である必要があります。この ViewModel のソースは生成されません。",
             diagnostic.GetMessage(CultureInfo.GetCultureInfo(cultureName)));
     }
 
@@ -240,7 +240,7 @@ public class DiagnosticDocumentationTests
     [InlineData("Bnd003", "Conflicting tooltip values for the same View field", "View field '{0}' has conflicting tooltip values from multiple [Schema] entries with the same id. Only the first tooltip will be used.")]
     [InlineData("Bnd004", "Unsupported type accessibility", "Type '{0}' has unsupported accessibility '{1}'. No source will be generated for ViewModel '{2}'.")]
     [InlineData("Bnd006", "View implementations must not derive from MonoBehaviour", "Type '{0}' implements Bindings.IView and derives from UnityEngine.MonoBehaviour. View implementations must not derive from MonoBehaviour.")]
-    [InlineData("Bnd007", "Schema fields must be accessed through generated properties", "Field '{0}' is annotated with [Schema]. Access the generated property '{1}' instead of the field.")]
+    [InlineData("Bnd008", "Schema properties must be partial definitions", "Property '{0}' must be a public instance partial property definition with a public getter and no accessor bodies. No source will be generated for this ViewModel.")]
     [InlineData("Bndp001", "Use the generated self-rebind helper", "Use PublishRebindMessage() instead of directly publishing a rebind message for '{0}'")]
     [InlineData("Bndp002", "Views must not construct ViewModels", "View '{0}' constructs ViewModel '{1}'. Construct the ViewModel outside the View and pass it in instead.")]
     [InlineData("Bndp003", "ViewModels must not merely aggregate other ViewModels", "ViewModel '{0}' only stores or exposes child ViewModel member '{1}'. If it is not used in the owning ViewModel's logic, move ownership outside this ViewModel.")]

@@ -70,7 +70,7 @@ namespace Bindings.Tests
         {
             if (value is Guid)
             {
-                // Guid's longest supported format fits the rented buffer.
+                // Even the longest supported Guid format fits the stack buffer.
                 _ = Assert.Throws<TargetInvocationException>(() => Invoke(value.GetType(), value, "invalid"));
             }
             else

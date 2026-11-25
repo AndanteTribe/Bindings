@@ -12,7 +12,7 @@ BND002  | Bindings | Error    | InvalidSchemaIdValue. [Documentation](../../docs
 BND003  | Bindings | Error    | ConflictingTooltipValues. [Documentation](../../docs/diagnostics/BND003.md)
 BND004  | Bindings | Error    | UnsupportedTypeAccessibility. [Documentation](../../docs/diagnostics/BND004.md)
 BND006  | Bindings | Error    | ViewMustNotDeriveFromMonoBehaviour. [Documentation](../../docs/diagnostics/BND006.md)
-BND007  | Bindings | Error    | SchemaFieldMustBeAccessedThroughProperty. [Documentation](../../docs/diagnostics/BND007.md)
+BND008  | Bindings | Error    | SchemaPropertyMustBePartialDefinition. [Documentation](../../docs/diagnostics/BND008.md)
 BNDP001 | Bindings.Practices | Error | UseGeneratedSelfRebindHelper. [Documentation](../../docs/diagnostics/BNDP001.md)
 BNDP002 | Bindings.Practices | Error | ViewMustNotConstructViewModel. [Documentation](../../docs/diagnostics/BNDP002.md)
 BNDP003 | Bindings.Practices | Error | ViewModelMustNotMerelyAggregateViewModels. [Documentation](../../docs/diagnostics/BNDP003.md)

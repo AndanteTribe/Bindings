@@ -70,7 +70,7 @@ namespace Bindings.GeneratorCore {
                     "urn default;\n    }\n");
  }
             this.Write("\n    private void BindAll()\n    {\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings("        ") ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( WritePropertyBindings("        ") ));
             this.Write("\n");
             this.Write(this.ToStringHelper.ToStringWithCulture( WriteMethodBindings("        ") ));
             this.Write("\n        OnPostBind();\n        _viewModel.NotifyCompletedBind();\n    }\n\n    parti" +
@@ -103,7 +103,7 @@ namespace Bindings.GeneratorCore {
                     " global::Bindings.IMvvmSubscriber<global::Bindings.DebugBindMessage>.OnReceivedM" +
                     "essage(global::Bindings.DebugBindMessage message)\n    {\n        message.BindTo(t" +
                     "his);\n");
-            this.Write(this.ToStringHelper.ToStringWithCulture( WriteFieldBindings("        ") ));
+            this.Write(this.ToStringHelper.ToStringWithCulture( WritePropertyBindings("        ") ));
             this.Write("\n        OnPostBind();\n        _viewModel.NotifyCompletedBind();\n    }\n}\n");
  for (var i = 0; i < Context.ContainingTypes.Count; i++) {
             this.Write("}\n");

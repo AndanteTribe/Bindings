@@ -32,11 +32,11 @@
     <data name="Bnd006Message" xml:space="preserve">
         <value>Type '{0}' implements Bindings.IView and derives from UnityEngine.MonoBehaviour. View implementations must not derive from MonoBehaviour.</value>
     </data>
-    <data name="Bnd007Title" xml:space="preserve">
-        <value>Schema fields must be accessed through generated properties</value>
+    <data name="Bnd008Title" xml:space="preserve">
+        <value>Schema properties must be partial definitions</value>
     </data>
-    <data name="Bnd007Message" xml:space="preserve">
-        <value>Field '{0}' is annotated with [Schema]. Access the generated property '{1}' instead of the field.</value>
+    <data name="Bnd008Message" xml:space="preserve">
+        <value>Property '{0}' must be a public instance partial property definition with a public getter and no accessor bodies. No source will be generated for this ViewModel.</value>
     </data>
     <data name="Bndp001Title" xml:space="preserve">
         <value>Use the generated self-rebind helper</value>

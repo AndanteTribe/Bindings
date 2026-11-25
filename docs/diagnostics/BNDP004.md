@@ -26,7 +26,7 @@ A ViewModel method only copies its parameters unchanged to distinct, publicly wr
 public partial class CounterViewModel
 {
     [Schema(PathResolver.TMPro.TMP_Text.text)]
-    private int _count;
+    public partial int Count { get; set; }
 
     public void SetCount(int count) => Count = count;
 }
@@ -53,7 +53,7 @@ Methods performing validation, transformation, or other actual behavior are outs
 
 - Every parameter is copied exactly once to a different property, with no unused parameters. `ref`, `in`, and `out` parameters are excluded.
 - The property belongs to the current instance (`this`, unqualified, or `base`), is public, and has a public non-init setter. Child and other instances are excluded.
-- The property corresponds by generated name and type to a Schema field declared in its containing type. Ordinary properties, direct field writes, static properties, indexers, getter-only properties, and restricted setters do not qualify.
+- The property itself has the actual Schema attribute (including merged partial-property attributes). Properties without Schema, direct field writes, static properties, indexers, getter-only properties, and restricted setters do not qualify.
 - Parameter and property types must match, including nullable reference annotations. Parentheses are allowed. Any explicit or implicit conversion, including an identity cast, prevents reporting.
 - The entire body consists of simple assignment expression statements, one per parameter. Expression-bodied methods are supported. Explicit returns, locals, calls, control flow, compound assignments, or repeated parameters/properties prevent reporting.
 

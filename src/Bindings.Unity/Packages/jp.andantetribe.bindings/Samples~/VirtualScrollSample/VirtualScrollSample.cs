@@ -60,6 +60,6 @@ namespace Bindings.Sample
     {
         [Required]
         [Schema(PathResolver.TMPro.TMP_Text.text)]
-        private string _label;
+        public partial string Label { get; set; }
     }
 }

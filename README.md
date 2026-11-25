@@ -14,8 +14,9 @@ It provides a Roslyn Source Generator that automatically generates ViewModel and
 Bind requests triggered by `PublishRebindMessage()` are **batched** internally and executed all at once just before the Canvas renders (`Canvas.preWillRenderCanvases`), avoiding redundant updates within a single frame.
 
 ## Requirements
-- Unity 6000.0 or later
-- Unity uGUI 2.0.0 or later
+- Unity 6000.7 or later
+- Unity uGUI 2.7.0 or later
+- C# 14: place a `csc.rsp` containing `-langversion:14` beside the consuming assembly's `.asmdef`. The package supplies its own scoped response file. Avoid `Assets/csc.rsp`, which also affects unrelated packages.
 
 ## Installation
 Open `Window > Package Manager`, select `[+] > Add package from git URL`, and enter the following URL:
@@ -42,7 +43,7 @@ namespace MyApp
         private readonly CounterModel _model;
 
         [Schema(PathResolver.TMPro.TMP_Text.text)]
-        private int _count;
+        public partial int Count { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         private void Increment()
@@ -83,20 +84,20 @@ namespace MyApp
         internal readonly global::UnityEngine.Events.UnityAction _incrementAction;
         internal readonly global::UnityEngine.Events.UnityAction _decrementAction;
 
-        public int Count
+        public partial int Count
         {
-            get => _count;
+            get => field;
             set
             {
-                _count = value;
+                field = value;
                 PublishRebindMessage();
             }
         }
 
         public CounterViewModel(global::MyApp.CounterModel model, global::Bindings.IMvvmPublisher publisher)
         {
-            _model = model;
             _publisher = publisher;
+            _model = model;
             this._incrementAction = this.@Increment;
             this._decrementAction = this.@Decrement;
             OnPostConstruct();
@@ -252,11 +253,11 @@ Applied to a `partial` class or struct to mark it as a ViewModel and trigger sou
 
 Applied to a field or property to include it as a parameter in the generated constructor. The constructor accepts each member's type and assigns it. Required members appear in declaration order, followed by `IMvvmPublisher publisher`; without Required members, the constructor accepts only `publisher`.
 
-The generated constructor assigns `[Required]` members, then the internal `IMvvmPublisher`. For ViewModel classes, it then calls `partial void OnPostConstruct();`. Implement this hook in your partial class for one-time initialization that needs the publisher, including Schema property assignments. Structs do not generate this hook.
+The generated constructor assigns the internal `IMvvmPublisher` before `[Required]` members, so Required Schema setters can safely notify it. For ViewModel classes, it then calls `partial void OnPostConstruct();`. Implement this hook for one-time initialization that needs the publisher. Structs do not generate this hook.
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 
-Applied to a field or method to bind it to a UI component. Can be applied multiple times to the same member.
+Applied to a public instance partial property definition or a method to bind it to a UI component. Can be applied multiple times to the same member. Properties require a public getter and semicolon-only accessors; invalid definitions produce [BND008](docs/diagnostics/BND008.md).
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -273,7 +274,7 @@ Example:
 
 ```csharp
 [Schema(PathResolver.UnityEngine.GameObject.activeSelf)]
-private bool _isVisible;
+public partial bool IsVisible { get; set; }
 ```
 
 The generated binding will call `_isVisibleGameObject.SetActive(_viewModel.IsVisible);` (or the equivalent generated helper) when applying the binding.
@@ -284,7 +285,7 @@ Use `PathResolver.UnityEngine.RectTransform.rect.size` to bind a `Vector2` to th
 
 ```csharp
 [Schema(PathResolver.UnityEngine.RectTransform.rect.size)]
-private Vector2 _size;
+public partial Vector2 Size { get; set; }
 ```
 
 The generated View calls `RectTransform.SetSizeWithCurrentAnchors` once for the horizontal axis with `Size.x` and once for the vertical axis with `Size.y`. This binding is opt-in; `PathResolver.UnityEngine.RectTransform.sizeDelta` continues to assign `RectTransform.sizeDelta` directly.
@@ -296,34 +297,36 @@ The generated View calls `RectTransform.SetSizeWithCurrentAnchors` once for the 
 - A ViewModel is a partial class or struct. Its name must end with `ViewModel`, optionally followed by ASCII digits (`0`–`9`). Only that final `ViewModel` is replaced with `View`, preserving the digits: `CounterViewModel2` becomes `CounterView2`. See [BND001](docs/diagnostics/BND001.md).
 - The generated View is a sealed partial class implementing `IView<T>`, with the same accessibility and containing-type chain as its ViewModel. All containing types must also be partial. See [BND004](docs/diagnostics/BND004.md) for supported accessibilities.
 - Generated file names include the namespace and containing types: `MyApp.Screen.CounterViewModel.g.cs` and `MyApp.Screen.CounterView.g.cs`, for example. Generated type references use fully qualified names to avoid user-name collisions.
-- For field-derived identifiers, remove all leading `_` characters, then one leading `m_`. Uppercase the first remaining character for a Schema property, or lowercase it for a Required constructor parameter. The result must be a valid, non-empty identifier.
+- Schema property names are preserved exactly. For Required constructor parameters, remove all leading `_` characters, then one leading `m_`, and lowercase the first remaining character. The result must be a valid, non-empty identifier.
 
-| Member name | Schema property | Required parameter |
-| --- | --- | --- |
-| `_count`, `__count`, `m_count`, `_m_count` | `Count` | `count` |
-| `m_Service` | `Service` | `service` |
-| `myService` | `MyService` | `myService` |
+| Required member name | Required parameter |
+| --- | --- |
+| `_count`, `__count`, `m_count`, `_m_count`, `Count` | `count` |
+| `m_Service` | `service` |
+| `myService` | `myService` |
 
-Each Schema field produces one public property, even with multiple Schema attributes. For classes and ordinary structs, its setter assigns the field and requests a rebind, including when the value is unchanged. Use the property rather than directly accessing the field; see [BND007](docs/diagnostics/BND007.md). For readonly structs, only a getter is generated.
+Each Schema property produces one partial implementation, even with multiple Schema attributes. Accessor signatures are preserved, including `private set`, `init`, and getter-only definitions. The getter reads the compiler-generated backing field through C# 14's `field`; `set` and `init` assign it and request a rebind, even when the value is unchanged. Readonly structs can use getter-only definitions.
+
+To migrate, replace `[Schema] private int _count;` with `[Schema] public partial int Count { get; set; }` and use `Count` in user code. Bindings does not generate serialization attributes on ViewModels or their backing fields; Inspector previews use separate slots. Initializers belong on the partial definition. The former diagnostics BND007 and BND009 have been removed.
 
 ### Component Fields and Sharing
 
-Generated component fields combine the normalized member name and component name: `_count` bound to `TMP_Text` becomes `_countText`, and `Increment` bound to `Button` becomes `_incrementButton`. Member names use the lowercase-first normalization above. The component suffix uses the class-name segment after its last underscore (`TMP_Text` → `Text`), falling back to the class name when that segment is empty.
+Generated component fields combine the normalized member name and component name: `Count` bound to `TMP_Text` becomes `_countText`, and `Increment` bound to `Button` becomes `_incrementButton`. Member names use the lowercase-first normalization above. The component suffix uses the class-name segment after its last underscore (`TMP_Text` → `Text`), falling back to the class name when that segment is empty.
 
-- Entries with the same component type and the same explicit `id >= 0` share one field. Its name uses the first collected member; fields are collected before methods, each in declaration order. The ID itself is not appended to the name.
+- Entries with the same component type and the same explicit `id >= 0` share one field. Its name uses the first collected member; properties are collected before methods, each in declaration order. The ID itself is not appended to the name.
 - Every omitted ID or `id = -1` creates an independent component. Distinct names have no numeric suffix; colliding names receive `1`, `2`, and so on in encounter order, skipping names already used.
 - Repeating the same Button schema twice on `Submit` therefore produces `_submitButton1` and `_submitButton2`. Two different methods `Increment` and `Decrement` produce `_incrementButton` and `_decrementButton`.
 - `RectTransform.rect.size` and `RectTransform.sizeDelta` can share a RectTransform using the same explicit ID.
-- Component fields are serialized and emitted in first-reference order, processing Schema fields before Schema methods. A shared component is declared once.
+- Component fields are serialized and emitted in first-reference order, processing Schema properties before Schema methods. A shared component is declared once.
 - A supplied tooltip becomes a Unity `Tooltip` attribute. The first non-empty tooltip wins; different non-empty values on a shared field produce [BND003](docs/diagnostics/BND003.md).
 
 ### Binding and Serialization
 
-Binding applies field schemas first, then method event schemas. TMP text uses `TextMeshProExtensions.SetValue`; `activeSelf` and `rect.size` use the dedicated APIs described above. Other field bindings use direct assignment. For each component/event pair, `RemoveAllListeners()` is called once, followed by `AddListener` for each bound method. Finally, the View's `OnPostBind` runs, then the ViewModel's `OnPostBind` through `NotifyCompletedBind`.
+Binding applies property schemas first, then method event schemas. TMP text uses `TextMeshProExtensions.SetValue`; `activeSelf` and `rect.size` use the dedicated APIs described above. Other property bindings use direct assignment. For each component/event pair, `RemoveAllListeners()` is called once, followed by `AddListener` for each bound method. Finally, the View's `OnPostBind` runs, then the ViewModel's `OnPostBind` through `NotifyCompletedBind`.
 
 With `requireBindImplementation: true`, implement `IView.BindAsync` on the partial View and call its generated `BindAll()` when ready. The default implementation calls `BindAll()` synchronously and returns a completed `ValueTask`.
 
-The debug subscriber is compiled under `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT`. It applies only field bindings, followed by the same completion hooks; it does not re-register event listeners.
+The debug subscriber is compiled under `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT`. It applies only property bindings, followed by the same completion hooks; it does not re-register event listeners.
 
 Views always receive `[Serializable]` for the Binder's `[SerializeReference]` storage; their ViewModel reference is non-serialized.
 
@@ -381,7 +384,7 @@ Each ID links to its detailed cause, examples, exceptions, Code Fix availability
 | [`BND003`](docs/diagnostics/BND003.md) | Error | Multiple `[Schema]` entries assign conflicting tooltip values to the same View field. |
 | [`BND004`](docs/diagnostics/BND004.md) | Error | A `[ViewModel]` type or one of its containing types has an accessibility that cannot be represented in generated source. |
 | [`BND006`](docs/diagnostics/BND006.md) | Error | A class implementing `IView` derives from `MonoBehaviour`. Implement Views as plain C# classes instead. |
-| [`BND007`](docs/diagnostics/BND007.md) | Error | Code directly reads or writes a `[Schema]` field in a `[ViewModel]` type. Use its generated property instead. |
+| [`BND008`](docs/diagnostics/BND008.md) | Error | A Schema property is not a supported public instance partial definition with a public getter. |
 
 ### Best-practice diagnostics
 
@@ -406,7 +409,7 @@ dotnet_diagnostic.BNDP001.severity = suggestion
 
 Use `none` to disable a diagnostic. To disable all best-practice diagnostics, set `dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none`.
 
-Diagnostic messages use Japanese for the `ja` / `ja-JP` UI cultures and fall back to English for other cultures. Source-generation errors BND001 and BND004 stop only the affected ViewModel's generation; usage and best-practice diagnostics do not suppress source generation. Detailed behavior is documented on each rule's page.
+Diagnostic messages use Japanese for the `ja` / `ja-JP` UI cultures and fall back to English for other cultures. Source-generation errors BND001, BND004, and BND008 stop only the affected ViewModel's generation; usage and best-practice diagnostics do not suppress source generation. Detailed behavior is documented on each rule's page.
 
 ## Single-Axis Virtual Scrolling
 

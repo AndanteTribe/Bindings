@@ -203,7 +203,7 @@ public class ViewModelUiComponentAnalyzerTests
             public partial class OuterViewModel {
                 [Bindings.ViewModel]
                 public partial class InnerViewModel {
-                    [Bindings.Schema("TMPro.TMP_Text.text")] private int _count;
+                    [Bindings.Schema("TMPro.TMP_Text.text")] public partial int Count { get; set; }
                 }
             }
             """, stubs);

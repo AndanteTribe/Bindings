@@ -37,7 +37,7 @@ Schema メンバーでデータを公開し、独自のコンポーネント操�
 public partial class CounterViewModel
 {
     [Schema(PathResolver.UnityEngine.UI.Text.text)]
-    private int _count;
+    public partial int Count { get; set; }
     public void Reset() => Count = 0;
 }
 ```

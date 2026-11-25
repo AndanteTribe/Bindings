@@ -59,21 +59,21 @@ public partial class ViewModelTemplate(GenerationContext context)
     }
 
     /// <summary>
-    /// Schema fields used to generate ViewModel properties, deduplicated by source field name.
-    /// Multiple Schema attributes on one field still remain in <see cref="GenerationContext.SchemaFields"/>
+    /// Partial property implementations, deduplicated by declared name.
+    /// Multiple Schema attributes on one property still remain in <see cref="GenerationContext.SchemaProperties"/>
     /// so the View can generate every declared binding.
     /// </summary>
-    public IEnumerable<(string FieldName, string FieldTypeName, GenerationContext.BindingInfo Binding)> SchemaPropertyFields
+    public IEnumerable<(string PropertyName, string PropertyTypeName, string Modifiers, string Getter, string Setter, GenerationContext.BindingInfo Binding)> DistinctSchemaProperties
     {
         get
         {
-            var fieldNames = new HashSet<string>();
-            for (var i = 0; i < Context.SchemaFields.Count; i++)
+            var propertyNames = new HashSet<string>();
+            for (var i = 0; i < Context.SchemaProperties.Count; i++)
             {
-                var schemaField = Context.SchemaFields[i];
-                if (fieldNames.Add(schemaField.FieldName))
+                var property = Context.SchemaProperties[i];
+                if (propertyNames.Add(property.PropertyName))
                 {
-                    yield return schemaField;
+                    yield return property;
                 }
             }
         }
@@ -109,7 +109,7 @@ public partial class ViewTemplate(
     public readonly GenerationContext Context = context;
 
     /// <summary>
-    /// View component field name assigned to each SchemaFields[i] entry.
+    /// View component field name assigned to each SchemaProperties[i] entry.
     /// </summary>
     public readonly string[] FieldAssignments = fieldAssignments;
 
@@ -186,17 +186,18 @@ public partial class ViewTemplate(
     }
 
     /// <summary>
-    /// Generates field binding statements for all [Schema] fields.
+    /// Generates binding statements for all [Schema] properties.
     /// Each statement is prefixed with <paramref name="indent"/>.
     /// </summary>
-    public string WriteFieldBindings(string indent)
+    public string WritePropertyBindings(string indent)
     {
         var sb = new StringBuilder();
-        for (var i = 0; i < Context.SchemaFields.Count; i++)
+        for (var i = 0; i < Context.SchemaProperties.Count; i++)
         {
-            var (fieldName, _, binding) = Context.SchemaFields[i];
+            var property = Context.SchemaProperties[i];
+            var binding = property.Binding;
             var viewField = FieldAssignments[i];
-            var propName = ToPropertyName(fieldName);
+            var propName = property.PropertyName;
 
             switch (binding.BindingPath)
             {

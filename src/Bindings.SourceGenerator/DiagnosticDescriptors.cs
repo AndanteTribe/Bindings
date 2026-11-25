@@ -119,16 +119,16 @@ internal static class DiagnosticDescriptors
             customTags: [Category]);
 
     /// <summary>
-    /// BND007: emitted when user code directly accesses a [Schema] field in a ViewModel.
+    /// BND008: emitted for unsupported Schema property declarations.
     /// </summary>
-    public static readonly DiagnosticDescriptor Bnd007 = new(
-            id: "BND007",
-            title: new LocalizableResourceString("Bnd007Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
-            messageFormat: new LocalizableResourceString("Bnd007Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+    public static readonly DiagnosticDescriptor Bnd008 = new(
+            id: "BND008",
+            title: new LocalizableResourceString("Bnd008Title", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
+            messageFormat: new LocalizableResourceString("Bnd008Message", DiagnosticResources.ResourceManager, typeof(DiagnosticResources)),
             category: Category,
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
-            helpLinkUri: Documentation.BaseUrl + "BND007.md",
+            helpLinkUri: Documentation.BaseUrl + "BND008.md",
             customTags: [Category]);
 
     /// <summary>

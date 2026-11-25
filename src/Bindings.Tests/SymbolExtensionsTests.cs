@@ -69,19 +69,19 @@ public class SymbolExtensionsTests
     }
 
     [Theory]
-    [InlineData("[Bindings.Schema(\"Text.text\")] private int _count; public int Count { get; set; }", true)]
-    [InlineData("[Bindings.Schema(\"Text.text\")] private int m_count; public int Count { get; set; }", true)]
-    [InlineData("[Bindings.Schema(\"Text.text\")] private int _count; public int Count { get; private set; }", true)]
+    [InlineData("[Bindings.Schema(\"Text.text\")] public int Count { get; set; }", true)]
+    [InlineData("[Bindings.Schema(\"Text.text\")] public int Count { get; private set; }", true)]
+    [InlineData("[Bindings.Schema(\"Text.text\")] public int Count { get; init; }", true)]
     [InlineData("[Bindings.Schema(\"Text.text\")] private int _count; public string Count { get; set; }", false)]
     [InlineData("[Bindings.Schema(\"Text.text\")] private int _other; public int Count { get; set; }", false)]
     [InlineData("private int _count; public int Count { get; set; }", false)]
     [InlineData("public int Count { get; set; }", false)]
-    public void SchemaPropertyMappingChecksOnlyFieldNameTypeAndAttribute(string members, bool expected)
+    public void SchemaPropertyChecksItsOwnAttribute(string members, bool expected)
     {
         var compilation = BindingsUsageAnalyzerTests.CreateCompilation("class Sample { " + members + " }");
         var property = Assert.IsAssignableFrom<IPropertySymbol>(Assert.Single(compilation.GetTypeByMetadataName("Sample")!.GetMembers("Count")));
         var schemaAttribute = compilation.GetTypeByMetadataName("Bindings.SchemaAttribute");
-        Assert.Equal(expected, InvokePredicate("IsSchemaProperty", property, schemaAttribute));
-        Assert.False(InvokePredicate("IsSchemaProperty", property, null));
+        Assert.Equal(expected, InvokePredicate("HasAttribute", property, schemaAttribute));
+        Assert.False(InvokePredicate("HasAttribute", property, null));
     }
 }

@@ -8,10 +8,10 @@ namespace Bindings.Sample
     public partial class GaugeViewModel
     {
         [Schema(PathResolver.TMPro.TMP_Text.text, tooltip: "最大値")]
-        private uint _max;
+        public partial uint Max { get; set; }
 
         [Schema(PathResolver.TMPro.TMP_Text.text, tooltip: "現在値")]
-        private uint _current;
+        public partial uint Current { get; set; }
 
         public void AnimateTo(uint current)
         {

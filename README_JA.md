@@ -14,8 +14,9 @@ Roslyn ソースジェネレーターを利用し、アノテーションを付�
 `PublishRebindMessage()` によって発行されたバインド要求は内部でキューに積まれ、Canvas レンダリング直前（`Canvas.preWillRenderCanvases`）に一括実行されます。これにより、1フレーム内での無駄な更新が回避されます。
 
 ## 要件
-- Unity 6000.0 以上
-- Unity uGUI 2.0.0 以上
+- Unity 6000.7 以上
+- Unity uGUI 2.7.0 以上
+- C# 14: 利用側の `.asmdef` と同じフォルダーに `-langversion:14` を記載した `csc.rsp` を配置してください。パッケージ側には専用の設定を同梱しています。無関係なパッケージにも影響する `Assets/csc.rsp` での全体指定は避けてください。
 
 ## インストール
 `Window > Package Manager` から Package Manager ウィンドウを開き、`[+] > Add package from git URL` を選択して以下の URL を入力します。
@@ -42,7 +43,7 @@ namespace MyApp
         private readonly CounterModel _model;
 
         [Schema(PathResolver.TMPro.TMP_Text.text)]
-        private int _count;
+        public partial int Count { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         private void Increment()
@@ -83,20 +84,20 @@ namespace MyApp
         internal readonly global::UnityEngine.Events.UnityAction _incrementAction;
         internal readonly global::UnityEngine.Events.UnityAction _decrementAction;
 
-        public int Count
+        public partial int Count
         {
-            get => _count;
+            get => field;
             set
             {
-                _count = value;
+                field = value;
                 PublishRebindMessage();
             }
         }
 
         public CounterViewModel(global::MyApp.CounterModel model, global::Bindings.IMvvmPublisher publisher)
         {
-            _model = model;
             _publisher = publisher;
+            _model = model;
             this._incrementAction = this.@Increment;
             this._decrementAction = this.@Decrement;
             OnPostConstruct();
@@ -252,11 +253,11 @@ public class GameEntry : MonoBehaviour
 
 フィールドまたはプロパティに付与し、生成されるコンストラクタの引数として追加します。各メンバーの型の引数を受け取り、代入します。Requiredメンバーは宣言順に並び、最後に `IMvvmPublisher publisher` が続きます。Requiredメンバーがなければ、引数は `publisher` のみです。
 
-生成コンストラクタは `[Required]` メンバー、内部の `IMvvmPublisher` の順に代入します。ViewModel クラスでは、続けて `partial void OnPostConstruct();` を呼び出します。partial クラス側でこのフックを実装し、Schemaプロパティへの代入など、Publisherが必要な一度だけの初期化を行ってください。構造体にはこのフックを生成しません。
+生成コンストラクタは内部の `IMvvmPublisher`、`[Required]` メンバーの順に代入します。Required と Schema を併用した setter からも安全に通知できます。ViewModel クラスでは、続けて `partial void OnPostConstruct();` を呼び出します。Publisher が必要な一度だけの初期化にはこのフックを実装してください。構造体にはこのフックを生成しません。
 
 ### `[Schema(bindingPath, id, format, tooltip)]`
 
-フィールドまたはメソッドに付与し、UI コンポーネントにバインドします。同一メンバに複数回付与できます。
+public インスタンス partial プロパティ定義、またはメソッドに付与し、UI コンポーネントにバインドします。同一メンバに複数回付与できます。プロパティには public な getter とセミコロンのみのアクセサーが必要です。不正な定義には [BND008](docs/diagnostics/BND008.ja.md) を報告します。
 
 | パラメータ | 型 | デフォルト | 説明 |
 |-----------|-----|-----------|------|
@@ -273,7 +274,7 @@ public class GameEntry : MonoBehaviour
 
 ```csharp
 [Schema(PathResolver.UnityEngine.GameObject.activeSelf)]
-private bool _isVisible;
+public partial bool IsVisible { get; set; }
 ```
 
 生成されるバインディングでは `_isVisibleGameObject.SetActive(_viewModel.IsVisible);`（または相当する生成ヘルパー）が呼ばれ、アクティブ状態が反映されます。
@@ -284,7 +285,7 @@ private bool _isVisible;
 
 ```csharp
 [Schema(PathResolver.UnityEngine.RectTransform.rect.size)]
-private Vector2 _size;
+public partial Vector2 Size { get; set; }
 ```
 
 生成される View は、水平軸へ `Size.x`、垂直軸へ `Size.y` を渡して `RectTransform.SetSizeWithCurrentAnchors` をそれぞれ1回呼び出します。この動作は明示的にこのパスを選んだ場合だけ有効であり、`PathResolver.UnityEngine.RectTransform.sizeDelta` は引き続き `RectTransform.sizeDelta` へ直接代入します。
@@ -296,34 +297,36 @@ private Vector2 _size;
 - ViewModelはpartialなクラスまたは構造体です。型名の末尾は `ViewModel`、またはその後にASCII数字（`0`～`9`）だけを付けた形式にします。この最後の `ViewModel` だけを `View` に置換し、数字は維持します。例：`CounterViewModel2` → `CounterView2`。[BND001](docs/diagnostics/BND001.ja.md)を参照してください。
 - 生成Viewは `IView<T>` を実装するsealed partial classです。ViewModelと同じアクセシビリティと親型チェーンを維持します。親型もすべてpartialである必要があります。対応するアクセシビリティは [BND004](docs/diagnostics/BND004.ja.md) を参照してください。
 - 生成ファイル名には名前空間と親型を含めます。例：`MyApp.Screen.CounterViewModel.g.cs`、`MyApp.Screen.CounterView.g.cs`。生成コードの型参照は、ユーザー定義名との衝突を避けるため完全修飾名を使用します。
-- フィールド由来の識別子は、先頭の `_` をすべて除去し、続けて先頭の `m_` を1つ除去します。残った先頭文字をSchemaプロパティでは大文字、Requiredのコンストラクター引数では小文字にします。結果は空でない有効な識別子である必要があります。
+- Schema プロパティ名は宣言どおりに維持します。Required のコンストラクター引数は、先頭の `_` をすべて除去し、続けて先頭の `m_` を1つ除去して先頭文字を小文字にします。結果は空でない有効な識別子である必要があります。
 
-| メンバー名 | Schemaプロパティ | Required引数 |
-| --- | --- | --- |
-| `_count`、`__count`、`m_count`、`_m_count` | `Count` | `count` |
-| `m_Service` | `Service` | `service` |
-| `myService` | `MyService` | `myService` |
+| Required メンバー名 | Required引数 |
+| --- | --- |
+| `_count`、`__count`、`m_count`、`_m_count`、`Count` | `count` |
+| `m_Service` | `service` |
+| `myService` | `myService` |
 
-Schema属性を複数付けても、フィールドごとに生成する公開プロパティは1つです。クラスと通常の構造体では、setterがフィールドへ代入して再バインドを要求します。同じ値の代入でも通知します。フィールドを直接参照せず、プロパティを使用してください。[BND007](docs/diagnostics/BND007.ja.md)に詳細があります。readonly structではgetterのみを生成します。
+Schema 属性を複数付けても、プロパティごとに生成する partial 実装は1つです。`private set`・`init`・getter のみの定義を含め、アクセサーの宣言を維持します。getter は C# 14 の `field` でコンパイラー生成の backing field を読み、`set` / `init` は代入して再バインドを要求します。同じ値でも通知します。readonly struct では getter のみの定義を使用できます。
+
+移行時は `[Schema] private int _count;` を `[Schema] public partial int Count { get; set; }` に変更し、ユーザーコードからも `Count` を使います。Bindings は ViewModel や backing field にシリアライズ属性を生成せず、Inspector のプレビューには独立したスロットを使用します。初期値は partial 定義側に記述できます。旧診断 BND007 と BND009 は削除しました。
 
 ### コンポーネントフィールドと共有
 
-生成コンポーネントフィールド名は、正規化したメンバー名とコンポーネント名を組み合わせます。`TMP_Text` への `_count` のバインドは `_countText`、`Button` への `Increment` のバインドは `_incrementButton` です。メンバー名には上記の先頭小文字の正規化を使います。コンポーネントの接尾辞はクラス名の最後のアンダースコアより後ろ（`TMP_Text` → `Text`）を使い、空になる場合はクラス名全体を使います。
+生成コンポーネントフィールド名は、正規化したメンバー名とコンポーネント名を組み合わせます。`TMP_Text` への `Count` のバインドは `_countText`、`Button` への `Increment` のバインドは `_incrementButton` です。メンバー名には上記の先頭小文字の正規化を使います。コンポーネントの接尾辞はクラス名の最後のアンダースコアより後ろ（`TMP_Text` → `Text`）を使い、空になる場合はクラス名全体を使います。
 
-- 同じコンポーネント型かつ同じ明示的な `id >= 0` のエントリは、1つのフィールドを共有します。最初に収集したメンバー名を採用します。フィールド、メソッドの順で、それぞれ宣言順に収集します。ID自体をフィールド名へ付加するわけではありません。
+- 同じコンポーネント型かつ同じ明示的な `id >= 0` のエントリは、1つのフィールドを共有します。最初に収集したメンバー名を採用します。プロパティ、メソッドの順で、それぞれ宣言順に収集します。ID自体をフィールド名へ付加するわけではありません。
 - ID省略または `id = -1` の各エントリは独立します。名前が異なれば連番はなく、同じ名前が競合した場合にだけ出現順に `1`、`2` などを付加します。使用済みの名前は飛ばします。
 - `Submit` に同じButtonのSchemaを2つ付けると、`_submitButton1` と `_submitButton2` になります。別々の `Increment` と `Decrement` なら `_incrementButton` と `_decrementButton` です。
 - `RectTransform.rect.size` と `RectTransform.sizeDelta` は、同じ明示的IDでRectTransformを共有できます。
-- コンポーネントフィールドはシリアライズ対象です。Schemaフィールド、Schemaメソッドの順に参照を処理し、初出順に宣言します。共有コンポーネントの宣言は1つです。
+- コンポーネントフィールドはシリアライズ対象です。Schemaプロパティ、Schemaメソッドの順に参照を処理し、初出順に宣言します。共有コンポーネントの宣言は1つです。
 - tooltipを指定するとUnityの `Tooltip` 属性になります。最初の非空値を採用し、共有フィールドで異なる非空値が競合した場合は [BND003](docs/diagnostics/BND003.ja.md) になります。
 
 ### バインドとシリアライズ
 
-最初にフィールドのSchema、次にメソッドのイベントSchemaを適用します。TMPテキストは `TextMeshProExtensions.SetValue`、`activeSelf` と `rect.size` は前述の専用APIを使い、それ以外のフィールドバインドは直接代入します。コンポーネントとイベントの組み合わせごとに `RemoveAllListeners()` を1回呼び、各メソッドを `AddListener` で登録します。最後にViewの `OnPostBind`、続けて `NotifyCompletedBind` 経由でViewModelの `OnPostBind` を呼びます。
+最初にプロパティのSchema、次にメソッドのイベントSchemaを適用します。TMPテキストは `TextMeshProExtensions.SetValue`、`activeSelf` と `rect.size` は前述の専用APIを使い、それ以外のプロパティバインドは直接代入します。コンポーネントとイベントの組み合わせごとに `RemoveAllListeners()` を1回呼び、各メソッドを `AddListener` で登録します。最後にViewの `OnPostBind`、続けて `NotifyCompletedBind` 経由でViewModelの `OnPostBind` を呼びます。
 
 `requireBindImplementation: true` の場合は、partial Viewに `IView.BindAsync` を実装し、準備できた時点で生成済みの `BindAll()` を呼んでください。既定の実装は `BindAll()` を同期実行し、完了済みの `ValueTask` を返します。
 
-デバッグ用サブスクライバーは `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT` の条件でコンパイルします。フィールドのバインドだけを適用して同じ完了フックを呼び、イベントリスナーの再登録は行いません。
+デバッグ用サブスクライバーは `UNITY_EDITOR || !DISABLE_DEBUGTOOLKIT` の条件でコンパイルします。プロパティのバインドだけを適用して同じ完了フックを呼び、イベントリスナーの再登録は行いません。
 
 Viewには、Binderの `[SerializeReference]` による保持のため、常に `[Serializable]` を付与します。ViewModelへの参照はシリアライズしません。
 
@@ -381,7 +384,7 @@ public sealed partial class MyView : IMvvmSubscriber<ShowDialogMessage>
 | [`BND003`](docs/diagnostics/BND003.ja.md) | エラー | 複数の `[Schema]` エントリが同一 View フィールドに対して異なるツールチップ値を指定した。 |
 | [`BND004`](docs/diagnostics/BND004.ja.md) | エラー | `[ViewModel]` 型またはその親型のアクセシビリティを生成コードで表現できない。 |
 | [`BND006`](docs/diagnostics/BND006.ja.md) | エラー | `IView` を実装するクラスが `MonoBehaviour` を継承している。View は通常の C# クラスとして実装する。 |
-| [`BND007`](docs/diagnostics/BND007.ja.md) | エラー | `[ViewModel]` 型の `[Schema]` フィールドを直接読み書きしている。生成されるプロパティを使用する。 |
+| [`BND008`](docs/diagnostics/BND008.ja.md) | エラー | Schema プロパティが public な getter を持つ対応可能な public インスタンス partial 定義ではない。 |
 
 ### ベストプラクティス診断
 
@@ -406,7 +409,7 @@ dotnet_diagnostic.BNDP001.severity = suggestion
 
 無効にする場合は `none` を指定します。ベストプラクティス診断をまとめて無効にするには、`dotnet_analyzer_diagnostic.category-Bindings.Practices.severity = none` を指定してください。
 
-診断メッセージはUIカルチャーが `ja` / `ja-JP` の場合に日本語、それ以外は英語になります。生成時のBND001・BND004は該当ViewModelの生成だけを中止し、Usage診断・ベストプラクティス診断はソース生成を抑止しません。個別の動作は各診断ページを参照してください。
+診断メッセージはUIカルチャーが `ja` / `ja-JP` の場合に日本語、それ以外は英語になります。生成時のBND001・BND004・BND008は該当ViewModelの生成だけを中止し、Usage診断・ベストプラクティス診断はソース生成を抑止しません。個別の動作は各診断ページを参照してください。
 
 ## 単軸仮想スクロール
 

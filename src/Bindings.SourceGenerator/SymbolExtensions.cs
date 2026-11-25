@@ -1,11 +1,10 @@
 using System.Collections.Generic;
-using Bindings.GeneratorCore;
 using Microsoft.CodeAnalysis;
 
 namespace Bindings;
 
 /// <summary>
-/// Shared symbol identity, type relationship, and Schema property mapping checks.
+/// Shared symbol identity and type relationship checks.
 /// Missing metadata types never match unresolved symbols.
 /// </summary>
 internal static class SymbolExtensions
@@ -53,26 +52,6 @@ internal static class SymbolExtensions
                 {
                     return true;
                 }
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Checks whether a property matches a Schema field by generated name and type.
-    /// This Bindings-specific mapping does not establish accessibility or source provenance.
-    /// </summary>
-    public static bool IsSchemaProperty(this IPropertySymbol property, INamedTypeSymbol? schemaAttribute)
-    {
-        foreach (var member in property.ContainingType.GetMembers())
-        {
-            if (member is IFieldSymbol field
-                && field.HasAttribute(schemaAttribute)
-                && TemplateHelpers.ToPropertyName(field.Name) == property.Name
-                && SymbolEqualityComparer.IncludeNullability.Equals(field.Type, property.Type))
-            {
-                return true;
             }
         }
 

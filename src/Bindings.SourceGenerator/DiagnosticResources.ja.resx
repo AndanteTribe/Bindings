@@ -32,11 +32,11 @@
     <data name="Bnd006Message" xml:space="preserve">
         <value>型 '{0}' は Bindings.IView を実装し、UnityEngine.MonoBehaviour を継承しています。View の実装は MonoBehaviour を継承できません。</value>
     </data>
-    <data name="Bnd007Title" xml:space="preserve">
-        <value>Schema フィールドには生成されたプロパティを通じてアクセスしてください</value>
+    <data name="Bnd008Title" xml:space="preserve">
+        <value>Schema プロパティは partial 定義である必要があります</value>
     </data>
-    <data name="Bnd007Message" xml:space="preserve">
-        <value>フィールド '{0}' には [Schema] が付与されています。フィールドではなく、生成されたプロパティ '{1}' にアクセスしてください。</value>
+    <data name="Bnd008Message" xml:space="preserve">
+        <value>プロパティ '{0}' は public な getter を持ち、アクセサー本体を持たない public インスタンス partial プロパティ定義である必要があります。この ViewModel のソースは生成されません。</value>
     </data>
     <data name="Bndp001Title" xml:space="preserve">
         <value>生成された自身への再バインド用ヘルパーを使用してください</value>

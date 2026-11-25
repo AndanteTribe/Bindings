@@ -9,7 +9,7 @@ namespace Bindings.Sample
         private readonly CountModel _model;
 
         [Schema(PathResolver.TMPro.TMP_Text.text)]
-        private int _count;
+        public partial int Count { get; set; }
 
         [Schema(PathResolver.UnityEngine.UI.Button.onClick)]
         private void Increment()
@@ -36,20 +36,20 @@ namespace Bindings.Sample
     //     internal readonly global::UnityEngine.Events.UnityAction _incrementAction;
     //     internal readonly global::UnityEngine.Events.UnityAction _decrementAction;
     //
-    //     public int Count
+    //     public partial int Count
     //     {
-    //         get => _count;
+    //         get => field;
     //         set
     //         {
-    //             _count = value;
+    //             field = value;
     //             _publisher.PublishRebindMessage<CountViewModel>();
     //         }
     //     }
     //
     //     public CountViewModel(CountModel model, IMvvmPublisher publisher)
     //     {
-    //         _model = model;
     //         _publisher = publisher;
+    //         _model = model;
     //         this._incrementAction = this.@Increment;
     //         this._decrementAction = this.@Decrement;
     //     }

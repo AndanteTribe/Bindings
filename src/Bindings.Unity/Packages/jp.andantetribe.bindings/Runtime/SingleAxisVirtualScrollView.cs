@@ -138,11 +138,7 @@ namespace Bindings
             var addedItems = await UnityEngine.Object.InstantiateAsync(
                 _itemPrefab,
                 count - _items.Length,
-#if ENABLE_ORIGINAL_IMMUTABLE
                 new InstantiateParameters { parent = _scrollRect.content, originalImmutable = true },
-#else
-                new InstantiateParameters { parent = _scrollRect.content, },
-#endif
                 cancellationToken);
             foreach (var item in addedItems)
             {
